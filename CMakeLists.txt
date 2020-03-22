@@ -16,13 +16,9 @@ project(Android_iRobot)
 # library dependencies
 find_package(SDL2 CONFIG REQUIRED)
 find_package(OpenCV REQUIRED)
-add_subdirectory(libs)
+add_subdirectory(src/libs)
 
 # -------------------------------------------------------------
-# header references
-include_directories(${CMAKE_HOME_DIRECTORY}/include)
-SET(CMAKE_SOURCE_DIR ${CMAKE_HOME_DIRECTORY}/src)
-
 SET(COMMON_SOURCES ${CMAKE_HOME_DIRECTORY}/src/common.cpp)
 
 # -------------------------------------------------------------

@@ -1,7 +1,7 @@
 #define CATCH_CONFIG_MAIN
 
 #include "catch.hpp"
-#include "fact.hpp"
+#include "../src/fact.hpp"
 
 TEST_CASE( "factorials are computed", "[factorial]" ) {
     REQUIRE( factorial(1) == 1 );
