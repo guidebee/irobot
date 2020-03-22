@@ -19,6 +19,7 @@ find_package(OpenCV REQUIRED)
 add_subdirectory(src/libs)
 
 # -------------------------------------------------------------
+include_directories(${CMAKE_HOME_DIRECTORY}/src)
 SET(COMMON_SOURCES ${CMAKE_HOME_DIRECTORY}/src/common.cpp)
 
 # -------------------------------------------------------------
