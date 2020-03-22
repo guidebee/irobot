@@ -10,7 +10,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-D__STDC_CONSTANT_MACROS")
 
 
-project(iRobot)
+project(Android_iRobot)
 
 # -------------------------------------------------------------
 # library dependencies
@@ -21,14 +21,16 @@ add_subdirectory(libs)
 # -------------------------------------------------------------
 # header references
 include_directories(${CMAKE_HOME_DIRECTORY}/include)
+SET(CMAKE_SOURCE_DIR ${CMAKE_HOME_DIRECTORY}/src)
 
+SET(COMMON_SOURCES ${CMAKE_HOME_DIRECTORY}/src/common.cpp)
 
 # -------------------------------------------------------------
 # utility functions
 function(APP name)
     set(APP_TARGET ${name})
-    add_executable(${APP_TARGET} ${CMAKE_HOME_DIRECTORY}/src/${APP_TARGET}.cpp
-            ${CMAKE_HOME_DIRECTORY}/src/common.cpp)
+    add_executable(${APP_TARGET} ${COMMON_SOURCES}
+            ${CMAKE_HOME_DIRECTORY}/src/${APP_TARGET}.cpp)
     target_link_libraries(${APP_TARGET} PRIVATE FFmpeg)
     target_link_libraries(${APP_TARGET} PRIVATE SDL2::SDL2 SDL2::SDL2main)
     target_link_libraries(${APP_TARGET} PRIVATE ${OpenCV_LIBS})
