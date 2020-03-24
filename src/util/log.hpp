@@ -16,7 +16,7 @@ extern "C" {
 }
 #endif
 
-#include "config.h"
+#include "config.hpp"
 
 #define LOGV(...) SDL_LogVerbose(SDL_LOG_CATEGORY_APPLICATION, __VA_ARGS__)
 #define LOGD(...) SDL_LogDebug(SDL_LOG_CATEGORY_APPLICATION, __VA_ARGS__)

@@ -14,7 +14,7 @@ extern "C" {
 #include <stdbool.h>
 #include <stddef.h>
 
-#include "config.h"
+#include "config.hpp"
 
 // To define a queue type of "struct foo":
 //    struct queue_foo QUEUE(struct foo);

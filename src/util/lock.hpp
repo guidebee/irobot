@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 #include "log.hpp"
-#include "config.h"
+#include "config.hpp"
 
 
 static inline void

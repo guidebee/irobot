@@ -18,7 +18,7 @@ extern "C" {
 #endif
 
 
-#include "config.h"
+#include "config.hpp"
 
 // like strncpy, except:
 //  - it copies at most n-1 chars

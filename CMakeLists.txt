@@ -27,17 +27,28 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/util/lock.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/log.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/queue.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/util/str_util.hpp)
+        ${CMAKE_HOME_DIRECTORY}/src/util/str_util.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/util/net.hpp)
 
 SET(COMMON_SOURCES
         ${COMMON_SOURCE_HEADERS}
         ${CMAKE_HOME_DIRECTORY}/src/common.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/helper.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp)
+        ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/util/net.cpp)
+
+
+if (WIN32)
+    SET(COMMON_SOURCES ${COMMON_SOURCES}
+            ${CMAKE_HOME_DIRECTORY}/src/platform/windows/net.cpp)
+else (WIN32)
+    SET(COMMON_SOURCES ${COMMON_SOURCES}
+            ${CMAKE_HOME_DIRECTORY}/src/platform/unix/net.cpp)
+endif (WIN32)
 
 configure_file(
         "${PROJECT_SOURCE_DIR}/config.in"
-        "${PROJECT_BINARY_DIR}/src/config.h"
+        "${PROJECT_BINARY_DIR}/src/config.hpp"
 )
 # -------------------------------------------------------------
 # utility functions
