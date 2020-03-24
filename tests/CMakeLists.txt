@@ -7,3 +7,4 @@ SET(TEST_SOURCE all_tests.cpp ${COMMON_SOURCES})
 add_executable(all_tests ${TEST_SOURCE})
 
 target_link_libraries(all_tests PRIVATE Catch2::Catch2 FFmpeg)
+target_link_libraries(all_tests PRIVATE SDL2::SDL2 SDL2::SDL2main)

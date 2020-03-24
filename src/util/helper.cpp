@@ -19,7 +19,7 @@ extern "C" {
 Uint64 get_current_timestamp() {
     struct timeval tm_now;
 
-    gettimeofday(&tm_now, NULL);
+    gettimeofday(&tm_now, nullptr);
     Uint64 milli_seconds = tm_now.tv_sec * 1000LL + tm_now.tv_usec / 1000; // calculate milliseconds
     return milli_seconds;
 

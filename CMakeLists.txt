@@ -22,12 +22,18 @@ include_directories(${CMAKE_HOME_DIRECTORY}/src ${PROJECT_BINARY_DIR}/src)
 
 SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/util/buffer_util.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/util/cbuf.hpp)
+        ${CMAKE_HOME_DIRECTORY}/src/util/cbuf.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/util/helper.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/util/lock.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/util/log.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/util/queue.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/util/str_util.hpp)
 
 SET(COMMON_SOURCES
         ${COMMON_SOURCE_HEADERS}
         ${CMAKE_HOME_DIRECTORY}/src/common.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/util/helper.cpp)
+        ${CMAKE_HOME_DIRECTORY}/src/util/helper.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp)
 
 configure_file(
         "${PROJECT_SOURCE_DIR}/config.in"
