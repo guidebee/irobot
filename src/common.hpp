@@ -20,9 +20,12 @@ extern "C" {
 
 #define IMAGE_ALIGN 1
 
-void save_frame(AVFrame *pFrame,
-                int width, int height, int iFrame);
+void
+save_frame(AVFrame *pFrame,
+           int width, int height, int iFrame);
 
-int decode_frame(AVCodecContext *pCodecContext,
-                 AVFrame *pFrame, const AVPacket *pPacket);
+int
+decode_frame(AVCodecContext *pCodecContext,
+             AVFrame *pFrame, const AVPacket *pPacket);
+
 #endif //ANDROID_IROBOT_COMMON_HPP

@@ -19,9 +19,17 @@ add_subdirectory(libs)
 
 # -------------------------------------------------------------
 include_directories(${CMAKE_HOME_DIRECTORY}/src ${PROJECT_BINARY_DIR}/src)
-SET(COMMON_SOURCES ${CMAKE_HOME_DIRECTORY}/src/common.cpp)
 
-configure_file (
+SET(COMMON_SOURCE_HEADERS
+        ${CMAKE_HOME_DIRECTORY}/src/util/buffer_util.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/util/cbuf.hpp)
+
+SET(COMMON_SOURCES
+        ${COMMON_SOURCE_HEADERS}
+        ${CMAKE_HOME_DIRECTORY}/src/common.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/util/helper.cpp)
+
+configure_file(
         "${PROJECT_SOURCE_DIR}/config.in"
         "${PROJECT_BINARY_DIR}/src/config.h"
 )
