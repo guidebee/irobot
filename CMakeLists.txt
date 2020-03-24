@@ -6,22 +6,25 @@ if (DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
 endif ()
 set(VCPKG_TARGET_TRIPLET $ENV{VCPKG_DEFAULT_TRIPLET} CACHE INTERNAL "" FORCE)
 
+project(Android_iRobot VERSION 1.0.0 DESCRIPTION "Android iRobot Agent"
+        LANGUAGES CXX)
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_FLAGS "-D__STDC_CONSTANT_MACROS")
-
-
-project(Android_iRobot)
-
 # -------------------------------------------------------------
 # library dependencies
 find_package(SDL2 CONFIG REQUIRED)
 find_package(OpenCV REQUIRED)
-add_subdirectory(src/libs)
+add_subdirectory(libs)
 
 # -------------------------------------------------------------
-include_directories(${CMAKE_HOME_DIRECTORY}/src)
+include_directories(${CMAKE_HOME_DIRECTORY}/src ${PROJECT_BINARY_DIR}/src)
 SET(COMMON_SOURCES ${CMAKE_HOME_DIRECTORY}/src/common.cpp)
 
+configure_file (
+        "${PROJECT_SOURCE_DIR}/config.in"
+        "${PROJECT_BINARY_DIR}/src/config.h"
+)
 # -------------------------------------------------------------
 # utility functions
 function(APP name)
