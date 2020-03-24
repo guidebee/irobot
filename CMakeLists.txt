@@ -29,6 +29,8 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/util/queue.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/net.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/common.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/command.hpp
         ${CMAKE_HOME_DIRECTORY}/src/video/common.hpp)
 
 SET(COMMON_SOURCES
@@ -36,15 +38,18 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/video/common.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/helper.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/util/net.cpp)
+        ${CMAKE_HOME_DIRECTORY}/src/util/net.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/command.cpp)
 
 
 if (WIN32)
     SET(COMMON_SOURCES ${COMMON_SOURCES}
-            ${CMAKE_HOME_DIRECTORY}/src/platform/windows/net.cpp)
+            ${CMAKE_HOME_DIRECTORY}/src/platform/windows/net.cpp
+            ${CMAKE_HOME_DIRECTORY}/src/platform/windows/command.cpp)
 else (WIN32)
     SET(COMMON_SOURCES ${COMMON_SOURCES}
-            ${CMAKE_HOME_DIRECTORY}/src/platform/unix/net.cpp)
+            ${CMAKE_HOME_DIRECTORY}/src/platform/unix/net.cpp
+            ${CMAKE_HOME_DIRECTORY}/src/platform/unix/command.cpp)
 endif (WIN32)
 
 configure_file(
