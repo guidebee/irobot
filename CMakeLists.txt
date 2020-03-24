@@ -28,11 +28,12 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/util/log.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/queue.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/util/net.hpp)
+        ${CMAKE_HOME_DIRECTORY}/src/util/net.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/video/common.hpp)
 
 SET(COMMON_SOURCES
         ${COMMON_SOURCE_HEADERS}
-        ${CMAKE_HOME_DIRECTORY}/src/common.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/video/common.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/helper.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/net.cpp)
