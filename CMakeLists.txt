@@ -35,6 +35,7 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/android/input.hpp
         ${CMAKE_HOME_DIRECTORY}/src/android/keycodes.hpp
         ${CMAKE_HOME_DIRECTORY}/src/android/device.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/android/file_handler.hpp
         ${CMAKE_HOME_DIRECTORY}/src/message/device_msg.hpp
         ${CMAKE_HOME_DIRECTORY}/src/message/control_msg.hpp
         ${CMAKE_HOME_DIRECTORY}/src/message/blob_msg.hpp
@@ -43,6 +44,7 @@ SET(COMMON_SOURCE_HEADERS
 SET(COMMON_SOURCES
         ${COMMON_SOURCE_HEADERS}
         ${CMAKE_HOME_DIRECTORY}/src/android/device.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/android/file_handler.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/common.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/helper.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp
