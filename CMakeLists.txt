@@ -43,6 +43,7 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/video/recorder.hpp
         ${CMAKE_HOME_DIRECTORY}/src/video/video_buffer.hpp
         ${CMAKE_HOME_DIRECTORY}/src/video/decoder.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/video/stream.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/events.hpp
         ${CMAKE_HOME_DIRECTORY}/src/common.hpp
         ${CMAKE_HOME_DIRECTORY}/src/command.hpp
@@ -66,6 +67,7 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/video/recorder.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/video_buffer.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/decoder.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/video/stream.cpp
         ${CMAKE_HOME_DIRECTORY}/src/command.cpp)
 
 
