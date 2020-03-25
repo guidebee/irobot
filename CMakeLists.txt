@@ -21,8 +21,14 @@ add_subdirectory(libs)
 include_directories(${CMAKE_HOME_DIRECTORY}/src ${PROJECT_BINARY_DIR}/src)
 
 SET(COMMON_SOURCE_HEADERS
-        ${CMAKE_HOME_DIRECTORY}/src/util/buffer_util.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/android/input.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/android/keycodes.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/android/device.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/android/file_handler.hpp
         ${CMAKE_HOME_DIRECTORY}/src/android/receiver.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/message/device_msg.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/message/control_msg.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/message/blob_msg.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/cbuf.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/helper.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/lock.hpp
@@ -31,30 +37,25 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/net.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/json.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/util/buffer_util.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/video/utils.hpp
         ${CMAKE_HOME_DIRECTORY}/src/common.hpp
         ${CMAKE_HOME_DIRECTORY}/src/command.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/android/input.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/android/keycodes.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/android/device.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/android/file_handler.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/message/device_msg.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/message/control_msg.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/message/blob_msg.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/video/common.hpp)
+        )
 
 SET(COMMON_SOURCES
         ${COMMON_SOURCE_HEADERS}
         ${CMAKE_HOME_DIRECTORY}/src/android/device.cpp
         ${CMAKE_HOME_DIRECTORY}/src/android/file_handler.cpp
         ${CMAKE_HOME_DIRECTORY}/src/android/receiver.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/video/common.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/message/device_msg.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/message/control_msg.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/message/blob_msg.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/helper.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/net.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/json.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/message/device_msg.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/message/control_msg.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/message/blob_msg.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/video/utils.cpp
         ${CMAKE_HOME_DIRECTORY}/src/command.cpp)
 
 
