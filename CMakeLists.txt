@@ -42,6 +42,8 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/video/fps_counter.hpp
         ${CMAKE_HOME_DIRECTORY}/src/video/recorder.hpp
         ${CMAKE_HOME_DIRECTORY}/src/video/video_buffer.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/video/decoder.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/ui/events.hpp
         ${CMAKE_HOME_DIRECTORY}/src/common.hpp
         ${CMAKE_HOME_DIRECTORY}/src/command.hpp
         ${CMAKE_HOME_DIRECTORY}/src/compat.hpp
@@ -63,6 +65,7 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/video/fps_counter.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/recorder.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/video_buffer.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/video/decoder.cpp
         ${CMAKE_HOME_DIRECTORY}/src/command.cpp)
 
 
