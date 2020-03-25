@@ -15,3 +15,5 @@
 #define HIDPI_SUPPORT
 
 #define SCRCPY_VERSION "1.2.0"
+
+#define PREFIX ""

@@ -52,6 +52,7 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/controller.hpp
         ${CMAKE_HOME_DIRECTORY}/src/command.hpp
         ${CMAKE_HOME_DIRECTORY}/src/compat.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/server.hpp
         )
 
 SET(COMMON_SOURCES
@@ -77,7 +78,8 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/video/decoder.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/stream.cpp
         ${CMAKE_HOME_DIRECTORY}/src/command.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/controller.cpp)
+        ${CMAKE_HOME_DIRECTORY}/src/controller.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/server.cpp)
 
 
 if (WIN32)
