@@ -45,6 +45,8 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/video/decoder.hpp
         ${CMAKE_HOME_DIRECTORY}/src/video/stream.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/events.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/ui/tiny_xpm.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/ui/tiny_xpm.hpp
         ${CMAKE_HOME_DIRECTORY}/src/common.hpp
         ${CMAKE_HOME_DIRECTORY}/src/command.hpp
         ${CMAKE_HOME_DIRECTORY}/src/compat.hpp
@@ -58,6 +60,8 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/message/device_msg.cpp
         ${CMAKE_HOME_DIRECTORY}/src/message/control_msg.cpp
         ${CMAKE_HOME_DIRECTORY}/src/message/blob_msg.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/ui/tiny_xpm.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/ui/screen.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/helper.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/net.cpp
