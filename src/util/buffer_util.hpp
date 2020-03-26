@@ -6,7 +6,6 @@
 #ifndef ANDROID_IROBOT_BUFFER_UTIL_HPP
 #define ANDROID_IROBOT_BUFFER_UTIL_HPP
 
-#include <cstdbool>
 #include <cstdint>
 
 static inline void
