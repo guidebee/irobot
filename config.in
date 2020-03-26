@@ -18,4 +18,3 @@
 
 #define PREFIX "/usr/local"
 
-#define PATH_MAX 250
