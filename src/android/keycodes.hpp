@@ -3,6 +3,8 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 #ifndef ANDROID_IROBOT_KEYCODES_HPP
 #define ANDROID_IROBOT_KEYCODES_HPP
 
@@ -730,3 +732,5 @@ enum android_keycode {
 
 
 #endif //ANDROID_IROBOT_KEYCODES_HPP
+
+#pragma clang diagnostic pop

@@ -36,7 +36,6 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/util/queue.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/net.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/util/json.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/buffer_util.hpp
         ${CMAKE_HOME_DIRECTORY}/src/video/utils.hpp
         ${CMAKE_HOME_DIRECTORY}/src/video/fps_counter.hpp
@@ -73,7 +72,6 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/util/helper.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/net.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/util/json.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/utils.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/fps_counter.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/recorder.cpp

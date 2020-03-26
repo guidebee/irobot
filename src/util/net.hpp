@@ -10,8 +10,7 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <cstdint>
 #include <SDL2/SDL_platform.h>
 
 #ifdef __WINDOWS__

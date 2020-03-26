@@ -10,7 +10,6 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
 #include <libavformat/avformat.h>
 
 #if defined (__cplusplus)

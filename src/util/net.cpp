@@ -11,11 +11,7 @@
 extern "C" {
 #endif
 
-#include <stdio.h>
-
-#include "config.hpp"
-
-
+#include <cstdio>
 #ifdef __WINDOWS__
 typedef int socklen_t;
 #else

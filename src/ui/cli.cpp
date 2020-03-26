@@ -8,16 +8,14 @@
 #if defined (__cplusplus)
 extern "C" {
 #endif
-
 #include <getopt.h>
-#include <stdint.h>
 #include <unistd.h>
-
 
 #if defined (__cplusplus)
 }
 #endif
 
+#include <cstdint>
 #include "config.hpp"
 #include "video/recorder.hpp"
 #include "util/log.hpp"

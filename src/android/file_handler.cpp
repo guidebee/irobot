@@ -5,19 +5,8 @@
 
 #include "file_handler.hpp"
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
+#include <cassert>
 
-
-#include <assert.h>
-#include <string.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
-#include "config.hpp"
 #include "command.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"
@@ -119,7 +108,7 @@ file_handler_request(struct file_handler *file_handler,
 
 static int
 run_file_handler(void *data) {
-    struct file_handler *file_handler = (struct file_handler *)data;
+    struct file_handler *file_handler = (struct file_handler *) data;
 
     for (;;) {
         mutex_lock(file_handler->mutex);

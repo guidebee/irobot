@@ -4,20 +4,12 @@
 //
 
 #include "server.hpp"
+#include <cassert>
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-#include <assert.h>
-#include <errno.h>
-#include <inttypes.h>
-#include <libgen.h>
-#include <stdio.h>
+#include <cinttypes>
+
+#include <cstdio>
 #include <SDL2/SDL_timer.h>
-
-#if defined (__cplusplus)
-}
-#endif
 
 #include "config.hpp"
 #include "command.hpp"

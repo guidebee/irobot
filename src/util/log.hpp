@@ -6,15 +6,7 @@
 #ifndef ANDROID_IROBOT_LOG_HPP
 #define ANDROID_IROBOT_LOG_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <SDL2/SDL_log.h>
-
-#if defined (__cplusplus)
-}
-#endif
 
 #include "config.hpp"
 

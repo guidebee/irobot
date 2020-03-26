@@ -6,20 +6,10 @@
 #ifndef ANDROID_IROBOT_FPS_COUNTER_HPP
 #define ANDROID_IROBOT_FPS_COUNTER_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
-#include <stdbool.h>
-#include <stdint.h>
+#include <cstdint>
 #include <SDL2/SDL_atomic.h>
 #include <SDL2/SDL_mutex.h>
 #include <SDL2/SDL_thread.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
 #include "config.hpp"
 
 struct fps_counter {

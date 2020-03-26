@@ -3,25 +3,17 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
 
-#include <assert.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <sys/types.h>
+#include <cassert>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+
 #include <sys/stat.h>
-#include <unistd.h>
-
-#if defined (__cplusplus)
-}
-#endif
 
 
 #include "command.hpp"
-#include "config.hpp"
+
 #include "util/log.hpp"
 #include "util/str_util.hpp"
 #include "common.hpp"

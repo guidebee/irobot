@@ -12,25 +12,22 @@ extern "C" {
 
 // modern glibc will complain without this
 #define _DEFAULT_SOURCE
-
-
-#include <errno.h>
 #include <fcntl.h>
-#include <limits.h>
-#include <signal.h>
-#include <stdlib.h>
 #include <sys/types.h>
 #include <sys/wait.h>
 #include <unistd.h>
-
 
 #if defined (__cplusplus)
 }
 #endif
 
+#include <cerrno>
+#include <csignal>
+#include <cstdlib>
+
 #include "command.hpp"
 #include "util/log.hpp"
-#include "config.hpp"
+
 
 enum process_result
 cmd_execute(const char *const argv[], pid_t *pid) {

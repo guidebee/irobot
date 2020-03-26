@@ -9,8 +9,8 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
-#include <inttypes.h>
+
+#include <cinttypes>
 
 #ifdef _WIN32
 

@@ -3,21 +3,9 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <unistd.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
-
 #include "util/net.hpp"
 
-
-#include "config.hpp"
 
 bool
 net_init(void) {

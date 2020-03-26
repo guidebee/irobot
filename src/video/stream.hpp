@@ -10,8 +10,7 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
-#include <stdint.h>
+#include <cstdint>
 #include <libavformat/avformat.h>
 #include <SDL2/SDL_atomic.h>
 #include <SDL2/SDL_thread.h>

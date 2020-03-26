@@ -5,28 +5,12 @@
 
 #include "decoder.hpp"
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <libavformat/avformat.h>
-#include <libavutil/time.h>
 #include <SDL2/SDL_events.h>
-#include <SDL2/SDL_mutex.h>
-#include <SDL2/SDL_thread.h>
-#include <unistd.h>
 
-#if defined (__cplusplus)
-}
-#endif
-
-
-#include "config.hpp"
 #include "compat.hpp"
 #include "ui/events.hpp"
-#include "recorder.hpp"
 #include "video/video_buffer.hpp"
-#include "util/buffer_util.hpp"
 #include "util/log.hpp"
 
 // set the decoded frame as ready for rendering, and notify

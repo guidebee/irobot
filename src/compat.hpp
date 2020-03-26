@@ -6,16 +6,8 @@
 #ifndef ANDROID_IROBOT_COMPAT_HPP
 #define ANDROID_IROBOT_COMPAT_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <libavformat/version.h>
 #include <SDL2/SDL_version.h>
-
-#if defined (__cplusplus)
-}
-#endif
 
 // In ffmpeg/doc/APIchanges:
 // 2016-04-11 - 6f69f7a / 9200514 - lavf 57.33.100 / 57.5.0 - avformat.h

@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-#include <assert.h>
+#include <cassert>
 #include <SDL2/SDL_mutex.h>
 #include <libavutil/avutil.h>
 #include <libavformat/avformat.h>
@@ -18,9 +18,9 @@ extern "C" {
 }
 #endif
 
-#include "config.hpp"
+
 #include "util/lock.hpp"
-#include "util/log.hpp"
+
 
 bool
 video_buffer_init(struct video_buffer *vb, struct fps_counter *fps_counter,

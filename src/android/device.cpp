@@ -4,8 +4,8 @@
 //
 
 #include "device.hpp"
-#include "config.hpp"
 #include "util/log.hpp"
+
 bool
 device_read_info(socket_t device_socket, char *device_name, struct size *size) {
     unsigned char buf[DEVICE_NAME_FIELD_LENGTH + 4];

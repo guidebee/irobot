@@ -5,21 +5,10 @@
 
 #include "tiny_xpm.hpp"
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
+#include <cassert>
+#include <cstdint>
+#include <cstdlib>
 
-#include <assert.h>
-#include <stdbool.h>
-#include <stdint.h>
-#include <stdio.h>
-#include <stdlib.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
-#include "config.hpp"
 #include "util/log.hpp"
 
 struct index {
@@ -90,7 +79,7 @@ read_xpm(char *xpm[]) {
     }
 
     // parse image
-    uint32_t *pixels = (uint32_t *)SDL_malloc(4 * width * height);
+    uint32_t *pixels = (uint32_t *) SDL_malloc(4 * width * height);
     if (!pixels) {
         LOGE("Could not allocate icon memory");
         return NULL;

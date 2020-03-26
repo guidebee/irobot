@@ -6,16 +6,8 @@
 #ifndef ANDROID_IROBOT_BUFFER_UTIL_HPP
 #define ANDROID_IROBOT_BUFFER_UTIL_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
 #include <cstdbool>
 #include <cstdint>
-
-#if defined (__cplusplus)
-}
-#endif
-
 
 static inline void
 buffer_write16be(uint8_t *buf, uint16_t value) {

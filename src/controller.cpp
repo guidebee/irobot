@@ -5,16 +5,7 @@
 
 #include "controller.hpp"
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
-#include <assert.h>
-
-#if defined (__cplusplus)
-}
-
-#include "config.hpp"
+#include <cassert>
 #include "util/lock.hpp"
 #include "util/log.hpp"
 
@@ -145,4 +136,3 @@ controller_join(struct controller *controller) {
     receiver_join(&controller->receiver);
 }
 
-#endif

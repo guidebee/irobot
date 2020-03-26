@@ -9,7 +9,7 @@
 #if defined (__cplusplus)
 extern "C" {
 #endif
-#include <stdbool.h>
+
 #include <libavformat/avformat.h>
 #include <SDL2/SDL_mutex.h>
 #include <SDL2/SDL_thread.h>

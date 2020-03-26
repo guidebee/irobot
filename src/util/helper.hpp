@@ -6,16 +6,7 @@
 #ifndef ANDROID_IROBOT_HELPER_HPP
 #define ANDROID_IROBOT_HELPER_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <SDL2/SDL_types.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
 
 Uint64 get_current_timestamp();
 

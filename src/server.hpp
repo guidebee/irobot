@@ -6,16 +6,7 @@
 #ifndef ANDROID_IROBOT_SERVER_HPP
 #define ANDROID_IROBOT_SERVER_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
-#include <stdbool.h>
-#include <stdint.h>
-
-#if defined (__cplusplus)
-}
-#endif
+#include <cstdint>
 
 #include "config.hpp"
 #include "command.hpp"

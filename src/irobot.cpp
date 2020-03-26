@@ -5,9 +5,7 @@
 #if defined (__cplusplus)
 extern "C" {
 #endif
-#include <SDL2/SDL.h>
-#include <stdbool.h>
-#include <unistd.h>
+
 #include <libavformat/avformat.h>
 
 #if defined (__cplusplus)

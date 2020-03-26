@@ -4,7 +4,7 @@
 //
 
 #include "event_converter.hpp"
-#include "config.hpp"
+
 
 #define MAP(FROM, TO) case FROM: *to = TO; return true
 #define FAIL default: return false

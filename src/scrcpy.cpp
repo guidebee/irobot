@@ -5,22 +5,12 @@
 
 #include "scrcpy.hpp"
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
+#include <cstring>
 
-#include <stdio.h>
-#include <string.h>
-#include <unistd.h>
 #include <libavformat/avformat.h>
-#include <sys/time.h>
 #include <SDL2/SDL.h>
 
-#if defined (__cplusplus)
-}
-#endif
 
-#include "config.hpp"
 #include "command.hpp"
 #include "common.hpp"
 #include "compat.hpp"
@@ -35,9 +25,9 @@ extern "C" {
 #include "ui/screen.hpp"
 #include "server.hpp"
 #include "video/stream.hpp"
-#include "ui/tiny_xpm.hpp"
+
 #include "video/video_buffer.hpp"
-#include "util/lock.hpp"
+
 #include "util/log.hpp"
 #include "util/net.hpp"
 
@@ -109,6 +99,7 @@ sdl_init_and_configure(bool display) {
 #endif
 
 #ifdef CONTINUOUS_RESIZING_WORKAROUND
+
 // On Windows and MacOS, resizing blocks the event loop, so resizing events are
 // not triggered. As a workaround, handle them in an event handler.
 //
@@ -124,6 +115,7 @@ event_watcher(void *data, SDL_Event *event) {
     }
     return 0;
 }
+
 #endif
 
 static bool
@@ -348,7 +340,7 @@ scrcpy(const struct scrcpy_options *options) {
         fps_counter_initialized = true;
 
         if (!cannot_cont & !video_buffer_init(&video_buffer, &fps_counter,
-                               options->render_expired_frames)) {
+                                              options->render_expired_frames)) {
             cannot_cont = true;
         }
         video_buffer_initialized = true;
@@ -385,19 +377,19 @@ scrcpy(const struct scrcpy_options *options) {
     // now we consumed the header values, the socket receives the video stream
     // start the stream
     if (!cannot_cont & !stream_start(&stream)) {
-        cannot_cont= true;
+        cannot_cont = true;
     }
     stream_started = true;
 
     if (!cannot_cont & options->display) {
         if (options->control) {
             if (!controller_init(&controller, server.control_socket)) {
-                cannot_cont= true;
+                cannot_cont = true;
             }
             controller_initialized = true;
 
             if (!controller_start(&controller)) {
-                cannot_cont= true;
+                cannot_cont = true;
             }
             controller_started = true;
         }
@@ -411,7 +403,7 @@ scrcpy(const struct scrcpy_options *options) {
                                                   options->window_height, options->screen_width,
                                                   options->screen_height,
                                                   options->window_borderless)) {
-            cannot_cont= true;
+            cannot_cont = true;
         }
 
         if (!cannot_cont & options->turn_screen_off) {

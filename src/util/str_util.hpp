@@ -6,17 +6,8 @@
 #ifndef ANDROID_IROBOT_STR_UTIL_HPP
 #define ANDROID_IROBOT_STR_UTIL_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <cstdint>
-#include <stddef.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
+#include <cstddef>
 
 #include "config.hpp"
 

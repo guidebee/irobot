@@ -3,7 +3,6 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#if defined (__cplusplus)
 
 #include "util/net.hpp"
 

@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
+
 #include <SDL2/SDL_mutex.h>
 
 #if defined (__cplusplus)

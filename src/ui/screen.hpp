@@ -10,7 +10,6 @@
 extern "C" {
 #endif
 
-#include <stdbool.h>
 #include <SDL2/SDL.h>
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
@@ -23,6 +22,7 @@ extern "C" {
 #include "config.hpp"
 #include "common.hpp"
 #include "video/stream.hpp"
+
 struct video_buffer;
 
 struct screen {
@@ -75,7 +75,7 @@ bool
 screen_init_rendering(struct screen *screen, const char *window_title,
                       struct size frame_size, bool always_on_top,
                       int16_t window_x, int16_t window_y, uint16_t window_width,
-                      uint16_t window_height,uint16_t screen_width,
+                      uint16_t window_height, uint16_t screen_width,
                       uint16_t screen_height, bool window_borderless);
 
 // show the window
@@ -113,5 +113,7 @@ screen_handle_window_event(struct screen *screen, const SDL_WindowEvent *event);
 void
 screen_capture(struct screen *screen);
 
-void screen_saveframe(struct screen *screen,AVFrame *pFrame);
+void
+screen_saveframe(struct screen *screen, AVFrame *pFrame);
+
 #endif //ANDROID_IROBOT_SCREEN_HPP

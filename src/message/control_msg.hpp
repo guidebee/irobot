@@ -6,17 +6,8 @@
 #ifndef ANDROID_IROBOT_CONTROL_MSG_HPP
 #define ANDROID_IROBOT_CONTROL_MSG_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
-#include <stdbool.h>
-#include <stddef.h>
-#include <stdint.h>
-
-#if defined (__cplusplus)
-}
-#endif
+#include <cstddef>
+#include <cstdint>
 
 #include "config.hpp"
 #include "android/input.hpp"

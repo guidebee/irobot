@@ -5,10 +5,6 @@
 
 #include "str_util.hpp"
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <cerrno>
 #include <climits>
 #include <cstdlib>
@@ -20,9 +16,6 @@ extern "C" {
 #endif
 
 #include <SDL2/SDL_stdinc.h>
-#if defined (__cplusplus)
-}
-#endif
 
 size_t
 xstrncpy(char *dest, const char *src, size_t n) {

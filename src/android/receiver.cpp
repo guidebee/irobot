@@ -5,18 +5,9 @@
 
 #include "receiver.hpp"
 
-
-#if defined (__cplusplus)
-extern "C" {
-#endif
-#include <assert.h>
+#include <cassert>
 #include <SDL2/SDL_clipboard.h>
 
-#if defined (__cplusplus)
-}
-#endif
-
-#include "config.hpp"
 #include "message/device_msg.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"
@@ -49,7 +40,7 @@ static ssize_t
 process_msgs(const unsigned char *buf, size_t len) {
     size_t head = 0;
     for (;;) {
-        struct device_msg msg;
+        struct device_msg msg{};
         ssize_t r = device_msg_deserialize(&buf[head], len - head, &msg);
         if (r == -1) {
             return -1;
@@ -71,7 +62,7 @@ process_msgs(const unsigned char *buf, size_t len) {
 
 static int
 run_receiver(void *data) {
-    struct receiver *receiver = (struct receiver *) data;
+    auto *receiver = (struct receiver *) data;
 
     unsigned char buf[DEVICE_MSG_SERIALIZED_MAX_SIZE];
     size_t head = 0;
@@ -116,5 +107,5 @@ receiver_start(struct receiver *receiver) {
 
 void
 receiver_join(struct receiver *receiver) {
-    SDL_WaitThread(receiver->thread, NULL);
+    SDL_WaitThread(receiver->thread, nullptr);
 }

@@ -6,20 +6,10 @@
 #ifndef ANDROID_IROBOT_LOCK_HPP
 #define ANDROID_IROBOT_LOCK_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <cstdint>
 #include <SDL2/SDL_mutex.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
 #include "log.hpp"
 #include "config.hpp"
-
 
 static inline void
 mutex_lock(SDL_mutex *mutex) {

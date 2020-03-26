@@ -3,20 +3,15 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
+#pragma clang diagnostic push
+#pragma ide diagnostic ignored "OCUnusedMacroInspection"
 #ifndef ANDROID_IROBOT_BLOB_MSG_HPP
 #define ANDROID_IROBOT_BLOB_MSG_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <SDL2/SDL_types.h>
 
-#if defined (__cplusplus)
-}
-#endif
-
 #define BLOB_MSG_DATA_MAX_COUNT 16
+
 #define BLOB_MSG_SERIALIZED_MAX_SIZE 10485760
 
 #define BLOB_MSG_TYPE_RECORDED_EVENTS       0x1
@@ -45,3 +40,5 @@ void
 blob_msg_destroy(struct blob_msg *msg);
 
 #endif //ANDROID_IROBOT_BLOB_MSG_HPP
+
+#pragma clang diagnostic pop

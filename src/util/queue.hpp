@@ -6,13 +6,8 @@
 #ifndef ANDROID_IROBOT_QUEUE_HPP
 #define ANDROID_IROBOT_QUEUE_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
-#include <assert.h>
-#include <stdbool.h>
-#include <stddef.h>
+#include <cassert>
+#include <cstddef>
 
 #include "config.hpp"
 
@@ -81,11 +76,6 @@ extern "C" {
     })
 // no need to update (PQ)->last if the queue is left empty:
 // (PQ)->last is undefined if !(PQ)->first anyway
-
-
-#if defined (__cplusplus)
-}
-#endif
 
 
 #endif //ANDROID_IROBOT_QUEUE_HPP

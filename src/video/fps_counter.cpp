@@ -4,18 +4,9 @@
 //
 
 #include "fps_counter.hpp"
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
-#include <assert.h>
+#include <cassert>
 #include <SDL2/SDL_timer.h>
 
-#if defined (__cplusplus)
-}
-#endif
-
-#include "config.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"
 

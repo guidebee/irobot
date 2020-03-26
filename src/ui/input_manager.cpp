@@ -5,17 +5,8 @@
 
 #include "input_manager.hpp"
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
+#include <cassert>
 
-#include <assert.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
-#include "config.hpp"
 #include "ui/event_converter.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"
