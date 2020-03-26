@@ -63,7 +63,7 @@ net_listen(uint32_t addr, uint16_t port, int backlog) {
     }
 
     int reuse = 1;
-    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const void *) &reuse,
+    if (setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, (const char *) &reuse,
                    sizeof(reuse)) == -1) {
         perror("setsockopt(SO_REUSEADDR)");
     }
