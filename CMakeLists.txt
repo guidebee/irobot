@@ -109,6 +109,7 @@ function(APP name)
     target_link_libraries(${APP_TARGET} PRIVATE ${OpenCV_LIBS})
 
     if (WIN32)
+        target_link_libraries(${APP_TARGET} PRIVATE wsock32 ws2_32)
         install(TARGETS ${name}
                 RUNTIME DESTINATION ${CMAKE_BINARY_DIR})
     endif ()
