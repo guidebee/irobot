@@ -191,7 +191,7 @@ utf8_to_wide_char(const char *utf8) {
         return NULL;
     }
 
-    wchar_t *wide = SDL_malloc(len * sizeof(wchar_t));
+    wchar_t *wide = (wchar_t *)SDL_malloc(len * sizeof(wchar_t));
     if (!wide) {
         return NULL;
     }
@@ -207,7 +207,7 @@ utf8_from_wide_char(const wchar_t *ws) {
         return NULL;
     }
 
-    char *utf8 = SDL_malloc(len);
+    char *utf8 = (char *)SDL_malloc(len);
     if (!utf8) {
         return NULL;
     }
