@@ -84,10 +84,6 @@ control_msg_serialize(const struct control_msg *msg, unsigned char *buf);
 void
 control_msg_destroy(struct control_msg *msg);
 
-char *
-control_msg_json_serialize(const struct control_msg *msg);
 
-size_t
-control_msg_json_deserialize(struct control_msg *msg, const unsigned char *buf, size_t len);
 
 #endif //ANDROID_IROBOT_CONTROL_MSG_HPP
