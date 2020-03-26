@@ -6,16 +6,7 @@
 #ifndef ANDROID_IROBOT_CBUF_HPP
 #define ANDROID_IROBOT_CBUF_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-#include <cstdbool>
 #include <unistd.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
 
 // To define a circular buffer type of 20 ints:
 //     struct cbuf_int CBUF(int, 20);
