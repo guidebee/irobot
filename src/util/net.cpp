@@ -97,17 +97,17 @@ net_accept(socket_t server_socket) {
 
 ssize_t
 net_recv(socket_t socket, void *buf, size_t len) {
-    return recv(socket, buf, len, 0);
+    return recv(socket, (char *)buf, len, 0);
 }
 
 ssize_t
 net_recv_all(socket_t socket, void *buf, size_t len) {
-    return recv(socket, buf, len, MSG_WAITALL);
+    return recv(socket, (char *)buf, len, MSG_WAITALL);
 }
 
 ssize_t
 net_send(socket_t socket, const void *buf, size_t len) {
-    return send(socket, buf, len, 0);
+    return send(socket, (char *)buf, len, 0);
 }
 
 ssize_t
@@ -115,7 +115,7 @@ net_send_all(socket_t socket, const void *buf, size_t len) {
     ssize_t w = 0;
     while (len > 0) {
 
-        w = net_send(socket, buf, len);
+        w = net_send(socket, (char *)buf, len);
         if (w == -1) {
             return -1;
         }
