@@ -17,3 +17,5 @@
 #define SCRCPY_VERSION "1.12.1"
 
 #define PREFIX "/usr/local"
+
+#define PATH_MAX 250
