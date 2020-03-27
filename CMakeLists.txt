@@ -30,7 +30,6 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/message/control_msg.hpp
         ${CMAKE_HOME_DIRECTORY}/src/message/blob_msg.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/cbuf.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/util/helper.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/lock.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/log.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/queue.hpp
@@ -69,7 +68,6 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/ui/event_converter.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/screen.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/input_manager.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/util/helper.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/net.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/utils.cpp
