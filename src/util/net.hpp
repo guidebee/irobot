@@ -10,7 +10,7 @@
 extern "C" {
 #endif
 
-#include <cstdint>
+
 #include <SDL2/SDL_platform.h>
 
 #ifdef __WINDOWS__
@@ -30,6 +30,8 @@ typedef int socket_t;
 #if defined (__cplusplus)
 }
 #endif
+
+#include <cstdint>
 
 bool
 net_init(void);
