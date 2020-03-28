@@ -6,6 +6,17 @@
 #ifndef ANDROID_IROBOT_SCRCPY_HPP
 #define ANDROID_IROBOT_SCRCPY_HPP
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
+#include <libavformat/avformat.h>
+#include <SDL2/SDL.h>
+
+#if defined (__cplusplus)
+}
+#endif
+
 #include <cstdint>
 
 #include "config.hpp"

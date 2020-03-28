@@ -39,7 +39,7 @@ controller_destroy(struct controller *controller) {
     SDL_DestroyCond(controller->msg_cond);
     SDL_DestroyMutex(controller->mutex);
 
-    struct control_msg msg;
+    struct control_msg msg{};
     while (cbuf_take(&controller->queue, &msg)) {
         control_msg_destroy(&msg);
     }
@@ -74,7 +74,7 @@ process_msg(struct controller *controller,
 
 static int
 run_controller(void *data) {
-    struct controller *controller = static_cast<struct controller *>(data);
+    auto *controller = static_cast<struct controller *>(data);
 
     for (;;) {
         mutex_lock(controller->mutex);
@@ -86,7 +86,7 @@ run_controller(void *data) {
             mutex_unlock(controller->mutex);
             break;
         }
-        struct control_msg msg;
+        struct control_msg msg{};
         bool non_empty = cbuf_take(&controller->queue, &msg);
         assert(non_empty);
         (void) non_empty;
@@ -115,7 +115,7 @@ controller_start(struct controller *controller) {
 
     if (!receiver_start(&controller->receiver)) {
         controller_stop(controller);
-        SDL_WaitThread(controller->thread, NULL);
+        SDL_WaitThread(controller->thread, nullptr);
         return false;
     }
 
@@ -132,7 +132,7 @@ controller_stop(struct controller *controller) {
 
 void
 controller_join(struct controller *controller) {
-    SDL_WaitThread(controller->thread, NULL);
+    SDL_WaitThread(controller->thread, nullptr);
     receiver_join(&controller->receiver);
 }
 

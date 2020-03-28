@@ -6,6 +6,15 @@
 #ifndef ANDROID_IROBOT_SERVER_HPP
 #define ANDROID_IROBOT_SERVER_HPP
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
+#include <SDL2/SDL_timer.h>
+#if defined (__cplusplus)
+}
+#endif
+
 #include <cstdint>
 
 #include "config.hpp"

@@ -4,24 +4,20 @@
 //
 
 
+#include "command.hpp"
+
 #include <cassert>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 
-#include <sys/stat.h>
-
-
-#include "command.hpp"
-
 #include "util/log.hpp"
-#include "util/str_util.hpp"
 #include "common.hpp"
 
 static const char *adb_command;
 
 static inline const char *
-get_adb_command(void) {
+get_adb_command() {
     if (!adb_command) {
         adb_command = getenv("ADB");
         if (!adb_command)
@@ -98,7 +94,7 @@ adb_execute(const char *serial, const char *const adb_cmd[], size_t len) {
     }
 
     memcpy(&cmd[i], adb_cmd, len * sizeof(const char *));
-    cmd[len + i] = NULL;
+    cmd[len + i] = nullptr;
     enum process_result r = cmd_execute(cmd, &process);
     if (r != PROCESS_SUCCESS) {
         show_adb_err_msg(r, cmd);
@@ -214,7 +210,7 @@ process_check_success(process_t proc, const char *name) {
 
 bool
 is_regular_file(const char *path) {
-    struct stat path_stat;
+    struct stat path_stat{};
     int r = stat(path, &path_stat);
     if (r) {
         perror("stat");

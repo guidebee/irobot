@@ -6,9 +6,17 @@
 #ifndef ANDROID_IROBOT_CONTROLLER_HPP
 #define ANDROID_IROBOT_CONTROLLER_HPP
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
 
 #include <SDL2/SDL_mutex.h>
 #include <SDL2/SDL_thread.h>
+
+#if defined (__cplusplus)
+}
+#endif
+
 
 #include "config.hpp"
 #include "message/control_msg.hpp"
@@ -46,4 +54,5 @@ controller_join(struct controller *controller);
 bool
 controller_push_msg(struct controller *controller,
                     const struct control_msg *msg);
+
 #endif //ANDROID_IROBOT_CONTROLLER_HPP

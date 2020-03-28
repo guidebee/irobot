@@ -9,7 +9,7 @@
 extern "C" {
 #endif
 
-
+#include <sys/stat.h>
 #include <cinttypes>
 
 #ifdef _WIN32
@@ -96,7 +96,7 @@ process_check_success(process_t proc, const char *name);
 // return the absolute path of the executable (the scrcpy binary)
 // may be NULL on error; to be freed by SDL_free
 char *
-get_executable_path(void);
+get_executable_path();
 
 // returns true if the file exists and is not a directory
 bool

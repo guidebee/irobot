@@ -9,7 +9,7 @@
 #include <cinttypes>
 
 #include <cstdio>
-#include <SDL2/SDL_timer.h>
+
 
 #include "config.hpp"
 #include "command.hpp"

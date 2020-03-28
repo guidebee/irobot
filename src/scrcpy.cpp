@@ -7,10 +7,6 @@
 
 #include <cstring>
 
-#include <libavformat/avformat.h>
-#include <SDL2/SDL.h>
-
-
 #include "command.hpp"
 #include "common.hpp"
 #include "compat.hpp"
@@ -210,7 +206,7 @@ event_loop(bool display, bool control) {
     (void) display;
 #ifdef CONTINUOUS_RESIZING_WORKAROUND
     if (display) {
-        SDL_AddEventWatch(event_watcher, NULL);
+        SDL_AddEventWatch(event_watcher, nullptr);
     }
 #endif
     SDL_Event event;
@@ -323,7 +319,7 @@ scrcpy(const struct scrcpy_options *options) {
     }
 
     char device_name[DEVICE_NAME_FIELD_LENGTH];
-    struct size frame_size;
+    struct size frame_size{};
 
     // screenrecord does not send frames when the screen content does not
     // change therefore, we transmit the screen size before the video stream,
@@ -332,7 +328,7 @@ scrcpy(const struct scrcpy_options *options) {
         cannot_cont = true;
     }
 
-    struct decoder *dec = NULL;
+    struct decoder *dec = nullptr;
     if (!cannot_cont & options->display) {
         if (!fps_counter_init(&fps_counter)) {
             cannot_cont = true;
@@ -357,7 +353,7 @@ scrcpy(const struct scrcpy_options *options) {
         dec = &decoder;
     }
 
-    struct recorder *rec = NULL;
+    struct recorder *rec = nullptr;
     if (!cannot_cont & record) {
         if (!recorder_init(&recorder,
                            options->record_filename,
@@ -407,7 +403,7 @@ scrcpy(const struct scrcpy_options *options) {
         }
 
         if (!cannot_cont & options->turn_screen_off) {
-            struct control_msg msg;
+            struct control_msg msg{};
             msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
             msg.set_screen_power_mode.mode = SCREEN_POWER_MODE_OFF;
 

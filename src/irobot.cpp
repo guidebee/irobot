@@ -21,7 +21,7 @@ extern "C" {
 #include "util/log.hpp"
 
 static void
-print_version(void) {
+print_version() {
     fprintf(stderr, "scrcpy %s\n\n", SCRCPY_VERSION);
 
     fprintf(stderr, "dependencies:\n");
