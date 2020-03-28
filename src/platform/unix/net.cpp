@@ -6,7 +6,6 @@
 #include <unistd.h>
 #include "util/net.hpp"
 
-
 bool
 net_init(void) {
     // do nothing

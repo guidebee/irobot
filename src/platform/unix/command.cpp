@@ -3,6 +3,8 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
+#pragma ide diagnostic ignored "OCUnusedMacroInspection"
+#pragma ide diagnostic ignored "hicpp-signed-bitwise"
 #if defined (__cplusplus)
 extern "C" {
 #endif
@@ -115,14 +117,14 @@ cmd_simple_wait(pid_t pid, int *exit_code) {
         *exit_code = code;
     }
 #ifndef NDEBUG
-    return 1;
+    return true;
 #else
     return !code;
 #endif
 }
 
 char *
-get_executable_path(void) {
+get_executable_path() {
 // <https://stackoverflow.com/a/1024937/1987178>
 #ifdef __linux__
     char buf[PATH_MAX + 1]; // +1 for the null byte
@@ -137,6 +139,6 @@ get_executable_path(void) {
     // in practice, we only need this feature for portable builds, only used on
     // Windows, so we don't care implementing it for every platform
     // (it's useful to have a working version on Linux for debugging though)
-    return NULL;
+    return nullptr;
 #endif
 }
