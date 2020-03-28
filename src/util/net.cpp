@@ -3,8 +3,9 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#pragma clang diagnostic push
+
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
+#include "net.hpp"
 
 #if defined (__cplusplus)
 extern "C" {
@@ -33,7 +34,7 @@ typedef struct in_addr IN_ADDR;
 }
 #endif
 
-#include "net.hpp"
+
 #include <cstdio>
 
 socket_t
@@ -134,4 +135,3 @@ net_shutdown(socket_t socket, int how) {
     return !shutdown(socket, how);
 }
 
-#pragma clang diagnostic pop

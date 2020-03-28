@@ -12,6 +12,7 @@
 #include <cstring>
 
 #include "util/log.hpp"
+#include "util/str_util.hpp"
 #include "common.hpp"
 
 static const char *adb_command;
