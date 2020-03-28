@@ -110,10 +110,5 @@ screen_resize_to_pixel_perfect(struct screen *screen);
 void
 screen_handle_window_event(struct screen *screen, const SDL_WindowEvent *event);
 
-void
-screen_capture(struct screen *screen);
-
-void
-screen_saveframe(struct screen *screen, AVFrame *pFrame);
 
 #endif //ANDROID_IROBOT_SCREEN_HPP

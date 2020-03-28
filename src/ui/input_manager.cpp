@@ -408,12 +408,12 @@ input_manager_process_key(struct input_manager *im,
                 }
                 return;
 
-            case SDLK_k:
-                if (control && cmd && !shift && !repeat && down) {
-                    screen_capture(im->screen);
-                }
-
-                return;
+//            case SDLK_k:
+//                if (control && cmd && !shift && !repeat && down) {
+//                    screen_capture(im->screen);
+//                }
+//
+//                return;
 //            case SDLK_e:
 //                if (control && cmd && !shift && !repeat && down) {
 //                    if (controller->fp_events == NULL) {
