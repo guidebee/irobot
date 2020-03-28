@@ -33,8 +33,6 @@ enum control_msg_type {
     CONTROL_MSG_TYPE_SET_CLIPBOARD,
     CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE,
     CONTROL_MSG_TYPE_ROTATE_DEVICE,
-    CONTROL_MSG_TYPE_START_RECORDING,
-    CONTROL_MSG_TYPE_END_RECORDING,
 };
 
 enum screen_power_mode {
@@ -83,7 +81,5 @@ control_msg_serialize(const struct control_msg *msg, unsigned char *buf);
 
 void
 control_msg_destroy(struct control_msg *msg);
-
-
 
 #endif //ANDROID_IROBOT_CONTROL_MSG_HPP

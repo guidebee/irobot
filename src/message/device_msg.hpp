@@ -5,6 +5,7 @@
 
 #ifndef ANDROID_IROBOT_DEVICE_MSG_HPP
 #define ANDROID_IROBOT_DEVICE_MSG_HPP
+
 #include <cstdint>
 #include <unistd.h>
 #include <cstring>

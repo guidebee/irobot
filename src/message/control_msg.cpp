@@ -2,25 +2,11 @@
 // Created by James Shen on 25/3/20.
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
-#pragma clang diagnostic push
-#pragma ide diagnostic ignored "modernize-use-nullptr"
-#pragma ide diagnostic ignored "modernize-raw-string-literal"
+
+#include "control_msg.hpp"
 
 #include <cassert>
 #include <cstring>
-
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
-
-#include <sys/time.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
-#include "control_msg.hpp"
 
 #include "util/buffer_util.hpp"
 #include "util/log.hpp"
