@@ -285,8 +285,6 @@ server_start(struct server *server, const char *serial,
         return false;
     }
 
-    server->agent_data_client_socket = INVALID_SOCKET;
-
     // server will connect to our server socket
     server->process = execute_server(server, params);
 

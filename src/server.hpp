@@ -30,7 +30,6 @@ struct server {
     socket_t agent_control_server_socket; // agent control server listen socket
     socket_t agent_control_client_socket;// agent control comm socket
     socket_t agent_data_server_socket;  // agent data server listen socket
-    socket_t agent_data_client_socket;// agent data comm socket
     uint16_t local_port;
     bool tunnel_enabled;
     bool tunnel_forward; // use "adb forward" instead of "adb reverse"
