@@ -9,13 +9,7 @@
 extern "C" {
 #endif
 
-#include <assert.h>
-#include <libavformat/avformat.h>
-#include <libavutil/time.h>
-#include <SDL2/SDL_events.h>
-#include <SDL2/SDL_mutex.h>
-#include <SDL2/SDL_thread.h>
-#include <unistd.h>
+
 
 #if defined (__cplusplus)
 }
@@ -76,7 +70,7 @@ stream_recv_packet(struct stream *stream, AVPacket *packet) {
 }
 
 static void
-notify_stopped(void) {
+notify_stopped() {
     SDL_Event stop_event;
     stop_event.type = EVENT_STREAM_STOPPED;
     SDL_PushEvent(&stop_event);
@@ -113,7 +107,7 @@ static bool
 stream_parse(struct stream *stream, AVPacket *packet) {
     uint8_t *in_data = packet->data;
     int in_len = packet->size;
-    uint8_t *out_data = NULL;
+    uint8_t *out_data = nullptr;
     int out_len = 0;
     int r = av_parser_parse2(stream->parser, stream->codec_ctx,
                              &out_data, &out_len, in_data, in_len,
@@ -196,7 +190,7 @@ stream_push_packet(struct stream *stream, AVPacket *packet) {
 
 static int
 run_stream(void *data) {
-    struct stream *stream = (struct stream *) data;
+    auto *stream = (struct stream *) data;
 
     AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_H264);
     if (!codec) {
@@ -311,5 +305,5 @@ stream_stop(struct stream *stream) {
 
 void
 stream_join(struct stream *stream) {
-    SDL_WaitThread(stream->thread, NULL);
+    SDL_WaitThread(stream->thread, nullptr);
 }

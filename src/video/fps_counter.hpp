@@ -7,9 +7,19 @@
 #define ANDROID_IROBOT_FPS_COUNTER_HPP
 
 #include <cstdint>
+
+#if defined (__cplusplus)
+extern "C" {
+#endif
 #include <SDL2/SDL_atomic.h>
 #include <SDL2/SDL_mutex.h>
 #include <SDL2/SDL_thread.h>
+#include <SDL2/SDL_timer.h>
+#if defined (__cplusplus)
+}
+#endif
+
+
 #include "config.hpp"
 
 struct fps_counter {
@@ -56,4 +66,5 @@ fps_counter_add_rendered_frame(struct fps_counter *counter);
 
 void
 fps_counter_add_skipped_frame(struct fps_counter *counter);
+
 #endif //ANDROID_IROBOT_FPS_COUNTER_HPP

@@ -10,8 +10,11 @@
 extern "C" {
 #endif
 
-#include <cstdint>
+#include <unistd.h>
 #include <libavformat/avformat.h>
+#include <SDL2/SDL_events.h>
+#include <SDL2/SDL_mutex.h>
+#include <SDL2/SDL_thread.h>
 #include <SDL2/SDL_atomic.h>
 #include <SDL2/SDL_thread.h>
 
@@ -19,6 +22,8 @@ extern "C" {
 }
 #endif
 
+#include <cassert>
+#include <cstdint>
 #include "config.hpp"
 #include "util/net.hpp"
 #include "video/decoder.hpp"

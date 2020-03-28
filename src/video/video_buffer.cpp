@@ -5,20 +5,7 @@
 
 #include "video_buffer.hpp"
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <cassert>
-#include <SDL2/SDL_mutex.h>
-#include <libavutil/avutil.h>
-#include <libavformat/avformat.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
-
 #include "util/lock.hpp"
 
 

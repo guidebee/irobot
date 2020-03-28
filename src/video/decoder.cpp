@@ -5,9 +5,6 @@
 
 #include "decoder.hpp"
 
-#include <libavformat/avformat.h>
-#include <SDL2/SDL_events.h>
-
 #include "compat.hpp"
 #include "ui/events.hpp"
 #include "video/video_buffer.hpp"
@@ -42,7 +39,7 @@ decoder_open(struct decoder *decoder, const AVCodec *codec) {
         return false;
     }
 
-    if (avcodec_open2(decoder->codec_ctx, codec, NULL) < 0) {
+    if (avcodec_open2(decoder->codec_ctx, codec, nullptr) < 0) {
         LOGE("Could not open codec");
         avcodec_free_context(&decoder->codec_ctx);
         return false;

@@ -5,7 +5,6 @@
 
 #include "fps_counter.hpp"
 #include <cassert>
-#include <SDL2/SDL_timer.h>
 
 #include "util/lock.hpp"
 #include "util/log.hpp"
@@ -25,7 +24,7 @@ fps_counter_init(struct fps_counter *counter) {
         return false;
     }
 
-    counter->thread = NULL;
+    counter->thread = nullptr;
     SDL_AtomicSet(&counter->started, 0);
     // no need to initialize the other fields, they are unused until started
 
@@ -69,7 +68,7 @@ check_interval_expired(struct fps_counter *counter, uint32_t now) {
 
 static int
 run_fps_counter(void *data) {
-    struct fps_counter *counter = (struct fps_counter *) data;
+    auto *counter = (struct fps_counter *) data;
 
     mutex_lock(counter->mutex);
     while (!counter->interrupted) {
@@ -142,7 +141,7 @@ fps_counter_interrupt(struct fps_counter *counter) {
 void
 fps_counter_join(struct fps_counter *counter) {
     if (counter->thread) {
-        SDL_WaitThread(counter->thread, NULL);
+        SDL_WaitThread(counter->thread, nullptr);
     }
 }
 

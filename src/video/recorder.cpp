@@ -5,16 +5,7 @@
 
 #include "recorder.hpp"
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-#include <assert.h>
-#include <libavutil/time.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
+#include <cassert>
 #include "config.hpp"
 #include "compat.hpp"
 #include "util/lock.hpp"
@@ -25,9 +16,9 @@ static const AVRational SCRCPY_TIME_BASE = {1, 1000000}; // timestamps in us
 static const AVOutputFormat *
 find_muxer(const char *name) {
 #ifdef SCRCPY_LAVF_HAS_NEW_MUXER_ITERATOR_API
-    void *opaque = NULL;
+    void *opaque = nullptr;
 #endif
-    const AVOutputFormat *oformat = NULL;
+    const AVOutputFormat *oformat = nullptr;
     do {
 #ifdef SCRCPY_LAVF_HAS_NEW_MUXER_ITERATOR_API
         oformat = av_muxer_iterate(&opaque);
@@ -41,9 +32,9 @@ find_muxer(const char *name) {
 
 static struct record_packet *
 record_packet_new(const AVPacket *packet) {
-    struct record_packet *rec = (struct record_packet *)SDL_malloc(sizeof(*rec));
+    auto rec = (struct record_packet *) SDL_malloc(sizeof(struct record_packet));
     if (!rec) {
-        return NULL;
+        return nullptr;
     }
 
     // av_packet_ref() does not initialize all fields in old FFmpeg versions
@@ -52,7 +43,7 @@ record_packet_new(const AVPacket *packet) {
 
     if (av_packet_ref(&rec->packet, packet)) {
         SDL_free(rec);
-        return NULL;
+        return nullptr;
     }
     return rec;
 }
@@ -104,7 +95,7 @@ recorder_init(struct recorder *recorder,
     recorder->format = format;
     recorder->declared_frame_size = declared_frame_size;
     recorder->header_written = false;
-    recorder->previous = NULL;
+    recorder->previous = nullptr;
 
     return true;
 }
@@ -124,7 +115,7 @@ recorder_get_format_name(enum recorder_format format) {
         case RECORDER_FORMAT_MKV:
             return "matroska";
         default:
-            return NULL;
+            return nullptr;
     }
 }
 
@@ -152,7 +143,7 @@ recorder_open(struct recorder *recorder, const AVCodec *input_codec) {
 
     av_dict_set(&recorder->ctx->metadata, "comment",
                 "Recorded by scrcpy "
-    SCRCPY_VERSION, 0);
+                SCRCPY_VERSION, 0);
 
     AVStream *ostream = avformat_new_stream(recorder->ctx, input_codec);
     if (!ostream) {
@@ -215,7 +206,7 @@ static bool
 recorder_write_header(struct recorder *recorder, const AVPacket *packet) {
     AVStream *ostream = recorder->ctx->streams[0];
 
-    uint8_t *extradata = static_cast<uint8_t *>(av_malloc(packet->size * sizeof(uint8_t)));
+    auto *extradata = static_cast<uint8_t *>(av_malloc(packet->size * sizeof(uint8_t)));
     if (!extradata) {
         LOGC("Could not allocate extradata");
         return false;
@@ -232,7 +223,7 @@ recorder_write_header(struct recorder *recorder, const AVPacket *packet) {
     ostream->codec->extradata_size = packet->size;
 #endif
 
-    int ret = avformat_write_header(recorder->ctx, NULL);
+    int ret = avformat_write_header(recorder->ctx, nullptr);
     if (ret < 0) {
         LOGE("Failed to write header to %s", recorder->filename);
         return false;
@@ -273,7 +264,7 @@ recorder_write(struct recorder *recorder, AVPacket *packet) {
 
 static int
 run_recorder(void *data) {
-    struct recorder *recorder = static_cast<struct recorder *>(data);
+    auto *recorder = static_cast<struct recorder *>(data);
 
     for (;;) {
         mutex_lock(recorder->mutex);
@@ -367,7 +358,7 @@ recorder_stop(struct recorder *recorder) {
 
 void
 recorder_join(struct recorder *recorder) {
-    SDL_WaitThread(recorder->thread, NULL);
+    SDL_WaitThread(recorder->thread, nullptr);
 }
 
 bool
