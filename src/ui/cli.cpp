@@ -318,16 +318,16 @@ parse_port(const char *s, uint16_t *port) {
 }
 
 static bool
-parse_record_format(const char *optarg, enum recorder_format *format) {
-    if (!strcmp(optarg, "mp4")) {
+parse_record_format(const char *opt_arg, enum recorder_format *format) {
+    if (!strcmp(opt_arg, "mp4")) {
         *format = RECORDER_FORMAT_MP4;
         return true;
     }
-    if (!strcmp(optarg, "mkv")) {
+    if (!strcmp(opt_arg, "mkv")) {
         *format = RECORDER_FORMAT_MKV;
         return true;
     }
-    LOGE("Unsupported format: %s (expected mp4 or mkv)", optarg);
+    LOGE("Unsupported format: %s (expected mp4 or mkv)", opt_arg);
     return false;
 }
 
@@ -366,36 +366,36 @@ guess_record_format(const char *filename) {
 bool
 scrcpy_parse_args(struct scrcpy_cli_args *args, int argc, char *argv[]) {
     static const struct option long_options[] = {
-            {"always-on-top",         no_argument,       NULL, OPT_ALWAYS_ON_TOP},
-            {"bit-rate",              required_argument, NULL, 'b'},
-            {"crop",                  required_argument, NULL, OPT_CROP},
-            {"fullscreen",            no_argument,       NULL, 'f'},
-            {"help",                  no_argument,       NULL, 'h'},
-            {"max-fps",               required_argument, NULL, OPT_MAX_FPS},
-            {"max-size",              required_argument, NULL, 'm'},
-            {"no-control",            no_argument,       NULL, 'n'},
-            {"no-display",            no_argument,       NULL, 'N'},
-            {"port",                  required_argument, NULL, 'p'},
-            {"push-target",           required_argument, NULL, OPT_PUSH_TARGET},
-            {"record",                required_argument, NULL, 'r'},
-            {"record-format",         required_argument, NULL, OPT_RECORD_FORMAT},
-            {"render-expired-frames", no_argument,       NULL,
+            {"always-on-top",         no_argument,       nullptr, OPT_ALWAYS_ON_TOP},
+            {"bit-rate",              required_argument, nullptr, 'b'},
+            {"crop",                  required_argument, nullptr, OPT_CROP},
+            {"fullscreen",            no_argument,       nullptr, 'f'},
+            {"help",                  no_argument,       nullptr, 'h'},
+            {"max-fps",               required_argument, nullptr, OPT_MAX_FPS},
+            {"max-size",              required_argument, nullptr, 'm'},
+            {"no-control",            no_argument,       nullptr, 'n'},
+            {"no-display",            no_argument,       nullptr, 'N'},
+            {"port",                  required_argument, nullptr, 'p'},
+            {"push-target",           required_argument, nullptr, OPT_PUSH_TARGET},
+            {"record",                required_argument, nullptr, 'r'},
+            {"record-format",         required_argument, nullptr, OPT_RECORD_FORMAT},
+            {"render-expired-frames", no_argument,       nullptr,
                                                                OPT_RENDER_EXPIRED_FRAMES},
-            {"serial",                required_argument, NULL, 's'},
-            {"show-touches",          no_argument,       NULL, 't'},
-            {"turn-screen-off",       no_argument,       NULL, 'S'},
-            {"prefer-text",           no_argument,       NULL, OPT_PREFER_TEXT},
-            {"version",               no_argument,       NULL, 'v'},
-            {"window-title",          required_argument, NULL, OPT_WINDOW_TITLE},
-            {"window-x",              required_argument, NULL, OPT_WINDOW_X},
-            {"window-y",              required_argument, NULL, OPT_WINDOW_Y},
-            {"window-width",          required_argument, NULL, OPT_WINDOW_WIDTH},
-            {"window-height",         required_argument, NULL, OPT_WINDOW_HEIGHT},
-            {"screen-width",          required_argument, NULL, OPT_SCREEN_WIDTH},
-            {"screen-height",         required_argument, NULL, OPT_SCREEN_HEIGHT},
-            {"window-borderless",     no_argument,       NULL,
+            {"serial",                required_argument, nullptr, 's'},
+            {"show-touches",          no_argument,       nullptr, 't'},
+            {"turn-screen-off",       no_argument,       nullptr, 'S'},
+            {"prefer-text",           no_argument,       nullptr, OPT_PREFER_TEXT},
+            {"version",               no_argument,       nullptr, 'v'},
+            {"window-title",          required_argument, nullptr, OPT_WINDOW_TITLE},
+            {"window-x",              required_argument, nullptr, OPT_WINDOW_X},
+            {"window-y",              required_argument, nullptr, OPT_WINDOW_Y},
+            {"window-width",          required_argument, nullptr, OPT_WINDOW_WIDTH},
+            {"window-height",         required_argument, nullptr, OPT_WINDOW_HEIGHT},
+            {"screen-width",          required_argument, nullptr, OPT_SCREEN_WIDTH},
+            {"screen-height",         required_argument, nullptr, OPT_SCREEN_HEIGHT},
+            {"window-borderless",     no_argument,       nullptr,
                                                                OPT_WINDOW_BORDERLESS},
-            {NULL, 0,                                    NULL, 0},
+            {nullptr, 0,                                    nullptr, 0},
     };
 
     struct scrcpy_options *opts = &args->opts;
@@ -404,7 +404,7 @@ scrcpy_parse_args(struct scrcpy_cli_args *args, int argc, char *argv[]) {
 
     int c;
     while ((c = getopt_long(argc, argv, "b:c:fF:hm:nNp:r:s:StTv", long_options,
-                            NULL)) != -1) {
+                            nullptr)) != -1) {
         switch (c) {
             case 'b':
                 if (!parse_bit_rate(optarg, &opts->bit_rate)) {
