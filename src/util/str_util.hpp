@@ -21,7 +21,7 @@ size_t
 xstrncpy(char *dest, const char *src, size_t n);
 
 // join tokens by sep into dst
-// returns the number of chars actually written (max n-1) if no trucation
+// returns the number of chars actually written (max n-1) if no truncation
 // occurred, or n if truncated
 size_t
 xstrjoin(char *dst, const char *const tokens[], char sep, size_t n);
@@ -47,7 +47,8 @@ parse_integer_with_suffix(const char *s, long *out);
 size_t
 utf8_truncation_index(const char *utf8, size_t max_len);
 
-char *str_replace(char *orig, char *rep, char *with);
+char *
+str_replace(char *orig, char *rep, char *with);
 
 #ifdef _WIN32
 // convert a UTF-8 string to a wchar_t string

@@ -7,6 +7,7 @@ SET(TEST_SOURCE ${COMMON_SOURCES}
         all_tests.cpp
         test_buffer_util.cpp
         test_cbuf.cpp
+        test_strutil.cpp
         test_queue.cpp)
 add_executable(all_tests ${TEST_SOURCE})
 

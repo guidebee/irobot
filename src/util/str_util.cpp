@@ -56,7 +56,7 @@ strquote(const char *src) {
     size_t len = strlen(src);
     char *quoted = (char *) SDL_malloc(len + 3);
     if (!quoted) {
-        return NULL;
+        return nullptr;
     }
     memcpy(&quoted[1], src, len);
     quoted[0] = '"';
@@ -147,12 +147,12 @@ char *str_replace(char *orig, char *rep, char *with) {
 
     // sanity checks and initialization
     if (!orig || !rep)
-        return NULL;
+        return nullptr;
     len_rep = strlen(rep);
     if (len_rep == 0)
-        return NULL; // empty rep causes infinite loop during count
+        return nullptr; // empty rep causes infinite loop during count
     if (!with)
-        with = "";
+        with = const_cast<char *>("");
     len_with = strlen(with);
 
     // count the number of replacements needed
@@ -161,10 +161,10 @@ char *str_replace(char *orig, char *rep, char *with) {
         ins = tmp + len_rep;
     }
 
-    tmp = result = (char *) malloc(strlen(orig) + (len_with - len_rep) * count + 1);
+    tmp = result = reinterpret_cast<char *>(malloc(strlen(orig) + (len_with - len_rep) * count + 1));
 
     if (!result)
-        return NULL;
+        return nullptr;
 
     // first time through the loop, all the variable are set correctly
     // from here on,
