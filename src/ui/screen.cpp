@@ -9,8 +9,7 @@
 #include "config.hpp"
 #include "common.hpp"
 #include "compat.hpp"
-#include "icon.xpm"
-#include "tiny_xpm.hpp"
+
 #include "video/video_buffer.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"
@@ -222,13 +221,6 @@ screen_init_rendering(struct screen *screen, const char *window_title,
         return false;
     }
 
-    SDL_Surface *icon = read_xpm(icon_xpm);
-    if (icon) {
-        SDL_SetWindowIcon(screen->window, icon);
-        SDL_FreeSurface(icon);
-    } else {
-        LOGW("Could not load icon");
-    }
 
     LOGI("Initial texture: %"
                  PRIu16

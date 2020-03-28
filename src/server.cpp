@@ -268,7 +268,7 @@ server_start(struct server *server, const char *serial,
     server->agent_control_server_socket = listen_on_port(params->local_port + 1);
     if (server->agent_control_server_socket == INVALID_SOCKET) {
         LOGE("Could not listen on agent control port %"
-             PRIu16, params->local_port + 1);
+             PRIu16, static_cast<unsigned short>(params->local_port + 1));
         disable_tunnel(server);
         SDL_free(server->serial);
         return false;
@@ -279,7 +279,7 @@ server_start(struct server *server, const char *serial,
     server->agent_data_server_socket = listen_on_port(params->local_port + 2);
     if (server->agent_data_server_socket == INVALID_SOCKET) {
         LOGE("Could not listen on agent data port %"
-             PRIu16, params->local_port + 2);
+             PRIu16, static_cast<unsigned short>(params->local_port + 2));
         disable_tunnel(server);
         SDL_free(server->serial);
         return false;
