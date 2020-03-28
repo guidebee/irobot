@@ -78,19 +78,21 @@ TEST_CASE("serialize inject touch event", "[message][control_msg]") {
             .type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT,
             .inject_touch_event = {
                     .action = AMOTION_EVENT_ACTION_DOWN,
+                    .buttons = AMOTION_EVENT_BUTTON_PRIMARY,
                     .pointer_id = 0x1234567887654321L,
                     .position = {
-                            .point = {
-                                    .x = 100,
-                                    .y = 200,
-                            },
                             .screen_size = {
                                     .width = 1080,
                                     .height = 1920,
                             },
+                            .point = {
+                                    .x = 100,
+                                    .y = 200,
+                            },
+
                     },
                     .pressure = 1.0f,
-                    .buttons = AMOTION_EVENT_BUTTON_PRIMARY,
+            
             },
     };
 
@@ -115,14 +117,15 @@ TEST_CASE("serialize inject scroll event", "[message][control_msg]") {
             .type = CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT,
             .inject_scroll_event = {
                     .position = {
-                            .point = {
-                                    .x = 260,
-                                    .y = 1026,
-                            },
                             .screen_size = {
                                     .width = 1080,
                                     .height = 1920,
                             },
+                            .point = {
+                                    .x = 260,
+                                    .y = 1026,
+                            },
+
                     },
                     .hscroll = 1,
                     .vscroll = -1,
@@ -274,4 +277,5 @@ TEST_CASE("deserialize clipboard", "[message][control_msg]") {
 
     device_msg_destroy(&msg);
 }
+
 
