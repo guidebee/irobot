@@ -41,17 +41,17 @@ SDL_Surface *
 read_xpm(char *xpm[]) {
 #ifndef NDEBUG
     // patch the XPM to change the icon color in debug mode
-    xpm[2] = ".	c #CC00CC";
+    xpm[2] = const_cast<char *>(".	c #CC00CC");
 #endif
 
     char *endptr;
     // *** No error handling, assume the XPM source is valid ***
     // (it's in our source repo)
     // Assertions are only checked in debug
-    int width = strtol(xpm[0], &endptr, 10);
-    int height = strtol(endptr + 1, &endptr, 10);
-    int colors = strtol(endptr + 1, &endptr, 10);
-    int chars = strtol(endptr + 1, &endptr, 10);
+    int width = static_cast<int>(strtol(xpm[0], &endptr, 10));
+    int height = static_cast<int>(strtol(endptr + 1, &endptr, 10));
+    int colors = static_cast<int>(strtol(endptr + 1, &endptr, 10));
+    int chars = static_cast<int>(strtol(endptr + 1, &endptr, 10));
 
     // sanity checks
     assert(0 <= width && width < 256);
@@ -79,10 +79,10 @@ read_xpm(char *xpm[]) {
     }
 
     // parse image
-    uint32_t *pixels = (uint32_t *) SDL_malloc(4 * width * height);
+    auto *pixels = (uint32_t *) SDL_malloc(4 * width * height);
     if (!pixels) {
         LOGE("Could not allocate icon memory");
-        return NULL;
+        return nullptr;
     }
     for (int y = 0; y < height; ++y) {
         const char *line = xpm[1 + colors + y];
@@ -114,7 +114,7 @@ read_xpm(char *xpm[]) {
                                                     rmask, gmask, bmask, amask);
     if (!surface) {
         LOGE("Could not create icon surface");
-        return NULL;
+        return nullptr;
     }
     // make the surface own the raw pixels
     surface->flags &= ~SDL_PREALLOC;

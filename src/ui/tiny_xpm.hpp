@@ -6,7 +6,16 @@
 #ifndef ANDROID_IROBOT_TINY_XPM_HPP
 #define ANDROID_IROBOT_TINY_XPM_HPP
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
 #include <SDL2/SDL.h>
+
+#if defined (__cplusplus)
+}
+#endif
+
 #include "config.hpp"
 
 SDL_Surface *

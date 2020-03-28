@@ -2,9 +2,9 @@
 // Created by James Shen on 25/3/20.
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
+#pragma ide diagnostic ignored "hicpp-signed-bitwise"
 
 #include "event_converter.hpp"
-
 
 #define MAP(FROM, TO) case FROM: *to = TO; return true
 #define FAIL default: return false
@@ -42,7 +42,7 @@ autocomplete_metastate(enum android_metastate metastate) {
 
 enum android_metastate
 convert_meta_state(SDL_Keymod mod) {
-    enum android_metastate metastate = static_cast<android_metastate>(0);
+    auto metastate = static_cast<android_metastate>(0);
     if (mod & KMOD_LSHIFT) {
         metastate = static_cast<android_metastate>(metastate | AMETA_SHIFT_LEFT_ON);
     }
@@ -108,6 +108,7 @@ convert_keycode(SDL_Keycode from, enum android_keycode *to, uint16_t mod,
         MAP(SDLK_LEFT, AKEYCODE_DPAD_LEFT);
         MAP(SDLK_DOWN, AKEYCODE_DPAD_DOWN);
         MAP(SDLK_UP, AKEYCODE_DPAD_UP);
+
     }
 
     if (prefer_text) {
@@ -153,7 +154,7 @@ convert_keycode(SDL_Keycode from, enum android_keycode *to, uint16_t mod,
 
 enum android_motionevent_buttons
 convert_mouse_buttons(uint32_t state) {
-    enum android_motionevent_buttons buttons = static_cast<android_motionevent_buttons>(0);
+    auto buttons = static_cast<android_motionevent_buttons>(0);
     if (state & SDL_BUTTON_LMASK) {
         buttons = static_cast<android_motionevent_buttons>(buttons | AMOTION_EVENT_BUTTON_PRIMARY);
     }
@@ -194,3 +195,4 @@ convert_touch_action(SDL_EventType from, enum android_motionevent_action *to) {
         FAIL;
     }
 }
+

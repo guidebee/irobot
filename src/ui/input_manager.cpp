@@ -2,7 +2,7 @@
 // Created by James Shen on 25/3/20.
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
-
+#pragma ide diagnostic ignored "hicpp-signed-bitwise"
 #include "input_manager.hpp"
 
 #include <cassert>
@@ -22,8 +22,8 @@ convert_to_renderer_coordinates(SDL_Renderer *renderer, int *x, int *y) {
     float scale_x, scale_y;
     SDL_RenderGetViewport(renderer, &viewport);
     SDL_RenderGetScale(renderer, &scale_x, &scale_y);
-    *x = (int) (*x / scale_x) - viewport.x;
-    *y = (int) (*y / scale_y) - viewport.y;
+    *x = (int) (static_cast<float>(*x) / scale_x) - viewport.x;
+    *y = (int) (static_cast<float>(*y) / scale_y) - viewport.y;
 }
 
 static struct point
@@ -45,7 +45,7 @@ static void
 send_keycode(struct controller *controller, enum android_keycode keycode,
              int actions, const char *name) {
     // send DOWN event
-    struct control_msg msg;
+    struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_INJECT_KEYCODE;
     msg.inject_keycode.keycode = keycode;
     msg.inject_keycode.metastate = static_cast<android_metastate>(0);
@@ -104,7 +104,7 @@ action_menu(struct controller *controller, int actions) {
 // turn the screen on if it was off, press BACK otherwise
 static void
 press_back_or_turn_screen_on(struct controller *controller) {
-    struct control_msg msg;
+    struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON;
 
     if (!controller_push_msg(controller, &msg)) {
@@ -114,7 +114,7 @@ press_back_or_turn_screen_on(struct controller *controller) {
 
 static void
 expand_notification_panel(struct controller *controller) {
-    struct control_msg msg;
+    struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL;
 
     if (!controller_push_msg(controller, &msg)) {
@@ -124,7 +124,7 @@ expand_notification_panel(struct controller *controller) {
 
 static void
 collapse_notification_panel(struct controller *controller) {
-    struct control_msg msg;
+    struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL;
 
     if (!controller_push_msg(controller, &msg)) {
@@ -134,7 +134,7 @@ collapse_notification_panel(struct controller *controller) {
 
 static void
 request_device_clipboard(struct controller *controller) {
-    struct control_msg msg;
+    struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_GET_CLIPBOARD;
 
     if (!controller_push_msg(controller, &msg)) {
@@ -155,7 +155,7 @@ set_device_clipboard(struct controller *controller) {
         return;
     }
 
-    struct control_msg msg;
+    struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_SET_CLIPBOARD;
     msg.set_clipboard.text = text;
 
@@ -168,7 +168,7 @@ set_device_clipboard(struct controller *controller) {
 static void
 set_screen_power_mode(struct controller *controller,
                       enum screen_power_mode mode) {
-    struct control_msg msg;
+    struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
     msg.set_screen_power_mode.mode = mode;
 
@@ -206,7 +206,7 @@ clipboard_paste(struct controller *controller) {
         return;
     }
 
-    struct control_msg msg;
+    struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_INJECT_TEXT;
     msg.inject_text.text = text;
     if (!controller_push_msg(controller, &msg)) {
@@ -217,7 +217,7 @@ clipboard_paste(struct controller *controller) {
 
 static void
 rotate_device(struct controller *controller) {
-    struct control_msg msg;
+    struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_ROTATE_DEVICE;
 
     if (!controller_push_msg(controller, &msg)) {
@@ -237,7 +237,7 @@ input_manager_process_text_input(struct input_manager *im,
         }
     }
 
-    struct control_msg msg;
+    struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_INJECT_TEXT;
     msg.inject_text.text = SDL_strdup(event->text);
     if (!msg.inject_text.text) {
@@ -433,7 +433,7 @@ input_manager_process_key(struct input_manager *im,
         return;
     }
 
-    struct control_msg msg;
+    struct control_msg msg{};
     if (convert_input_key(event, &msg, im->prefer_text)) {
         if (!controller_push_msg(controller, &msg)) {
             LOGW("Could not request 'inject keycode'");
@@ -467,7 +467,7 @@ input_manager_process_mouse_motion(struct input_manager *im,
         // simulated from touch events, so it's a duplicate
         return;
     }
-    struct control_msg msg;
+    struct control_msg msg{};
     if (convert_mouse_motion(event, im->screen, &msg)) {
         if (!controller_push_msg(im->controller, &msg)) {
             LOGW("Could not request 'inject mouse motion event'");
@@ -499,7 +499,7 @@ convert_touch(const SDL_TouchFingerEvent *from, struct screen *screen,
 void
 input_manager_process_touch(struct input_manager *im,
                             const SDL_TouchFingerEvent *event) {
-    struct control_msg msg;
+    struct control_msg msg{};
     if (convert_touch(event, im->screen, &msg)) {
         if (!controller_push_msg(im->controller, &msg)) {
             LOGW("Could not request 'inject touch event'");
@@ -566,7 +566,7 @@ input_manager_process_mouse_button(struct input_manager *im,
         return;
     }
 
-    struct control_msg msg;
+    struct control_msg msg{};
     if (convert_mouse_button(event, im->screen, &msg)) {
         if (!controller_push_msg(im->controller, &msg)) {
             LOGW("Could not request 'inject mouse button event'");
@@ -594,7 +594,7 @@ convert_mouse_wheel(const SDL_MouseWheelEvent *from, struct screen *screen,
 void
 input_manager_process_mouse_wheel(struct input_manager *im,
                                   const SDL_MouseWheelEvent *event) {
-    struct control_msg msg;
+    struct control_msg msg{};
     if (convert_mouse_wheel(event, im->screen, &msg)) {
         if (!controller_push_msg(im->controller, &msg)) {
             LOGW("Could not request 'inject mouse wheel event'");

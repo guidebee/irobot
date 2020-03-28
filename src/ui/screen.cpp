@@ -6,10 +6,6 @@
 #include "screen.hpp"
 
 #include <cassert>
-#include <SDL2/SDL.h>
-#include <libavformat/avformat.h>
-#include <libswscale/swscale.h>
-
 #include "config.hpp"
 #include "common.hpp"
 #include "compat.hpp"
@@ -29,7 +25,7 @@ get_window_size(SDL_Window *window) {
     int height;
     SDL_GetWindowSize(window, &width, &height);
 
-    struct size size;
+    struct size size{};
     size.width = width;
     size.height = height;
     return size;
@@ -93,7 +89,7 @@ get_optimal_size(struct size current_size, struct size frame_size) {
         return current_size;
     }
 
-    struct size display_size;
+    struct size display_size{};
     // 32 bits because we need to multiply two 16 bits values
     uint32_t w;
     uint32_t h;
@@ -134,7 +130,7 @@ get_optimal_window_size(const struct screen *screen, struct size frame_size) {
 static inline struct size
 get_initial_optimal_size(struct size frame_size, uint16_t req_width,
                          uint16_t req_height) {
-    struct size window_size;
+    struct size window_size{};
     if (!req_width && !req_height) {
         window_size = get_optimal_size(frame_size, frame_size);
     } else {
@@ -313,19 +309,12 @@ prepare_for_frame(struct screen *screen, struct size new_frame_size) {
 // write the frame into the texture
 static void
 update_texture(struct screen *screen, const AVFrame *frame) {
-    SDL_UpdateYUVTexture(screen->texture, NULL,
+    SDL_UpdateYUVTexture(screen->texture, nullptr,
                          frame->data[0], frame->linesize[0],
                          frame->data[1], frame->linesize[1],
                          frame->data[2], frame->linesize[2]);
 
     screen_saveframe(screen, (AVFrame *) frame);
-
-    AVCodecContext *pCodecCtxOrig = screen->stream.codec_ctx;
-
-
-
-//    write_frame_to_file(frame,screen->stream.codec_ctx);
-
 }
 
 bool
@@ -349,7 +338,7 @@ void save_texture(struct screen *screen, SDL_Renderer *renderer, SDL_Texture *te
     SDL_Texture *target = SDL_GetRenderTarget(renderer);
     SDL_SetRenderTarget(renderer, texture);
     int width, height, format;
-    SDL_QueryTexture(texture, reinterpret_cast<Uint32 *>(&format), NULL, &width, &height);
+    SDL_QueryTexture(texture, reinterpret_cast<Uint32 *>(&format), nullptr, &width, &height);
     bool is_portrait = height > width;
     uint16_t screen_width = screen->device_screen_size.width;
     uint16_t screen_height = screen->device_screen_size.height;
@@ -364,7 +353,7 @@ void save_texture(struct screen *screen, SDL_Renderer *renderer, SDL_Texture *te
          screen_height);
     SDL_Surface *surface = SDL_CreateRGBSurface(0, screen_width,
                                                 screen_height, 32, 0, 0, 0, 0);
-    SDL_RenderReadPixels(renderer, NULL, surface->format->format, surface->pixels, surface->pitch);
+    SDL_RenderReadPixels(renderer, nullptr, surface->format->format, surface->pixels, surface->pitch);
 
     SDL_SaveBMP(surface, file_name);
     SDL_FreeSurface(surface);
@@ -376,7 +365,7 @@ void
 screen_render(struct screen *screen) {
 
     SDL_RenderClear(screen->renderer);
-    SDL_RenderCopy(screen->renderer, screen->texture, NULL, NULL);
+    SDL_RenderCopy(screen->renderer, screen->texture, nullptr, nullptr);
     SDL_RenderPresent(screen->renderer);
 
 
@@ -486,7 +475,7 @@ void SaveFrame(AVFrame *pFrame, int width, int height, int iFrame) {
     // Open file
     sprintf(szFilename, "frame%d.ppm", iFrame);
     pFile = fopen(szFilename, "wb");
-    if (pFile == NULL)
+    if (pFile == nullptr)
         return;
 
     // Write header
@@ -501,25 +490,25 @@ void SaveFrame(AVFrame *pFrame, int width, int height, int iFrame) {
 }
 
 void screen_saveframe(struct screen *screen, AVFrame *pFrame) {
-    AVCodecContext *pCodecCtxOrig = NULL;
-    AVCodecContext *pCodecCtx = NULL;
-    AVCodec *pCodec = NULL;
+    AVCodecContext *pCodecCtxOrig = nullptr;
+    AVCodecContext *pCodecCtx = nullptr;
+    AVCodec *pCodec = nullptr;
 
     SDL_Texture *texture;
 
-    AVFrame *pFrameRGB = NULL;
-    struct SwsContext *sws_ctx = NULL;
+    AVFrame *pFrameRGB = nullptr;
+    struct SwsContext *sws_ctx = nullptr;
 
     int numBytes;
-    uint8_t *buffer = NULL;
+    uint8_t *buffer = nullptr;
 
     pCodecCtxOrig = screen->stream.codec_ctx;
     pCodec = screen->stream.codec;
     texture = screen->texture;
     int width, height, format;
-    SDL_QueryTexture(texture, (Uint32 *) (&format), NULL, &width, &height);
+    SDL_QueryTexture(texture, (Uint32 *) (&format), nullptr, &width, &height);
 
-    if (pCodec == NULL) {
+    if (pCodec == nullptr) {
         fprintf(stderr, "Unsupported codec!\n");
         return;
     }
@@ -538,11 +527,11 @@ void screen_saveframe(struct screen *screen, AVFrame *pFrame) {
     pCodecCtx->coded_width = width;
 
     // Open codec
-    if (avcodec_open2(pCodecCtx, pCodec, NULL) < 0)
+    if (avcodec_open2(pCodecCtx, pCodec, nullptr) < 0)
         return; // Could not open codec
 
     pFrameRGB = av_frame_alloc();
-    if (pFrameRGB == NULL)
+    if (pFrameRGB == nullptr)
         return;
 
     // Determine required buffer size and allocate buffer
@@ -564,12 +553,12 @@ void screen_saveframe(struct screen *screen, AVFrame *pFrame) {
                              pCodecCtx->height,
                              AV_PIX_FMT_RGB24,
                              SWS_BILINEAR,
-                             NULL,
-                             NULL,
-                             NULL
+                             nullptr,
+                             nullptr,
+                             nullptr
     );
 
-    if (sws_ctx == NULL) return;
+    if (sws_ctx == nullptr) return;
     sws_scale(sws_ctx, (uint8_t const *const *) pFrame->data,
               pFrame->linesize, 0, pCodecCtx->height,
               pFrameRGB->data, pFrameRGB->linesize);
