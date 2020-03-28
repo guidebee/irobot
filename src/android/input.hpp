@@ -1,8 +1,12 @@
+
 //
 // Created by James Shen on 25/3/20.
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
+#pragma ide diagnostic ignored "hicpp-signed-bitwise"
+#pragma ide diagnostic ignored "OCUnusedMacroInspection"
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 #ifndef ANDROID_IROBOT_INPUT_HPP
 #define ANDROID_IROBOT_INPUT_HPP
 
@@ -811,3 +815,5 @@ enum android_motion_range {
 
 
 #endif //ANDROID_IROBOT_INPUT_HPP
+
+

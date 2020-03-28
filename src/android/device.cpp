@@ -19,9 +19,9 @@ device_read_info(socket_t device_socket, char *device_name, struct size *size) {
     // strcpy is safe here, since name contains at least
     // DEVICE_NAME_FIELD_LENGTH bytes and strlen(buf) < DEVICE_NAME_FIELD_LENGTH
     strcpy(device_name, (char *) buf);
-    size->width = (buf[DEVICE_NAME_FIELD_LENGTH] << 8)
+    size->width = (static_cast<unsigned  char>(buf[DEVICE_NAME_FIELD_LENGTH] << 8))
                   | buf[DEVICE_NAME_FIELD_LENGTH + 1];
-    size->height = (buf[DEVICE_NAME_FIELD_LENGTH + 2] << 8)
+    size->height = (static_cast<unsigned  char>(buf[DEVICE_NAME_FIELD_LENGTH + 2] << 8))
                    | buf[DEVICE_NAME_FIELD_LENGTH + 3];
     return true;
 }

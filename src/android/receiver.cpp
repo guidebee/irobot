@@ -5,9 +5,16 @@
 
 #include "receiver.hpp"
 
-#include <cassert>
+#if defined (__cplusplus)
+extern "C" {
+#endif
 #include <SDL2/SDL_clipboard.h>
 
+#if defined (__cplusplus)
+}
+#endif
+
+#include <cassert>
 #include "message/device_msg.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"

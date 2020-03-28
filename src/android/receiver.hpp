@@ -6,8 +6,17 @@
 #ifndef ANDROID_IROBOT_RECEIVER_HPP
 #define ANDROID_IROBOT_RECEIVER_HPP
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
 #include <SDL2/SDL_mutex.h>
 #include <SDL2/SDL_thread.h>
+
+#if defined (__cplusplus)
+}
+#endif
+
 
 #include "config.hpp"
 #include "util/net.hpp"

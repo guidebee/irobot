@@ -10,7 +10,6 @@
 extern "C" {
 #endif
 
-
 #include <SDL2/SDL_platform.h>
 
 #ifdef __WINDOWS__

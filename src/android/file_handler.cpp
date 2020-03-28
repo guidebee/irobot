@@ -42,7 +42,7 @@ file_handler_init(struct file_handler *file_handler, const char *serial,
             return false;
         }
     } else {
-        file_handler->serial = NULL;
+        file_handler->serial = nullptr;
     }
 
     // lazy initialization
@@ -62,7 +62,7 @@ file_handler_destroy(struct file_handler *file_handler) {
     SDL_DestroyMutex(file_handler->mutex);
     SDL_free(file_handler->serial);
 
-    struct file_handler_request req;
+    struct file_handler_request req{};
     while (cbuf_take(&file_handler->queue, &req)) {
         file_handler_request_destroy(&req);
     }
@@ -108,7 +108,7 @@ file_handler_request(struct file_handler *file_handler,
 
 static int
 run_file_handler(void *data) {
-    struct file_handler *file_handler = (struct file_handler *) data;
+    auto *file_handler = (struct file_handler *) data;
 
     for (;;) {
         mutex_lock(file_handler->mutex);
@@ -121,7 +121,7 @@ run_file_handler(void *data) {
             mutex_unlock(file_handler->mutex);
             break;
         }
-        struct file_handler_request req;
+        struct file_handler_request req{};
         bool non_empty = cbuf_take(&file_handler->queue, &req);
         assert(non_empty);
         (void) non_empty;
@@ -182,7 +182,7 @@ file_handler_stop(struct file_handler *file_handler) {
         if (!cmd_terminate(file_handler->current_process)) {
             LOGW("Could not terminate install process");
         }
-        cmd_simple_wait(file_handler->current_process, NULL);
+        cmd_simple_wait(file_handler->current_process, nullptr);
         file_handler->current_process = PROCESS_NONE;
     }
     mutex_unlock(file_handler->mutex);
@@ -190,5 +190,5 @@ file_handler_stop(struct file_handler *file_handler) {
 
 void
 file_handler_join(struct file_handler *file_handler) {
-    SDL_WaitThread(file_handler->thread, NULL);
+    SDL_WaitThread(file_handler->thread, nullptr);
 }
