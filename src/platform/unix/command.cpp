@@ -7,9 +7,23 @@
 
 #include "command.hpp"
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <unistd.h>
+
+#if defined (__cplusplus)
+}
+#endif
+
 #include <cerrno>
 #include <csignal>
 #include <cstdlib>
+
+
 
 #include "util/log.hpp"
 

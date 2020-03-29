@@ -17,9 +17,11 @@ extern "C" {
 
 #ifdef __WINDOWS__
 # include <winsock2.h>
-#define SHUT_RD SD_RECEIVE
-#define SHUT_WR SD_SEND
+
+#ifndef SHUT_RDWR
 #define SHUT_RDWR SD_BOTH
+#endif
+
 typedef SOCKET socket_t;
 #else
 

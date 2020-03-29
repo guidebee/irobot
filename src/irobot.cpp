@@ -2,15 +2,6 @@
 // Created by James Shen on 22/3/20.
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
-#include <libavformat/avformat.h>
-
-#if defined (__cplusplus)
-}
-#endif
 
 #define SDL_MAIN_HANDLED // avoid link error on Linux Windows Subsystem
 #include "scrcpy.hpp"
