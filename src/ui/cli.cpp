@@ -5,21 +5,16 @@
 
 #include "cli.hpp"
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-#include <getopt.h>
-#include <unistd.h>
 
-#if defined (__cplusplus)
-}
-#endif
 
 #include <cstdint>
+
 #include "config.hpp"
-#include "video/recorder.hpp"
+
+
 #include "util/log.hpp"
 #include "util/str_util.hpp"
+#include "video/recorder.hpp"
 
 void
 scrcpy_print_usage(const char *arg0) {
@@ -212,7 +207,7 @@ scrcpy_print_usage(const char *arg0) {
             "\n",
             arg0,
             DEFAULT_BIT_RATE,
-            DEFAULT_MAX_SIZE, DEFAULT_MAX_SIZE ? "" : " (unlimited)",
+            DEFAULT_MAX_SIZE, " (unlimited)",
             DEFAULT_LOCAL_PORT);
 }
 
@@ -380,7 +375,7 @@ scrcpy_parse_args(struct scrcpy_cli_args *args, int argc, char *argv[]) {
             {"record",                required_argument, nullptr, 'r'},
             {"record-format",         required_argument, nullptr, OPT_RECORD_FORMAT},
             {"render-expired-frames", no_argument,       nullptr,
-                                                               OPT_RENDER_EXPIRED_FRAMES},
+                                                                  OPT_RENDER_EXPIRED_FRAMES},
             {"serial",                required_argument, nullptr, 's'},
             {"show-touches",          no_argument,       nullptr, 't'},
             {"turn-screen-off",       no_argument,       nullptr, 'S'},
@@ -394,8 +389,8 @@ scrcpy_parse_args(struct scrcpy_cli_args *args, int argc, char *argv[]) {
             {"screen-width",          required_argument, nullptr, OPT_SCREEN_WIDTH},
             {"screen-height",         required_argument, nullptr, OPT_SCREEN_HEIGHT},
             {"window-borderless",     no_argument,       nullptr,
-                                                               OPT_WINDOW_BORDERLESS},
-            {nullptr, 0,                                    nullptr, 0},
+                                                                  OPT_WINDOW_BORDERLESS},
+            {nullptr, 0,                                 nullptr, 0},
     };
 
     struct scrcpy_options *opts = &args->opts;

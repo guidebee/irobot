@@ -213,7 +213,6 @@ recorder_write_header(struct recorder *recorder, const AVPacket *packet) {
     ostream->codecpar->extradata_size = packet->size;
 
 
-
     int ret = avformat_write_header(recorder->ctx, nullptr);
     if (ret < 0) {
         LOGE("Failed to write header to %s", recorder->filename);

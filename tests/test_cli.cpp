@@ -49,17 +49,17 @@ TEST_CASE("options", "[ui][cli]") {
     char *argv[] = {
             const_cast<char *>("scrcpy"),
             const_cast<char *>("--always-on-top"),
-            const_cast<char *>("--bit-rate"),const_cast<char *>("5M"),
-            const_cast<char *>("--crop"),const_cast<char *>("100:200:300:400"),
+            const_cast<char *>("--bit-rate"), const_cast<char *>("5M"),
+            const_cast<char *>("--crop"), const_cast<char *>("100:200:300:400"),
             const_cast<char *>("--fullscreen"),
-            const_cast<char *>("--max-fps"),const_cast<char *>("30"),
+            const_cast<char *>("--max-fps"), const_cast<char *>("30"),
             const_cast<char *>("--max-size"), const_cast<char *>("1024"),
             // "--no-control" is not compatible with "--turn-screen-off"
             // "--no-display" is not compatible with "--fulscreen"
-            const_cast<char *>("--port"),const_cast<char *>("1234"),
+            const_cast<char *>("--port"), const_cast<char *>("1234"),
             const_cast<char *>("--push-target"), const_cast<char *>("/sdcard/Movies"),
             const_cast<char *>("--record"), const_cast<char *>("file"),
-            const_cast<char *>("--record-format"),const_cast<char *>("mkv"),
+            const_cast<char *>("--record-format"), const_cast<char *>("mkv"),
             const_cast<char *>("--render-expired-frames"),
             const_cast<char *>("--serial"), const_cast<char *>("0123456789abcdef"),
             const_cast<char *>("--show-touches"),
@@ -112,7 +112,8 @@ TEST_CASE("options2", "[ui][cli]") {
             const_cast<char *>("scrcpy"),
             const_cast<char *>("--no-control"),
             const_cast<char *>("--no-display"),
-            const_cast<char *>("--record"), const_cast<char *>("file.mp4"), // cannot enable --no-display without recording
+            const_cast<char *>("--record"),
+            const_cast<char *>("file.mp4"), // cannot enable --no-display without recording
     };
 
     bool ok = scrcpy_parse_args(&args, ARRAY_LEN(argv), argv);

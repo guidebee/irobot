@@ -9,21 +9,19 @@
 
 #include "command.hpp"
 #include "common.hpp"
-
 #include "controller.hpp"
-#include "video/decoder.hpp"
-#include "android/device.hpp"
-#include "ui/events.hpp"
-#include "android/file_handler.hpp"
-#include "video/fps_counter.hpp"
-#include "ui/input_manager.hpp"
-#include "video/recorder.hpp"
-#include "ui/screen.hpp"
 #include "server.hpp"
+
+#include "android/device.hpp"
+#include "android/file_handler.hpp"
+#include "ui/input_manager.hpp"
+#include "ui/screen.hpp"
+#include "ui/events.hpp"
+#include "video/decoder.hpp"
+#include "video/fps_counter.hpp"
+#include "video/recorder.hpp"
 #include "video/stream.hpp"
-
 #include "video/video_buffer.hpp"
-
 #include "util/log.hpp"
 #include "util/net.hpp"
 
@@ -64,19 +62,15 @@ sdl_init_and_configure(bool display) {
         LOGW("Could not enable bilinear filtering");
     }
 
-
     // Handle a click to gain focus as any other click
     if (!SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1")) {
         LOGW("Could not enable mouse focus clickthrough");
     }
 
-
-
     // Disable compositor bypassing on X11
     if (!SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0")) {
         LOGW("Could not disable X11 compositor bypass");
     }
-
 
     // Do not minimize on focus loss
     if (!SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0")) {
@@ -85,7 +79,6 @@ sdl_init_and_configure(bool display) {
 
     // Do not disable the screensaver when scrcpy is running
     SDL_EnableScreenSaver();
-
     return true;
 }
 
@@ -252,9 +245,9 @@ sdl_priority_from_av_level(int level) {
             return SDL_LOG_PRIORITY_WARN;
         case AV_LOG_INFO:
             return SDL_LOG_PRIORITY_INFO;
+        default:
+            return static_cast<SDL_LogPriority>(0);
     }
-    // do not forward others, which are too verbose
-    return static_cast<SDL_LogPriority>(0);
 }
 
 static void
@@ -278,7 +271,7 @@ av_log_callback(void *avcl, int level, const char *fmt, va_list vl) {
 
 bool
 scrcpy(const struct scrcpy_options *options) {
-    bool record = !!options->record_filename;
+    bool record = options->record_filename != nullptr;
     struct server_params params = {
             .crop = options->crop,
             .local_port = options->port,
@@ -292,20 +285,17 @@ scrcpy(const struct scrcpy_options *options) {
     }
 
     process_t proc_show_touches = PROCESS_NONE;
-    bool show_touches_waited;
+    bool show_touches_waited = false;
     if (options->show_touches) {
         LOGI("Enable show_touches");
         proc_show_touches = set_show_touches_enabled(options->serial, true);
         show_touches_waited = false;
     }
 
-    bool ret = false;
-
     bool fps_counter_initialized = false;
     bool video_buffer_initialized = false;
     bool file_handler_initialized = false;
     bool recorder_initialized = false;
-    bool stream_started = false;
     bool controller_initialized = false;
     bool controller_started = false;
 
@@ -375,7 +365,7 @@ scrcpy(const struct scrcpy_options *options) {
     if (!cannot_cont & !stream_start(&stream)) {
         cannot_cont = true;
     }
-    stream_started = true;
+    bool stream_started = true;
 
     if (!cannot_cont & options->display) {
         if (options->control) {
@@ -424,7 +414,7 @@ scrcpy(const struct scrcpy_options *options) {
 
     input_manager.prefer_text = options->prefer_text;
 
-    ret = event_loop(options->display, options->control);
+    bool ret = event_loop(options->display, options->control);
     LOGD("quit...");
 
     screen_destroy(&screen);

@@ -39,4 +39,5 @@ decoder_push(struct decoder *decoder, const AVPacket *packet);
 
 void
 decoder_interrupt(struct decoder *decoder);
+
 #endif //ANDROID_IROBOT_DECODER_HPP

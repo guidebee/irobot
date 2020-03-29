@@ -91,7 +91,7 @@ main(int argc, char *argv[]) {
 
     avformat_network_deinit(); // ignore failure
 
-#if defined (__WINDOWS__) && !defined (WINDOWS_NOCONSOLE)
+#if defined (__WINDOWS__)
     if (res != 0) {
         fprintf(stderr, "Press any key to continue...\n");
         getchar();

@@ -17,7 +17,6 @@ extern "C" {
 #endif
 
 
-
 TEST_CASE("utility xstrncpy simple", "[util][str_util]") {
     char s[] = "xxxxxxxxxx";
     size_t w = xstrncpy(s, "abcdef", sizeof(s));
@@ -64,7 +63,7 @@ TEST_CASE("utility xstrncpy truncated", "[util][str_util]") {
 }
 
 TEST_CASE("utility xstrjoin simple", "[util][str_util]") {
-    const char *const tokens[] = { "abc", "de", "fghi", NULL };
+    const char *const tokens[] = {"abc", "de", "fghi", NULL};
     char s[] = "xxxxxxxxxxxxxx";
     size_t w = xstrjoin(s, tokens, ' ', sizeof(s));
 
@@ -82,7 +81,7 @@ TEST_CASE("utility xstrjoin simple", "[util][str_util]") {
 }
 
 TEST_CASE("utility xstrjoin just fit", "[util][str_util]") {
-    const char *const tokens[] = { "abc", "de", "fghi", NULL };
+    const char *const tokens[] = {"abc", "de", "fghi", NULL};
     char s[] = "xxxxxxxxxxx";
     size_t w = xstrjoin(s, tokens, ' ', sizeof(s));
 
@@ -97,7 +96,7 @@ TEST_CASE("utility xstrjoin just fit", "[util][str_util]") {
 }
 
 TEST_CASE("utility xstrjoin truncated in token", "[util][str_util]") {
-    const char *const tokens[] = { "abc", "de", "fghi", NULL };
+    const char *const tokens[] = {"abc", "de", "fghi", NULL};
     char s[] = "xxxxx";
     size_t w = xstrjoin(s, tokens, ' ', sizeof(s));
 
@@ -112,7 +111,7 @@ TEST_CASE("utility xstrjoin truncated in token", "[util][str_util]") {
 }
 
 TEST_CASE("utility xstrjoin truncated before sep", "[util][str_util]") {
-    const char *const tokens[] = { "abc", "de", "fghi", NULL };
+    const char *const tokens[] = {"abc", "de", "fghi", NULL};
     char s[] = "xxxxxx";
     size_t w = xstrjoin(s, tokens, ' ', sizeof(s));
 
@@ -127,7 +126,7 @@ TEST_CASE("utility xstrjoin truncated before sep", "[util][str_util]") {
 }
 
 TEST_CASE("utility xstrjoin truncated after sep", "[util][str_util]") {
-    const char *const tokens[] = { "abc", "de", "fghi", NULL };
+    const char *const tokens[] = {"abc", "de", "fghi", NULL};
     char s[] = "xxxxxxx";
     size_t w = xstrjoin(s, tokens, ' ', sizeof(s));
 

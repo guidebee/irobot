@@ -10,16 +10,18 @@
 #include <cstdint>
 
 #include "config.hpp"
+#include "common.hpp"
+
 #include "android/input.hpp"
 #include "android/keycodes.hpp"
-#include "common.hpp"
+
 
 #define CONTROL_MSG_TEXT_MAX_LENGTH 300
 #define CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH 4093
 #define CONTROL_MSG_SERIALIZED_MAX_SIZE \
     (3 + CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH)
 
-#define POINTER_ID_MOUSE UINT64_C(-1);
+#define POINTER_ID_MOUSE UINT64_C(-1)
 
 enum control_msg_type {
     CONTROL_MSG_TYPE_INJECT_KEYCODE,

@@ -6,8 +6,17 @@
 #ifndef ANDROID_IROBOT_DEVICE_MSG_HPP
 #define ANDROID_IROBOT_DEVICE_MSG_HPP
 
-#include <cstdint>
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
 #include <unistd.h>
+
+#if defined (__cplusplus)
+}
+#endif
+
+#include <cstdint>
 #include <cstring>
 
 #include "config.hpp"

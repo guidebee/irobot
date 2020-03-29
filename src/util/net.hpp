@@ -11,7 +11,8 @@ extern "C" {
 #endif
 
 #include <SDL2/SDL_platform.h>
-
+#include <unistd.h>
+    
 #ifdef __WINDOWS__
 # include <winsock2.h>
 #define SHUT_RD SD_RECEIVE

@@ -5,6 +5,7 @@
 
 
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
+
 #include "net.hpp"
 
 #if defined (__cplusplus)

@@ -8,12 +8,12 @@
 
 struct int_queue CBUF(int, 32);
 
-TEST_CASE( "utility cbuf empty", "[util][cbuf]" ) {
+TEST_CASE("utility cbuf empty", "[util][cbuf]") {
     struct int_queue queue{};
     cbuf_init(&queue);
-    REQUIRE(cbuf_is_empty(&queue) );
+    REQUIRE(cbuf_is_empty(&queue));
     bool push_ok = cbuf_push(&queue, 42);
-    REQUIRE(push_ok );
+    REQUIRE(push_ok);
     REQUIRE(!cbuf_is_empty(&queue));
     int item;
     bool take_ok = cbuf_take(&queue, &item);
@@ -24,7 +24,7 @@ TEST_CASE( "utility cbuf empty", "[util][cbuf]" ) {
     REQUIRE(!take_empty_ok); // the queue is empty
 }
 
-TEST_CASE( "utility cbuf full", "[util][cbuf]" ) {
+TEST_CASE("utility cbuf full", "[util][cbuf]") {
     struct int_queue queue{};
     cbuf_init(&queue);
 
@@ -44,7 +44,7 @@ TEST_CASE( "utility cbuf full", "[util][cbuf]" ) {
     REQUIRE(!cbuf_is_full(&queue));
 }
 
-TEST_CASE( "utility cbuf push take", "[util][cbuf]" ) {
+TEST_CASE("utility cbuf push take", "[util][cbuf]") {
     struct int_queue queue{};
     cbuf_init(&queue);
 
@@ -54,7 +54,7 @@ TEST_CASE( "utility cbuf push take", "[util][cbuf]" ) {
     bool push2_ok = cbuf_push(&queue, 35);
     REQUIRE(push2_ok);
 
-    int item=0;
+    int item = 0;
 
     bool take1_ok = cbuf_take(&queue, &item);
     REQUIRE(take1_ok);

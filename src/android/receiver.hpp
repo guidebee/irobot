@@ -17,7 +17,6 @@ extern "C" {
 }
 #endif
 
-
 #include "config.hpp"
 #include "util/net.hpp"
 

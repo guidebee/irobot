@@ -4,7 +4,9 @@
 //
 
 #pragma ide diagnostic ignored "OCUnusedMacroInspection"
-#pragma ide diagnostic ignored "hicpp-signed-bitwise"
+
+#include "command.hpp"
+
 #if defined (__cplusplus)
 extern "C" {
 #endif
@@ -26,8 +28,7 @@ extern "C" {
 #include <cerrno>
 #include <csignal>
 #include <cstdlib>
-#include <climits>
-#include "command.hpp"
+
 #include "util/log.hpp"
 
 

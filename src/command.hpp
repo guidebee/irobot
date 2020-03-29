@@ -48,6 +48,7 @@ typedef int exit_code_t;
 }
 #endif
 
+#include <climits>
 #include "config.hpp"
 
 enum process_result {

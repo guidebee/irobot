@@ -3,10 +3,9 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
+#include "config.hpp"
 
 #include "util/net.hpp"
-
-#include "config.hpp"
 #include "util/log.hpp"
 
 bool

@@ -92,7 +92,7 @@ TEST_CASE("serialize inject touch event", "[message][control_msg]") {
 
                     },
                     .pressure = 1.0f,
-            
+
             },
     };
 

@@ -6,6 +6,15 @@
 #ifndef ANDROID_IROBOT_CLI_HPP
 #define ANDROID_IROBOT_CLI_HPP
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
+#include <getopt.h>
+#include <unistd.h>
+
+#if defined (__cplusplus)
+}
+#endif
 
 #include "config.hpp"
 #include "scrcpy.hpp"

@@ -6,13 +6,15 @@
 #ifndef ANDROID_IROBOT_INPUT_MANAGER_HPP
 #define ANDROID_IROBOT_INPUT_MANAGER_HPP
 
-
 #include "config.hpp"
 #include "common.hpp"
 #include "controller.hpp"
+
+#include "ui/screen.hpp"
+
 #include "video/fps_counter.hpp"
 #include "video/video_buffer.hpp"
-#include "ui/screen.hpp"
+
 
 struct input_manager {
     struct controller *controller;
