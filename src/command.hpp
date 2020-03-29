@@ -12,11 +12,17 @@
 extern "C" {
 #endif
 
+#ifndef   _POSIX_SOURCE
 #define _POSIX_SOURCE // for kill()
+#endif
+#ifndef _BSD_SOURCE
 #define _BSD_SOURCE // for readlink()
-
+#endif
+#ifndef _DEFAULT_SOURCE
 // modern glibc will complain without this
 #define _DEFAULT_SOURCE
+#endif
+
 #include <fcntl.h>
 #include <sys/wait.h>
 #include <unistd.h>
