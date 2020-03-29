@@ -6,8 +6,8 @@
 #include "video_buffer.hpp"
 
 #include <cassert>
-#include "util/lock.hpp"
 
+#include "util/lock.hpp"
 
 bool
 video_buffer_init(struct video_buffer *vb, struct fps_counter *fps_counter,

@@ -9,21 +9,9 @@
 
 #define SDL_MAIN_HANDLED // avoid link error on Linux Windows Subsystem
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
-#include <libavformat/avformat.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
-
 #include "config.hpp"
 #include "ui/cli.hpp"
 #include "util/log.hpp"
-
 
 static void
 print_version() {

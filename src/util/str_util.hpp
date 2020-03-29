@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <cstddef>
 #include <climits>
+
 #include "config.hpp"
 
 // like strncpy, except:

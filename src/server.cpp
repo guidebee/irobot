@@ -4,18 +4,18 @@
 //
 
 #include "server.hpp"
+
 #include <cassert>
-
 #include <cinttypes>
-
 #include <cstdio>
-
 
 #include "config.hpp"
 #include "command.hpp"
 #include "util/log.hpp"
 #include "util/net.hpp"
 
+
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 #define SOCKET_NAME "scrcpy"
 #define SERVER_FILENAME "scrcpy-server"
 
@@ -23,7 +23,7 @@
 #define DEVICE_SERVER_PATH "/data/local/tmp/scrcpy-server.jar"
 
 static const char *
-get_server_path(void) {
+get_server_path() {
     const char *server_path_env = getenv("SCRCPY_SERVER_PATH");
     if (server_path_env) {
         LOGD("Using SCRCPY_SERVER_PATH: %s", server_path_env);
@@ -134,7 +134,7 @@ execute_server(struct server *server, const struct server_params *params) {
     sprintf(max_fps_string, "%" PRIu16, params->max_fps);
     const char *const cmd[] = {
             "shell",
-            "CLASSPATH=" DEVICE_SERVER_PATH,
+            "CLASSPATH=" DEVICE_SERVER_PATH, // NOLINT(bugprone-suspicious-missing-comma)
             "app_process",
 #ifdef SERVER_DEBUGGER
 # define SERVER_DEBUGGER_PORT "5005"
@@ -366,7 +366,7 @@ server_stop(struct server *server) {
         LOGW("Could not terminate server");
     }
 
-    cmd_simple_wait(server->process, NULL); // ignore exit code
+    cmd_simple_wait(server->process, nullptr); // ignore exit code
     LOGD("Server terminated");
 
     if (server->tunnel_enabled) {

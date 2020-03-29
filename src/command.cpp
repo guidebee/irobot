@@ -11,9 +11,8 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "util/log.hpp"
-#include "util/str_util.hpp"
 #include "common.hpp"
+#include "util/log.hpp"
 
 static const char *adb_command;
 

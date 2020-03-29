@@ -6,9 +6,8 @@
 #include "screen.hpp"
 
 #include <cassert>
-#include "config.hpp"
-#include "common.hpp"
 
+#include "common.hpp"
 
 #include "video/video_buffer.hpp"
 #include "util/lock.hpp"

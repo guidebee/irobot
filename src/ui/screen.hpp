@@ -39,7 +39,6 @@ struct screen {
     bool fullscreen;
     bool maximized;
     bool no_window;
-    struct stream stream;
 
     struct size device_screen_size;
 };

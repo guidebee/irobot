@@ -9,6 +9,7 @@
 #if defined (__cplusplus)
 extern "C" {
 #endif
+
 #include <libavutil/avutil.h>
 #include <libavformat/avformat.h>
 #include <SDL2/SDL_mutex.h>
@@ -19,6 +20,7 @@ extern "C" {
 #endif
 
 #include "config.hpp"
+
 #include "fps_counter.hpp"
 
 // forward declarations

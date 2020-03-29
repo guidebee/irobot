@@ -5,10 +5,10 @@
 
 #include "decoder.hpp"
 
-
 #include "ui/events.hpp"
-#include "video/video_buffer.hpp"
 #include "util/log.hpp"
+#include "video/video_buffer.hpp"
+
 
 // set the decoded frame as ready for rendering, and notify
 static void

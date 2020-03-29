@@ -5,11 +5,8 @@
 
 #include "str_util.hpp"
 
-#include <cerrno>
-#include <climits>
-#include <cstdlib>
-#include <cstring>
 
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 #ifdef _WIN32
 # include <windows.h>
 # include <tchar.h>
@@ -25,6 +22,10 @@ extern "C" {
 }
 #endif
 
+#include <cerrno>
+#include <climits>
+#include <cstdlib>
+#include <cstring>
 
 size_t
 xstrncpy(char *dest, const char *src, size_t n) {
@@ -182,7 +183,7 @@ char *str_replace(char *orig, char *rep, char *with) {
     //    orig points to the remainder of orig after "end of rep"
     while (count--) {
         ins = strstr(orig, rep);
-        len_front = ins - orig;
+        len_front = static_cast<int>(ins - orig);
         tmp = strncpy(tmp, orig, len_front) + len_front;
         tmp = strcpy(tmp, with) + len_with;
         orig += len_front + len_rep; // move to next "end of rep"
@@ -226,3 +227,4 @@ utf8_from_wide_char(const wchar_t *ws) {
 }
 
 #endif
+
