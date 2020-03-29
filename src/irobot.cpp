@@ -2,6 +2,13 @@
 // Created by James Shen on 22/3/20.
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
+
+#pragma ide diagnostic ignored "OCUnusedMacroInspection"
+
+#include "scrcpy.hpp"
+
+#define SDL_MAIN_HANDLED // avoid link error on Linux Windows Subsystem
+
 #if defined (__cplusplus)
 extern "C" {
 #endif
@@ -12,13 +19,11 @@ extern "C" {
 }
 #endif
 
-#define SDL_MAIN_HANDLED // avoid link error on Linux Windows Subsystem
-#include "scrcpy.hpp"
 
 #include "config.hpp"
 #include "ui/cli.hpp"
-#include "compat.hpp"
 #include "util/log.hpp"
+
 
 static void
 print_version() {
@@ -41,6 +46,7 @@ print_version() {
 
 int
 main(int argc, char *argv[]) {
+
 #ifdef __WINDOWS__
     // disable buffering, we want logs immediately
     // even line buffering (setvbuf() with mode _IOLBF) is not sufficient
@@ -73,12 +79,9 @@ main(int argc, char *argv[]) {
     }
 
     LOGI("scrcpy "
-         SCRCPY_VERSION
-         " <https://github.com/Genymobile/scrcpy>");
+                 SCRCPY_VERSION
+                 " <https://github.com/Genymobile/scrcpy>");
 
-#ifdef SCRCPY_LAVF_REQUIRES_REGISTER_ALL
-    av_register_all();
-#endif
 
     if (avformat_network_init()) {
         return 1;
@@ -96,3 +99,4 @@ main(int argc, char *argv[]) {
 #endif
     return res;
 }
+

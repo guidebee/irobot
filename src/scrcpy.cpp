@@ -9,7 +9,7 @@
 
 #include "command.hpp"
 #include "common.hpp"
-#include "compat.hpp"
+
 #include "controller.hpp"
 #include "video/decoder.hpp"
 #include "android/device.hpp"
@@ -64,19 +64,19 @@ sdl_init_and_configure(bool display) {
         LOGW("Could not enable bilinear filtering");
     }
 
-#ifdef SCRCPY_SDL_HAS_HINT_MOUSE_FOCUS_CLICKTHROUGH
+
     // Handle a click to gain focus as any other click
     if (!SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1")) {
         LOGW("Could not enable mouse focus clickthrough");
     }
-#endif
 
-#ifdef SCRCPY_SDL_HAS_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR
+
+
     // Disable compositor bypassing on X11
     if (!SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0")) {
         LOGW("Could not disable X11 compositor bypass");
     }
-#endif
+
 
     // Do not minimize on focus loss
     if (!SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0")) {

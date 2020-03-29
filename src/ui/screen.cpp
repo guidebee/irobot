@@ -8,7 +8,7 @@
 #include <cassert>
 #include "config.hpp"
 #include "common.hpp"
-#include "compat.hpp"
+
 
 #include "video/video_buffer.hpp"
 #include "util/lock.hpp"
@@ -61,11 +61,7 @@ set_window_size(struct screen *screen, struct size new_size) {
 static bool
 get_preferred_display_bounds(struct size *bounds) {
     SDL_Rect rect;
-#ifdef SCRCPY_SDL_HAS_GET_DISPLAY_USABLE_BOUNDS
 # define GET_DISPLAY_BOUNDS(i, r) SDL_GetDisplayUsableBounds((i), (r))
-#else
-# define GET_DISPLAY_BOUNDS(i, r) SDL_GetDisplayBounds((i), (r))
-#endif
     if (GET_DISPLAY_BOUNDS(0, &rect)) {
         LOGW("Could not get display usable bounds: %s", SDL_GetError());
         return false;
@@ -185,12 +181,8 @@ screen_init_rendering(struct screen *screen, const char *window_title,
     window_flags |= SDL_WINDOW_ALLOW_HIGHDPI;
 #endif
     if (always_on_top) {
-#ifdef SCRCPY_SDL_HAS_WINDOW_ALWAYS_ON_TOP
         window_flags |= SDL_WINDOW_ALWAYS_ON_TOP;
-#else
-        LOGW("The 'always on top' flag is not available "
-             "(compile with SDL >= 2.0.5 to enable it)");
-#endif
+
     }
     if (window_borderless) {
         window_flags |= SDL_WINDOW_BORDERLESS;
@@ -406,10 +398,10 @@ screen_handle_window_event(struct screen *screen,
             assert(screen->windowed_window_size_backup.height);
             // Revert the last size, it was updated while screen was maximized.
             screen->windowed_window_size = screen->windowed_window_size_backup;
-#ifdef DEBUG
-        // Reset the backup to invalid values to detect unexpected usage
-        screen->windowed_window_size_backup.width = 0;
-        screen->windowed_window_size_backup.height = 0;
+#ifndef NDEBUG
+            // Reset the backup to invalid values to detect unexpected usage
+            screen->windowed_window_size_backup.width = 0;
+            screen->windowed_window_size_backup.height = 0;
 #endif
             screen->maximized = true;
             break;

@@ -15,8 +15,7 @@ extern "C" {
 }
 #endif
 
-#include "config.hpp"
-#include "compat.hpp"
+
 #include "video/decoder.hpp"
 #include "ui/events.hpp"
 #include "recorder.hpp"
