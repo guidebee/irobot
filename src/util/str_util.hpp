@@ -5,6 +5,7 @@
 
 #ifndef ANDROID_IROBOT_STR_UTIL_HPP
 #define ANDROID_IROBOT_STR_UTIL_HPP
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 
 #include <cstdint>
 #include <cstddef>

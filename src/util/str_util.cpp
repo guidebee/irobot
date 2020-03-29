@@ -2,11 +2,10 @@
 // Created by James Shen on 24/3/20.
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 
 #include "str_util.hpp"
 
-
-#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 #ifdef _WIN32
 # include <windows.h>
 # include <tchar.h>
@@ -25,7 +24,6 @@ extern "C" {
 #include <cerrno>
 #include <climits>
 #include <cstdlib>
-#include <cstring>
 
 size_t
 xstrncpy(char *dest, const char *src, size_t n) {
