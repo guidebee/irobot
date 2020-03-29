@@ -1,6 +1,8 @@
 //
 // Created by James Shen on 22/3/20.
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
+
+#pragma ide diagnostic ignored "OCUnusedMacroInspection"
 //
 
 #define SDL_MAIN_HANDLED // avoid link error on Linux Windows Subsystem
@@ -32,11 +34,12 @@ print_version() {
 
 int
 main(int argc, char *argv[]) {
+
 #ifdef __WINDOWS__
     // disable buffering, we want logs immediately
     // even line buffering (setvbuf() with mode _IOLBF) is not sufficient
-    setbuf(stdout, NULL);
-    setbuf(stderr, NULL);
+    setbuf(stdout, nullptr);
+    setbuf(stderr, nullptr);
 #endif
 
 #ifndef NDEBUG
@@ -67,9 +70,6 @@ main(int argc, char *argv[]) {
          SCRCPY_VERSION
          " <https://github.com/Genymobile/scrcpy>");
 
-#ifdef SCRCPY_LAVF_REQUIRES_REGISTER_ALL
-    av_register_all();
-#endif
 
     if (avformat_network_init()) {
         return 1;
@@ -79,7 +79,7 @@ main(int argc, char *argv[]) {
 
     avformat_network_deinit(); // ignore failure
 
-#if defined (__WINDOWS__) && !defined (WINDOWS_NOCONSOLE)
+#if defined (__WINDOWS__)
     if (res != 0) {
         fprintf(stderr, "Press any key to continue...\n");
         getchar();
@@ -87,3 +87,4 @@ main(int argc, char *argv[]) {
 #endif
     return res;
 }
+
