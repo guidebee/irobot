@@ -3,6 +3,7 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
+
 #include "input_manager.hpp"
 
 #include <cassert>
@@ -407,23 +408,8 @@ input_manager_process_key(struct input_manager *im,
                     rotate_device(controller);
                 }
                 return;
-
-//            case SDLK_k:
-//                if (control && cmd && !shift && !repeat && down) {
-//                    screen_capture(im->screen);
-//                }
-//
-//                return;
-//            case SDLK_e:
-//                if (control && cmd && !shift && !repeat && down) {
-//                    if (controller->fp_events == NULL) {
-//                        controller_start_recording(controller);
-//                    } else {
-//                        controller_stop_recording(controller);
-//                    }
-//                }
-
-                return;
+            default:
+                break;
         }
 
         return;
@@ -489,8 +475,8 @@ convert_touch(const SDL_TouchFingerEvent *from, struct screen *screen,
     to->inject_touch_event.pointer_id = from->fingerId;
     to->inject_touch_event.position.screen_size = frame_size;
     // SDL touch event coordinates are normalized in the range [0; 1]
-    to->inject_touch_event.position.point.x = from->x * frame_size.width;
-    to->inject_touch_event.position.point.y = from->y * frame_size.height;
+    to->inject_touch_event.position.point.x = from->x * static_cast<float>(frame_size.width);
+    to->inject_touch_event.position.point.y = from->y * static_cast<float>(frame_size.height);
     to->inject_touch_event.pressure = from->pressure;
     to->inject_touch_event.buttons = static_cast<android_motionevent_buttons>(0);
     return true;

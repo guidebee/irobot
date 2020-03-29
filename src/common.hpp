@@ -7,6 +7,7 @@
 #define ANDROID_IROBOT_COMMON_HPP
 
 #include <cstdint>
+
 #include "config.hpp"
 
 #define ARRAY_LEN(a) (sizeof(a) / sizeof(a[0]))

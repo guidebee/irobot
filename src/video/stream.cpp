@@ -4,26 +4,11 @@
 //
 
 #include "stream.hpp"
-
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
-
-
-#if defined (__cplusplus)
-}
-#endif
-
-#include "config.hpp"
-#include "compat.hpp"
-#include "video/decoder.hpp"
-#include "ui/events.hpp"
 #include "recorder.hpp"
+#include "ui/events.hpp"
 #include "util/buffer_util.hpp"
 #include "util/log.hpp"
-
-#define BUFSIZE 0x10000
+#include "video/decoder.hpp"
 
 #define HEADER_SIZE 12
 #define NO_PTS UINT64_C(-1)
@@ -197,7 +182,6 @@ run_stream(void *data) {
         LOGE("H.264 decoder not found");
         goto end;
     }
-    stream->codec = codec;
     stream->codec_ctx = avcodec_alloc_context3(codec);
     if (!stream->codec_ctx) {
         LOGC("Could not allocate codec context");

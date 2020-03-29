@@ -19,8 +19,8 @@ extern "C" {
 
 
 #include "config.hpp"
-#include "message/control_msg.hpp"
 #include "android/receiver.hpp"
+#include "message/control_msg.hpp"
 #include "util/cbuf.hpp"
 #include "util/net.hpp"
 

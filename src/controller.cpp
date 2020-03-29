@@ -6,6 +6,7 @@
 #include "controller.hpp"
 
 #include <cassert>
+
 #include "util/lock.hpp"
 #include "util/log.hpp"
 

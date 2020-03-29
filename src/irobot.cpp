@@ -17,7 +17,7 @@ extern "C" {
 
 #include "config.hpp"
 #include "ui/cli.hpp"
-#include "compat.hpp"
+
 #include "util/log.hpp"
 
 static void

@@ -4,6 +4,7 @@
 //
 
 #include "fps_counter.hpp"
+
 #include <cassert>
 
 #include "util/lock.hpp"

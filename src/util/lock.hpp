@@ -18,8 +18,8 @@ extern "C" {
 
 #include <cstdint>
 
-#include "log.hpp"
 #include "config.hpp"
+#include "log.hpp"
 
 static inline void mutex_log(int r, const char *message) {
 #ifndef NDEBUG

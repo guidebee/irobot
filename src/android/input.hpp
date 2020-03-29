@@ -7,6 +7,7 @@
 #pragma ide diagnostic ignored "hicpp-signed-bitwise"
 #pragma ide diagnostic ignored "OCUnusedMacroInspection"
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
+
 #ifndef ANDROID_IROBOT_INPUT_HPP
 #define ANDROID_IROBOT_INPUT_HPP
 

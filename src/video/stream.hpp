@@ -24,7 +24,9 @@ extern "C" {
 
 #include <cassert>
 #include <cstdint>
+
 #include "config.hpp"
+
 #include "util/net.hpp"
 #include "video/decoder.hpp"
 
@@ -37,7 +39,6 @@ struct stream {
     struct decoder *decoder;
     struct recorder *recorder;
     AVCodecContext *codec_ctx;
-    AVCodec *codec;
     AVCodecParserContext *parser;
     // successive packets may need to be concatenated, until a non-config
     // packet is available

@@ -48,7 +48,6 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/common.hpp
         ${CMAKE_HOME_DIRECTORY}/src/controller.hpp
         ${CMAKE_HOME_DIRECTORY}/src/command.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/compat.hpp
         ${CMAKE_HOME_DIRECTORY}/src/server.hpp
         ${CMAKE_HOME_DIRECTORY}/src/scrcpy.hpp
         )

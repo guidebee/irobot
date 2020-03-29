@@ -8,15 +8,18 @@
 #if defined (__cplusplus)
 extern "C" {
 #endif
+
 #include <libavcodec/avcodec.h>
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
-#include <cstdio>
+
 
 #if defined (__cplusplus)
 }
 #endif
+
+#include <cstdio>
 
 #define IMAGE_ALIGN 1
 

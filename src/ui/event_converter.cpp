@@ -108,6 +108,8 @@ convert_keycode(SDL_Keycode from, enum android_keycode *to, uint16_t mod,
         MAP(SDLK_LEFT, AKEYCODE_DPAD_LEFT);
         MAP(SDLK_DOWN, AKEYCODE_DPAD_DOWN);
         MAP(SDLK_UP, AKEYCODE_DPAD_UP);
+        default:
+            break;
 
     }
 

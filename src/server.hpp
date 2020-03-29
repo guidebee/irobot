@@ -3,6 +3,7 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 #ifndef ANDROID_IROBOT_SERVER_HPP
 #define ANDROID_IROBOT_SERVER_HPP
 
@@ -77,3 +78,4 @@ void
 server_destroy(struct server *server);
 
 #endif //ANDROID_IROBOT_SERVER_HPP
+

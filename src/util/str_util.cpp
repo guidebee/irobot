@@ -2,13 +2,9 @@
 // Created by James Shen on 24/3/20.
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 
 #include "str_util.hpp"
-
-#include <cerrno>
-#include <climits>
-#include <cstdlib>
-#include <cstring>
 
 #ifdef _WIN32
 # include <windows.h>
@@ -25,6 +21,9 @@ extern "C" {
 }
 #endif
 
+#include <cerrno>
+#include <climits>
+#include <cstdlib>
 
 size_t
 xstrncpy(char *dest, const char *src, size_t n) {
@@ -182,7 +181,7 @@ char *str_replace(char *orig, char *rep, char *with) {
     //    orig points to the remainder of orig after "end of rep"
     while (count--) {
         ins = strstr(orig, rep);
-        len_front = ins - orig;
+        len_front = static_cast<int>(ins - orig);
         tmp = strncpy(tmp, orig, len_front) + len_front;
         tmp = strcpy(tmp, with) + len_with;
         orig += len_front + len_rep; // move to next "end of rep"
@@ -226,3 +225,4 @@ utf8_from_wide_char(const wchar_t *ws) {
 }
 
 #endif
+

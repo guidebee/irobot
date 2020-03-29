@@ -12,8 +12,6 @@
 
 #define DEFAULT_MAX_SIZE 0
 
-#define HIDPI_SUPPORT
-
 #define SCRCPY_VERSION "1.12.1"
 
 #define PREFIX "/usr/local"

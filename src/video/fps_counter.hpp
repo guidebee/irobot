@@ -11,10 +11,12 @@
 #if defined (__cplusplus)
 extern "C" {
 #endif
+
 #include <SDL2/SDL_atomic.h>
 #include <SDL2/SDL_mutex.h>
 #include <SDL2/SDL_thread.h>
 #include <SDL2/SDL_timer.h>
+
 #if defined (__cplusplus)
 }
 #endif

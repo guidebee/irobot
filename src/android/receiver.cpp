@@ -15,6 +15,7 @@ extern "C" {
 #endif
 
 #include <cassert>
+
 #include "message/device_msg.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"

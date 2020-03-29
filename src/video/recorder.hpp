@@ -20,6 +20,7 @@ extern "C" {
 
 #include "config.hpp"
 #include "common.hpp"
+
 #include "util/queue.hpp"
 
 enum recorder_format {

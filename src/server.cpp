@@ -4,18 +4,18 @@
 //
 
 #include "server.hpp"
+
 #include <cassert>
-
 #include <cinttypes>
-
 #include <cstdio>
-
 
 #include "config.hpp"
 #include "command.hpp"
 #include "util/log.hpp"
 #include "util/net.hpp"
 
+
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 #define SOCKET_NAME "scrcpy"
 #define SERVER_FILENAME "scrcpy-server"
 
@@ -23,7 +23,7 @@
 #define DEVICE_SERVER_PATH "/data/local/tmp/scrcpy-server.jar"
 
 static const char *
-get_server_path(void) {
+get_server_path() {
     const char *server_path_env = getenv("SCRCPY_SERVER_PATH");
     if (server_path_env) {
         LOGD("Using SCRCPY_SERVER_PATH: %s", server_path_env);
@@ -33,7 +33,7 @@ get_server_path(void) {
 
 #ifndef PORTABLE
     LOGD("Using server: "
-    DEFAULT_SERVER_PATH);
+                 DEFAULT_SERVER_PATH);
     // the absolute path is hardcoded
     return DEFAULT_SERVER_PATH;
 #else
@@ -134,10 +134,10 @@ execute_server(struct server *server, const struct server_params *params) {
     sprintf(max_fps_string, "%" PRIu16, params->max_fps);
     const char *const cmd[] = {
             "shell",
-            "CLASSPATH=" DEVICE_SERVER_PATH,
+            "CLASSPATH=" DEVICE_SERVER_PATH, // NOLINT(bugprone-suspicious-missing-comma)
             "app_process",
 #ifdef SERVER_DEBUGGER
-    # define SERVER_DEBUGGER_PORT "5005"
+# define SERVER_DEBUGGER_PORT "5005"
     "-agentlib:jdwp=transport=dt_socket,suspend=y,server=y,address="
         SERVER_DEBUGGER_PORT,
 #endif
@@ -258,7 +258,7 @@ server_start(struct server *server, const char *serial,
         server->server_socket = listen_on_port(params->local_port);
         if (server->server_socket == INVALID_SOCKET) {
             LOGE("Could not listen on port %"
-                 PRIu16, params->local_port);
+                         PRIu16, params->local_port);
             disable_tunnel(server);
             SDL_free(server->serial);
             return false;
@@ -268,7 +268,7 @@ server_start(struct server *server, const char *serial,
     server->agent_control_server_socket = listen_on_port(params->local_port + 1);
     if (server->agent_control_server_socket == INVALID_SOCKET) {
         LOGE("Could not listen on agent control port %"
-             PRIu16, static_cast<unsigned short>(params->local_port + 1));
+                     PRIu16, static_cast<unsigned short>(params->local_port + 1));
         disable_tunnel(server);
         SDL_free(server->serial);
         return false;
@@ -279,7 +279,7 @@ server_start(struct server *server, const char *serial,
     server->agent_data_server_socket = listen_on_port(params->local_port + 2);
     if (server->agent_data_server_socket == INVALID_SOCKET) {
         LOGE("Could not listen on agent data port %"
-             PRIu16, static_cast<unsigned short>(params->local_port + 2));
+                     PRIu16, static_cast<unsigned short>(params->local_port + 2));
         disable_tunnel(server);
         SDL_free(server->serial);
         return false;
@@ -366,7 +366,7 @@ server_stop(struct server *server) {
         LOGW("Could not terminate server");
     }
 
-    cmd_simple_wait(server->process, NULL); // ignore exit code
+    cmd_simple_wait(server->process, nullptr); // ignore exit code
     LOGD("Server terminated");
 
     if (server->tunnel_enabled) {

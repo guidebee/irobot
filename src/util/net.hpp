@@ -3,6 +3,8 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
+
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 #ifndef ANDROID_IROBOT_NET_HPP
 #define ANDROID_IROBOT_NET_HPP
 
@@ -11,6 +13,7 @@ extern "C" {
 #endif
 
 #include <SDL2/SDL_platform.h>
+#include <unistd.h>
 
 #ifdef __WINDOWS__
 # include <winsock2.h>
@@ -33,10 +36,10 @@ typedef int socket_t;
 #include <cstdint>
 
 bool
-net_init(void);
+net_init();
 
 void
-net_cleanup(void);
+net_cleanup();
 
 socket_t
 net_connect(uint32_t addr, uint16_t port);
@@ -68,3 +71,4 @@ bool
 net_close(socket_t socket);
 
 #endif //ANDROID_IROBOT_NET_HPP
+
