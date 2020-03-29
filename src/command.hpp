@@ -5,9 +5,21 @@
 
 #ifndef ANDROID_IROBOT_COMMAND_HPP
 #define ANDROID_IROBOT_COMMAND_HPP
+
+#pragma ide diagnostic ignored "OCUnusedMacroInspection"
+
 #if defined (__cplusplus)
 extern "C" {
 #endif
+
+#define _POSIX_SOURCE // for kill()
+#define _BSD_SOURCE // for readlink()
+
+// modern glibc will complain without this
+#define _DEFAULT_SOURCE
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include <sys/stat.h>
 #include <cinttypes>
