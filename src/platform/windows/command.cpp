@@ -5,6 +5,7 @@
 
 #include "command.hpp"
 #include "config.hpp"
+
 #include "util/log.hpp"
 #include "util/str_util.hpp"
 
@@ -43,11 +44,8 @@ cmd_execute(const char *const argv[], HANDLE *handle) {
         return PROCESS_ERROR_GENERIC;
     }
 
-#ifdef WINDOWS_NOCONSOLE
-    int flags = CREATE_NO_WINDOW;
-#else
     int flags = 0;
-#endif
+
     if (!CreateProcessW(NULL, wide, NULL, NULL, FALSE, flags, NULL, NULL, &si,
                         &pi)) {
         SDL_free(wide);

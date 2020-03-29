@@ -3,33 +3,15 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#pragma ide diagnostic ignored "OCUnusedMacroInspection"
-#pragma ide diagnostic ignored "hicpp-signed-bitwise"
-#if defined (__cplusplus)
-extern "C" {
-#endif
 
-#define _POSIX_SOURCE // for kill()
-#define _BSD_SOURCE // for readlink()
 
-// modern glibc will complain without this
-#define _DEFAULT_SOURCE
-#include <fcntl.h>
-#include <sys/types.h>
-#include <sys/wait.h>
-#include <unistd.h>
-
-#if defined (__cplusplus)
-}
-#endif
+#include "command.hpp"
 
 #include <cerrno>
 #include <csignal>
 #include <cstdlib>
-#include <climits>
-#include "command.hpp"
-#include "util/log.hpp"
 
+#include "util/log.hpp"
 
 enum process_result
 cmd_execute(const char *const argv[], pid_t *pid) {

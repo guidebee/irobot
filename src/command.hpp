@@ -5,9 +5,27 @@
 
 #ifndef ANDROID_IROBOT_COMMAND_HPP
 #define ANDROID_IROBOT_COMMAND_HPP
+
+#pragma ide diagnostic ignored "OCUnusedMacroInspection"
+
 #if defined (__cplusplus)
 extern "C" {
 #endif
+
+#ifndef   _POSIX_SOURCE
+#define _POSIX_SOURCE // for kill()
+#endif
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE // for readlink()
+#endif
+#ifndef _DEFAULT_SOURCE
+// modern glibc will complain without this
+#define _DEFAULT_SOURCE
+#endif
+
+#include <fcntl.h>
+#include <sys/wait.h>
+#include <unistd.h>
 
 #include <sys/stat.h>
 #include <cinttypes>
@@ -47,6 +65,8 @@ typedef int exit_code_t;
 #if defined (__cplusplus)
 }
 #endif
+
+#include <climits>
 
 #include "config.hpp"
 
