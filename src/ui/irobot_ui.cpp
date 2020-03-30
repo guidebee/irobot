@@ -10,7 +10,8 @@
 #include "ui/input_manager.hpp"
 #include "android/file_handler.hpp"
 
-extern struct screen screen;
+struct screen screen = SCREEN_INITIALIZER;
+
 extern struct video_buffer video_buffer;
 extern struct controller controller;
 extern struct file_handler file_handler;

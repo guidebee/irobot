@@ -11,13 +11,12 @@
 #include "common.hpp"
 #include "controller.hpp"
 #include "server.hpp"
-#include "ui/irobot_ui.hpp"
 
 #include "android/device.hpp"
 #include "android/file_handler.hpp"
 
 #include "ui/screen.hpp"
-
+#include "ui/irobot_ui.hpp"
 #include "video/decoder.hpp"
 #include "video/fps_counter.hpp"
 #include "video/recorder.hpp"
@@ -27,15 +26,17 @@
 #include "util/net.hpp"
 
 static struct server server = SERVER_INITIALIZER;
-struct screen screen = SCREEN_INITIALIZER;
 static struct fps_counter fps_counter;
 struct video_buffer video_buffer;
 static struct stream stream;
-static struct decoder decoder;
+
 static struct recorder recorder;
 struct controller controller;
 struct file_handler file_handler;
+
+static struct decoder decoder;
 extern struct input_manager input_manager;
+extern struct screen screen;
 
 
 
