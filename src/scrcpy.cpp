@@ -11,7 +11,7 @@
 #include "common.hpp"
 #include "controller.hpp"
 #include "server.hpp"
-#include "irobot_ui.hpp"
+#include "ui/irobot_ui.hpp"
 
 #include "android/device.hpp"
 #include "android/file_handler.hpp"
