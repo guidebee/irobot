@@ -11,7 +11,6 @@ extern "C" {
 #endif
 
 #include <libavformat/avformat.h>
-#include <SDL2/SDL.h>
 
 #if defined (__cplusplus)
 }
@@ -52,11 +51,11 @@ struct scrcpy_options {
 };
 
 #define SCRCPY_OPTIONS_DEFAULT { \
-    .serial = NULL, \
-    .crop = NULL, \
-    .record_filename = NULL, \
-    .window_title = NULL, \
-    .push_target = NULL, \
+    .serial = nullptr, \
+    .crop = nullptr, \
+    .record_filename = nullptr, \
+    .window_title = nullptr, \
+    .push_target = nullptr, \
     .record_format = RECORDER_FORMAT_AUTO, \
     .port = DEFAULT_LOCAL_PORT, \
     .max_size = DEFAULT_MAX_SIZE, \
