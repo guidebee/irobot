@@ -38,9 +38,6 @@ static struct decoder decoder;
 extern struct input_manager input_manager;
 extern struct screen screen;
 
-
-
-
 static process_t
 set_show_touches_enabled(const char *serial, bool enabled) {
     const char *value = enabled ? "1" : "0";
