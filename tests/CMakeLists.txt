@@ -19,5 +19,5 @@ target_link_libraries(all_tests PRIVATE SDL2::SDL2 SDL2::SDL2main)
 if (WIN32)
     target_link_libraries(all_tests PRIVATE wsock32 ws2_32)
     install(TARGETS all_tests
-            RUNTIME DESTINATION ${CMAKE_BINARY_DIR})
+            RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 endif ()
