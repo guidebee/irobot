@@ -105,11 +105,6 @@ function(APP name)
 
     if (WIN32)
         target_link_libraries(${APP_TARGET} PRIVATE wsock32 ws2_32)
-        install(TARGETS ${name}
-                RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
-        install(TARGETS ${name}
-                RUNTIME DESTINATION ${CMAKE_CURRENT_BINARY_DIR}
-                ARCHIVE DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
     endif ()
 
     install(DIRECTORY ${CMAKE_HOME_DIRECTORY}/server
