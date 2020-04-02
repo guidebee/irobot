@@ -246,7 +246,7 @@ IRobotOptions::init() {
         }
 
         if (!cannot_cont & options->turn_screen_off) {
-            struct control_msg msg{};
+            struct ControlMessage msg{};
             msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
             msg.set_screen_power_mode.mode = SCREEN_POWER_MODE_OFF;
 

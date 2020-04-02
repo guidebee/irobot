@@ -42,9 +42,9 @@ Controller::destroy() {
     SDL_DestroyCond(controller->msg_cond);
     SDL_DestroyMutex(controller->mutex);
 
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     while (cbuf_take(&controller->queue, &msg)) {
-        control_msg_destroy(&msg);
+        msg.destroy();
     }
 
     receiver_destroy(&controller->receiver);
@@ -52,7 +52,7 @@ Controller::destroy() {
 
 bool
 Controller::push_msg(
-        const struct control_msg *msg) {
+        const struct ControlMessage *msg) {
     Controller *controller = this;
     mutex_lock(controller->mutex);
     bool was_empty = cbuf_is_empty(&controller->queue);
@@ -66,10 +66,10 @@ Controller::push_msg(
 
 static bool
 process_msg(Controller *controller,
-            const struct control_msg *msg) {
+        struct ControlMessage *msg) {
 
     unsigned char serialized_msg[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int length = control_msg_serialize(msg, serialized_msg);
+    int length = msg->serialize(serialized_msg);
     if (!length) {
         return false;
     }
@@ -91,14 +91,14 @@ run_controller(void *data) {
             mutex_unlock(controller->mutex);
             break;
         }
-        struct control_msg msg{};
+        struct ControlMessage msg{};
         bool non_empty = cbuf_take(&controller->queue, &msg);
         assert(non_empty);
         (void) non_empty;
         mutex_unlock(controller->mutex);
 
         bool ok = process_msg(controller, &msg);
-        control_msg_destroy(&msg);
+        msg.destroy();
         if (!ok) {
             LOGD("Could not write msg to socket");
             break;

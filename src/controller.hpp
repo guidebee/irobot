@@ -24,7 +24,7 @@ extern "C" {
 #include "util/cbuf.hpp"
 #include "util/net.hpp"
 
-struct control_msg_queue CBUF(struct control_msg, 64);
+struct control_msg_queue CBUF(struct ControlMessage, 64);
 
 
 class Controller {
@@ -48,7 +48,7 @@ public:
     void join();
 
     bool push_msg(
-            const struct control_msg *msg);
+            const struct ControlMessage *msg);
 
 };
 

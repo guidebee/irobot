@@ -23,7 +23,7 @@
 
 #define POINTER_ID_MOUSE UINT64_C(-1)
 
-enum control_msg_type {
+enum ControlMessageType {
     CONTROL_MSG_TYPE_INJECT_KEYCODE,
     CONTROL_MSG_TYPE_INJECT_TEXT,
     CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT,
@@ -37,15 +37,15 @@ enum control_msg_type {
     CONTROL_MSG_TYPE_ROTATE_DEVICE,
 };
 
-enum screen_power_mode {
+enum ScreenPowerMode {
     // see <https://android.googlesource.com/platform/frameworks/base.git/+/pie-release-2/core/java/android/view/SurfaceControl.java#305>
 
     SCREEN_POWER_MODE_OFF = 0,
     SCREEN_POWER_MODE_NORMAL = 2,
 };
 
-struct control_msg {
-    enum control_msg_type type;
+struct ControlMessage {
+    enum ControlMessageType type;
     union {
         struct {
             enum android_keyevent_action action;
@@ -71,17 +71,21 @@ struct control_msg {
             char *text; // owned, to be freed by SDL_free()
         } set_clipboard;
         struct {
-            enum screen_power_mode mode;
+            enum ScreenPowerMode mode;
         } set_screen_power_mode;
     };
+
+    size_t
+    serialize(unsigned char *buf);
+
+    void
+    destroy();
 };
 
 // buf size must be at least CONTROL_MSG_SERIALIZED_MAX_SIZE
 // return the number of bytes written
-size_t
-control_msg_serialize(const struct control_msg *msg, unsigned char *buf);
 
-void
-control_msg_destroy(struct control_msg *msg);
+
+
 
 #endif //ANDROID_IROBOT_CONTROL_MSG_HPP

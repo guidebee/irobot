@@ -41,7 +41,8 @@ to_fixed_point_16(float f) {
 }
 
 size_t
-control_msg_serialize(const struct control_msg *msg, unsigned char *buf) {
+ControlMessage::serialize( unsigned char *buf) {
+    struct ControlMessage *msg= this;
     buf[0] = msg->type;
     switch (msg->type) {
         case CONTROL_MSG_TYPE_INJECT_KEYCODE:
@@ -95,7 +96,8 @@ control_msg_serialize(const struct control_msg *msg, unsigned char *buf) {
 
 
 void
-control_msg_destroy(struct control_msg *msg) {
+ControlMessage::destroy() {
+    struct ControlMessage *msg = this;
     switch (msg->type) {
         case CONTROL_MSG_TYPE_INJECT_TEXT:
             SDL_free(msg->inject_text.text);

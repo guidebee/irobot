@@ -46,7 +46,7 @@ static void
 send_keycode(Controller *controller, enum android_keycode keycode,
              int actions, const char *name) {
     // send DOWN event
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_INJECT_KEYCODE;
     msg.inject_keycode.keycode = keycode;
     msg.inject_keycode.metastate = static_cast<android_metastate>(0);
@@ -105,7 +105,7 @@ action_menu(Controller *controller, int actions) {
 // turn the screen on if it was off, press BACK otherwise
 static void
 press_back_or_turn_screen_on(Controller *controller) {
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON;
 
     if (!controller->push_msg(&msg)) {
@@ -115,7 +115,7 @@ press_back_or_turn_screen_on(Controller *controller) {
 
 static void
 expand_notification_panel(Controller *controller) {
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL;
 
     if (!controller->push_msg( &msg)) {
@@ -125,7 +125,7 @@ expand_notification_panel(Controller *controller) {
 
 static void
 collapse_notification_panel(Controller *controller) {
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL;
 
     if (!controller->push_msg(&msg)) {
@@ -135,7 +135,7 @@ collapse_notification_panel(Controller *controller) {
 
 static void
 request_device_clipboard(Controller *controller) {
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_GET_CLIPBOARD;
 
     if (!controller->push_msg(&msg)) {
@@ -156,7 +156,7 @@ set_device_clipboard(Controller *controller) {
         return;
     }
 
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_SET_CLIPBOARD;
     msg.set_clipboard.text = text;
 
@@ -168,8 +168,8 @@ set_device_clipboard(Controller *controller) {
 
 static void
 set_screen_power_mode(Controller *controller,
-                      enum screen_power_mode mode) {
-    struct control_msg msg{};
+                      enum ScreenPowerMode mode) {
+    struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
     msg.set_screen_power_mode.mode = mode;
 
@@ -207,7 +207,7 @@ clipboard_paste(Controller *controller) {
         return;
     }
 
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_INJECT_TEXT;
     msg.inject_text.text = text;
     if (!controller->push_msg(&msg)) {
@@ -218,7 +218,7 @@ clipboard_paste(Controller *controller) {
 
 static void
 rotate_device(Controller *controller) {
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_ROTATE_DEVICE;
 
     if (!controller->push_msg(&msg)) {
@@ -238,7 +238,7 @@ input_manager_process_text_input(struct input_manager *im,
         }
     }
 
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_INJECT_TEXT;
     msg.inject_text.text = SDL_strdup(event->text);
     if (!msg.inject_text.text) {
@@ -252,7 +252,7 @@ input_manager_process_text_input(struct input_manager *im,
 }
 
 static bool
-convert_input_key(const SDL_KeyboardEvent *from, struct control_msg *to,
+convert_input_key(const SDL_KeyboardEvent *from, struct ControlMessage *to,
                   bool prefer_text) {
     to->type = CONTROL_MSG_TYPE_INJECT_KEYCODE;
 
@@ -419,7 +419,7 @@ input_manager_process_key(struct input_manager *im,
         return;
     }
 
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     if (convert_input_key(event, &msg, im->prefer_text)) {
         if (!controller->push_msg(&msg)) {
             LOGW("Could not request 'inject keycode'");
@@ -429,7 +429,7 @@ input_manager_process_key(struct input_manager *im,
 
 static bool
 convert_mouse_motion(const SDL_MouseMotionEvent *from, struct screen *screen,
-                     struct control_msg *to) {
+                     struct ControlMessage *to) {
     to->type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT;
     to->inject_touch_event.action = AMOTION_EVENT_ACTION_MOVE;
     to->inject_touch_event.pointer_id = POINTER_ID_MOUSE;
@@ -453,7 +453,7 @@ input_manager_process_mouse_motion(struct input_manager *im,
         // simulated from touch events, so it's a duplicate
         return;
     }
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     if (convert_mouse_motion(event, im->screen, &msg)) {
         if (!im->controller->push_msg( &msg)) {
             LOGW("Could not request 'inject mouse motion event'");
@@ -463,7 +463,7 @@ input_manager_process_mouse_motion(struct input_manager *im,
 
 static bool
 convert_touch(const SDL_TouchFingerEvent *from, struct screen *screen,
-              struct control_msg *to) {
+              struct ControlMessage *to) {
     to->type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT;
 
     if (!convert_touch_action(static_cast<SDL_EventType>(from->type), &to->inject_touch_event.action)) {
@@ -485,7 +485,7 @@ convert_touch(const SDL_TouchFingerEvent *from, struct screen *screen,
 void
 input_manager_process_touch(struct input_manager *im,
                             const SDL_TouchFingerEvent *event) {
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     if (convert_touch(event, im->screen, &msg)) {
         if (!im->controller->push_msg(&msg)) {
             LOGW("Could not request 'inject touch event'");
@@ -501,7 +501,7 @@ is_outside_device_screen(struct input_manager *im, int x, int y) {
 
 static bool
 convert_mouse_button(const SDL_MouseButtonEvent *from, struct screen *screen,
-                     struct control_msg *to) {
+                     struct ControlMessage *to) {
     to->type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT;
 
     if (!convert_mouse_action(static_cast<SDL_EventType>(from->type), &to->inject_touch_event.action)) {
@@ -552,7 +552,7 @@ input_manager_process_mouse_button(struct input_manager *im,
         return;
     }
 
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     if (convert_mouse_button(event, im->screen, &msg)) {
         if (!im->controller->push_msg(&msg)) {
             LOGW("Could not request 'inject mouse button event'");
@@ -562,7 +562,7 @@ input_manager_process_mouse_button(struct input_manager *im,
 
 static bool
 convert_mouse_wheel(const SDL_MouseWheelEvent *from, struct screen *screen,
-                    struct control_msg *to) {
+                    struct ControlMessage *to) {
     struct position position = {
             .screen_size = screen->frame_size,
             .point = get_mouse_point(screen),
@@ -580,7 +580,7 @@ convert_mouse_wheel(const SDL_MouseWheelEvent *from, struct screen *screen,
 void
 input_manager_process_mouse_wheel(struct input_manager *im,
                                   const SDL_MouseWheelEvent *event) {
-    struct control_msg msg{};
+    struct ControlMessage msg{};
     if (convert_mouse_wheel(event, im->screen, &msg)) {
         if (!im->controller->push_msg(&msg)) {
             LOGW("Could not request 'inject mouse wheel event'");

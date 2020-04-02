@@ -8,8 +8,8 @@
 #include "message/control_msg.hpp"
 #include "message/device_msg.hpp"
 
-TEST_CASE("serialize inject keycode", "[message][control_msg]") {
-    struct control_msg msg = {
+TEST_CASE("serialize inject keycode", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_INJECT_KEYCODE,
             .inject_keycode = {
                     .action = AKEY_EVENT_ACTION_UP,
@@ -20,7 +20,7 @@ TEST_CASE("serialize inject keycode", "[message][control_msg]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = control_msg_serialize(&msg, buf);
+    int size = msg.serialize(buf);
     REQUIRE(size == 10);
 
     const unsigned char expected[] = {
@@ -32,8 +32,8 @@ TEST_CASE("serialize inject keycode", "[message][control_msg]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize inject text", "[message][control_msg]") {
-    struct control_msg msg = {
+TEST_CASE("serialize inject text", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_INJECT_TEXT,
             .inject_text = {
                     .text = const_cast<char *>("hello, world!"),
@@ -41,7 +41,7 @@ TEST_CASE("serialize inject text", "[message][control_msg]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = control_msg_serialize(&msg, buf);
+    int size = msg.serialize(buf);
     REQUIRE(size == 16);
 
     const unsigned char expected[] = {
@@ -52,8 +52,8 @@ TEST_CASE("serialize inject text", "[message][control_msg]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize inject text long", "[message][control_msg]") {
-    struct control_msg msg{};
+TEST_CASE("serialize inject text long", "[message][ControlMessage]") {
+    struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_INJECT_TEXT;
     char text[CONTROL_MSG_TEXT_MAX_LENGTH + 1];
     memset(text, 'a', sizeof(text));
@@ -61,7 +61,7 @@ TEST_CASE("serialize inject text long", "[message][control_msg]") {
     msg.inject_text.text = text;
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = control_msg_serialize(&msg, buf);
+    int size = msg.serialize(buf);
     REQUIRE(size == 3 + CONTROL_MSG_TEXT_MAX_LENGTH);
 
     unsigned char expected[3 + CONTROL_MSG_TEXT_MAX_LENGTH];
@@ -73,8 +73,8 @@ TEST_CASE("serialize inject text long", "[message][control_msg]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize inject touch event", "[message][control_msg]") {
-    struct control_msg msg = {
+TEST_CASE("serialize inject touch event", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT,
             .inject_touch_event = {
                     .action = AMOTION_EVENT_ACTION_DOWN,
@@ -97,7 +97,7 @@ TEST_CASE("serialize inject touch event", "[message][control_msg]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = control_msg_serialize(&msg, buf);
+    int size = msg.serialize(buf);
     REQUIRE(size == 28);
 
     const unsigned char expected[] = {
@@ -112,8 +112,8 @@ TEST_CASE("serialize inject touch event", "[message][control_msg]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize inject scroll event", "[message][control_msg]") {
-    struct control_msg msg = {
+TEST_CASE("serialize inject scroll event", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT,
             .inject_scroll_event = {
                     .position = {
@@ -133,7 +133,7 @@ TEST_CASE("serialize inject scroll event", "[message][control_msg]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = control_msg_serialize(&msg, buf);
+    int size = msg.serialize(buf);
     REQUIRE(size == 21);
 
     const unsigned char expected[] = {
@@ -146,13 +146,13 @@ TEST_CASE("serialize inject scroll event", "[message][control_msg]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize back or screen on", "[message][control_msg]") {
-    struct control_msg msg = {
+TEST_CASE("serialize back or screen on", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON,
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = control_msg_serialize(&msg, buf);
+    int size = msg.serialize(buf);
     REQUIRE(size == 1);
 
     const unsigned char expected[] = {
@@ -161,13 +161,13 @@ TEST_CASE("serialize back or screen on", "[message][control_msg]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize expand notification panel", "[message][control_msg]") {
-    struct control_msg msg = {
+TEST_CASE("serialize expand notification panel", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL,
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = control_msg_serialize(&msg, buf);
+    int size = msg.serialize(buf);
     REQUIRE(size == 1);
 
     const unsigned char expected[] = {
@@ -176,13 +176,13 @@ TEST_CASE("serialize expand notification panel", "[message][control_msg]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize collapse notification panel", "[message][control_msg]") {
-    struct control_msg msg = {
+TEST_CASE("serialize collapse notification panel", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL,
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = control_msg_serialize(&msg, buf);
+    int size = msg.serialize(buf);
     REQUIRE(size == 1);
 
     const unsigned char expected[] = {
@@ -191,13 +191,13 @@ TEST_CASE("serialize collapse notification panel", "[message][control_msg]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize get clipboard", "[message][control_msg]") {
-    struct control_msg msg = {
+TEST_CASE("serialize get clipboard", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_GET_CLIPBOARD,
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = control_msg_serialize(&msg, buf);
+    int size = msg.serialize(buf);
     REQUIRE(size == 1);
 
     const unsigned char expected[] = {
@@ -206,8 +206,8 @@ TEST_CASE("serialize get clipboard", "[message][control_msg]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize set clipboard", "[message][control_msg]") {
-    struct control_msg msg = {
+TEST_CASE("serialize set clipboard", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_SET_CLIPBOARD,
             .inject_text = {
                     .text = const_cast<char *>("hello, world!"),
@@ -215,7 +215,7 @@ TEST_CASE("serialize set clipboard", "[message][control_msg]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = control_msg_serialize(&msg, buf);
+    int size =msg.serialize(buf);
     REQUIRE(size == 16);
 
     const unsigned char expected[] = {
@@ -226,8 +226,8 @@ TEST_CASE("serialize set clipboard", "[message][control_msg]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize set screen power mode", "[message][control_msg]") {
-    struct control_msg msg = {
+TEST_CASE("serialize set screen power mode", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE,
             .set_screen_power_mode = {
                     .mode = SCREEN_POWER_MODE_NORMAL,
@@ -235,7 +235,7 @@ TEST_CASE("serialize set screen power mode", "[message][control_msg]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = control_msg_serialize(&msg, buf);
+    int size = msg.serialize(buf);
     REQUIRE(size == 2);
 
     const unsigned char expected[] = {
@@ -245,13 +245,13 @@ TEST_CASE("serialize set screen power mode", "[message][control_msg]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize rotate device", "[message][control_msg]") {
-    struct control_msg msg = {
+TEST_CASE("serialize rotate device", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_ROTATE_DEVICE,
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = control_msg_serialize(&msg, buf);
+    int size = msg.serialize(buf);
     REQUIRE(size == 1);
 
     const unsigned char expected[] = {
@@ -260,7 +260,7 @@ TEST_CASE("serialize rotate device", "[message][control_msg]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("deserialize clipboard", "[message][control_msg]") {
+TEST_CASE("deserialize clipboard", "[message][ControlMessage]") {
     const unsigned char input[] = {
             DEVICE_MSG_TYPE_CLIPBOARD,
             0x00, 0x03, // text length
