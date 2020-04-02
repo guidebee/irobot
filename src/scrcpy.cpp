@@ -14,7 +14,6 @@
 
 #include "android/device.hpp"
 #include "android/file_handler.hpp"
-
 #include "ui/screen.hpp"
 #include "ui/irobot_ui.hpp"
 #include "video/decoder.hpp"
@@ -25,7 +24,7 @@
 #include "util/log.hpp"
 #include "util/net.hpp"
 
-static struct server server = SERVER_INITIALIZER;
+static Server server{};
 static struct fps_counter fps_counter;
 struct video_buffer video_buffer;
 static struct stream stream;
@@ -100,7 +99,7 @@ scrcpy(const struct scrcpy_options *options) {
             .max_fps = options->max_fps,
             .control = options->control,
     };
-    if (!server_start(&server, options->serial, &params)) {
+    if (!server.start(options->serial, &params)) {
         return false;
     }
 
@@ -124,7 +123,7 @@ scrcpy(const struct scrcpy_options *options) {
         cannot_cont = true;
     }
 
-    if (!cannot_cont & !server_connect_to(&server)) {
+    if (!cannot_cont & !server.connect_to()) {
         cannot_cont = true;
     }
 
@@ -255,7 +254,7 @@ scrcpy(const struct scrcpy_options *options) {
     }
 
     // shutdown the sockets and kill the server
-    server_stop(&server);
+    server.stop();
 
     // now that the sockets are shutdown, the stream and controller are
     // interrupted, we can join them
@@ -297,7 +296,7 @@ scrcpy(const struct scrcpy_options *options) {
         wait_show_touches(proc_show_touches);
     }
 
-    server_destroy(&server);
+    server.destroy();
 
     return ret;
 }

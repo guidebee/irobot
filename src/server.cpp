@@ -106,7 +106,7 @@ disable_tunnel_forward(const char *serial, uint16_t local_port) {
 }
 
 static bool
-enable_tunnel(struct server *server) {
+enable_tunnel(Server *server) {
     if (enable_tunnel_reverse(server->serial, server->local_port)) {
         return true;
     }
@@ -117,7 +117,7 @@ enable_tunnel(struct server *server) {
 }
 
 static bool
-disable_tunnel(struct server *server) {
+disable_tunnel(Server *server) {
     if (server->tunnel_forward) {
         return disable_tunnel_forward(server->serial, server->local_port);
     }
@@ -125,7 +125,7 @@ disable_tunnel(struct server *server) {
 }
 
 static process_t
-execute_server(struct server *server, const struct server_params *params) {
+execute_server(Server *server, const struct server_params *params) {
     char max_size_string[6];
     char bit_rate_string[11];
     char max_fps_string[6];
@@ -218,14 +218,21 @@ close_socket(socket_t *socket) {
     *socket = INVALID_SOCKET;
 }
 
-void
-server_init(struct server *server) {
-    *server = (struct server) SERVER_INITIALIZER;
+void Server::init() {
+    this->serial = nullptr;
+    this->process = PROCESS_NONE;
+    this->server_socket = INVALID_SOCKET;
+    this->video_socket = INVALID_SOCKET;
+    this->control_socket = INVALID_SOCKET;
+    this->local_port = 0;
+    this->tunnel_enabled = false;
+    this->tunnel_forward = false;
 }
 
 bool
-server_start(struct server *server, const char *serial,
-             const struct server_params *params) {
+Server::start(const char *serial,
+              const struct server_params *params) {
+    Server *server = this;
     server->local_port = params->local_port;
 
     if (serial) {
@@ -302,8 +309,10 @@ server_start(struct server *server, const char *serial,
     return true;
 }
 
+
 bool
-server_connect_to(struct server *server) {
+Server::connect_to() {
+    Server *server = this;
     if (!server->tunnel_forward) {
         server->video_socket = net_accept(server->server_socket);
         if (server->video_socket == INVALID_SOCKET) {
@@ -343,7 +352,8 @@ server_connect_to(struct server *server) {
 }
 
 void
-server_stop(struct server *server) {
+Server::stop() {
+    Server *server = this;
     if (server->server_socket != INVALID_SOCKET) {
         close_socket(&server->server_socket);
     }
@@ -376,6 +386,8 @@ server_stop(struct server *server) {
 }
 
 void
-server_destroy(struct server *server) {
+Server::destroy() {
+    Server *server = this;
     SDL_free(server->serial);
 }
+
