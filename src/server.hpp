@@ -23,7 +23,7 @@ extern "C" {
 #include "util/net.hpp"
 
 
-struct server_params {
+struct ServerParameters {
     const char *crop;
     uint16_t local_port;
     uint16_t max_size;
@@ -52,7 +52,7 @@ public:
 
     // push, enable tunnel et start the server
     bool start(const char *serial,
-               const struct server_params *params);
+               const struct ServerParameters *params);
 
     // block until the communication with the server is established
     bool connect_to();

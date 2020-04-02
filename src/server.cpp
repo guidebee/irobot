@@ -125,7 +125,7 @@ disable_tunnel(Server *server) {
 }
 
 static process_t
-execute_server(Server *server, const struct server_params *params) {
+execute_server(Server *server, const struct ServerParameters *params) {
     char max_size_string[6];
     char bit_rate_string[11];
     char max_fps_string[6];
@@ -231,7 +231,7 @@ void Server::init() {
 
 bool
 Server::start(const char *serial,
-              const struct server_params *params) {
+              const struct ServerParameters *params) {
     Server *server = this;
     server->local_port = params->local_port;
 

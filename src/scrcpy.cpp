@@ -91,7 +91,7 @@ av_log_callback(void *avcl, int level, const char *fmt, va_list vl) {
 bool
 scrcpy(const struct scrcpy_options *options) {
     bool record = options->record_filename != nullptr;
-    struct server_params params = {
+    struct ServerParameters params = {
             .crop = options->crop,
             .local_port = options->port,
             .max_size = options->max_size,
