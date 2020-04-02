@@ -41,7 +41,6 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/video/video_buffer.hpp
         ${CMAKE_HOME_DIRECTORY}/src/video/decoder.hpp
         ${CMAKE_HOME_DIRECTORY}/src/video/stream.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/ui/cli.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/events.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/input_manager.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/event_converter.hpp
@@ -60,7 +59,6 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/android/receiver.cpp
         ${CMAKE_HOME_DIRECTORY}/src/message/device_msg.cpp
         ${CMAKE_HOME_DIRECTORY}/src/message/control_msg.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/ui/cli.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/event_converter.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/screen.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/input_manager.cpp

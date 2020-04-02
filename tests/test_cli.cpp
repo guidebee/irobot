@@ -4,46 +4,40 @@
 //
 
 #include "catch.hpp"
-#include "ui/cli.hpp"
+#include "irobot_option.hpp"
 #include "common.hpp"
 
 TEST_CASE("flag version", "[ui][cli]") {
-    struct scrcpy_cli_args args = {
-            .opts = SCRCPY_OPTIONS_DEFAULT,
-            .help = false,
-            .version = false,
+    struct IRobotOptions args = {
+
     };
 
     char *argv[] = {const_cast<char *>("scrcpy"),
                     const_cast<char *>("-v")};
 
-    bool ok = scrcpy_parse_args(&args, 2, argv);
+    bool ok = args.parse_args(2, argv);
     REQUIRE(ok);
     REQUIRE(!args.help);
     REQUIRE(args.version);
 }
 
 TEST_CASE("flag help", "[ui][cli]") {
-    struct scrcpy_cli_args args = {
-            .opts = SCRCPY_OPTIONS_DEFAULT,
-            .help = false,
-            .version = false,
+    struct IRobotOptions args = {
+
     };
 
     char *argv[] = {const_cast<char *>("scrcpy"),
                     const_cast<char *>("-v")};
 
-    bool ok = scrcpy_parse_args(&args, 2, argv);
+    bool ok = args.parse_args(2, argv);
     REQUIRE(ok);
     REQUIRE(!args.help);
     REQUIRE(args.version);
 }
 
 TEST_CASE("options", "[ui][cli]") {
-    struct scrcpy_cli_args args = {
-            .opts = SCRCPY_OPTIONS_DEFAULT,
-            .help = false,
-            .version = false,
+    struct IRobotOptions args = {
+
     };
 
     char *argv[] = {
@@ -73,10 +67,10 @@ TEST_CASE("options", "[ui][cli]") {
             const_cast<char *>("--window-borderless"),
     };
 
-    bool ok = scrcpy_parse_args(&args, ARRAY_LEN(argv), argv);
+    bool ok = args.parse_args(ARRAY_LEN(argv), argv);
     REQUIRE(ok);
 
-    const struct IRobotOptions *opts = &args.opts;
+    const struct IRobotOptions *opts = &args;
     REQUIRE(opts->always_on_top);
 //    fprintf(stderr, "%d\n", (int) opts->bit_rate);
     REQUIRE(opts->bit_rate == 5000000);
@@ -102,10 +96,8 @@ TEST_CASE("options", "[ui][cli]") {
 }
 
 TEST_CASE("options2", "[ui][cli]") {
-    struct scrcpy_cli_args args = {
-            .opts = SCRCPY_OPTIONS_DEFAULT,
-            .help = false,
-            .version = false,
+    struct IRobotOptions args = {
+
     };
 
     char *argv[] = {
@@ -116,10 +108,10 @@ TEST_CASE("options2", "[ui][cli]") {
             const_cast<char *>("file.mp4"), // cannot enable --no-display without recording
     };
 
-    bool ok = scrcpy_parse_args(&args, ARRAY_LEN(argv), argv);
+    bool ok = args.parse_args(ARRAY_LEN(argv), argv);
     REQUIRE(ok);
 
-    const struct IRobotOptions *opts = &args.opts;
+    const struct IRobotOptions *opts = &args;
     REQUIRE(!opts->control);
     REQUIRE(!opts->display);
     REQUIRE(!strcmp(opts->record_filename, "file.mp4"));

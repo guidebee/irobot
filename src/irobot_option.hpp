@@ -9,7 +9,8 @@
 #if defined (__cplusplus)
 extern "C" {
 #endif
-
+#include <getopt.h>
+#include <unistd.h>
 #include <libavformat/avformat.h>
 
 #if defined (__cplusplus)
@@ -48,12 +49,18 @@ struct IRobotOptions {
     bool window_borderless;
     uint16_t screen_width;
     uint16_t screen_height;
+    bool help;
+    bool version;
 
     IRobotOptions();
 
     bool init();
+    bool
+    parse_args(int argc, char *argv[]);
 };
 
+void
+scrcpy_print_usage(const char *arg0);
 
 
 #endif //ANDROID_IROBOT_SCRCPY_HPP

@@ -9,7 +9,6 @@
 #include "irobot_option.hpp"
 
 #include "config.hpp"
-#include "ui/cli.hpp"
 
 #include "util/log.hpp"
 
@@ -46,12 +45,11 @@ main(int argc, char *argv[]) {
     SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
 #endif
 
-    struct scrcpy_cli_args args = {
-            .help = false,
-            .version = false,
+    struct IRobotOptions args = {
+
     };
 
-    if (!scrcpy_parse_args(&args, argc, argv)) {
+    if (!args.parse_args(argc, argv)) {
         return 1;
     }
 
@@ -74,7 +72,7 @@ main(int argc, char *argv[]) {
         return 1;
     }
 
-    int res = args.opts.init() ? 0 : 1;
+    int res = args.init() ? 0 : 1;
 
     avformat_network_deinit(); // ignore failure
 
