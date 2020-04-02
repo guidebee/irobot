@@ -26,7 +26,9 @@ extern "C" {
 
 struct control_msg_queue CBUF(struct control_msg, 64);
 
-struct controller {
+
+class Controller {
+public:
     socket_t control_socket;
     SDL_Thread *thread;
     SDL_mutex *mutex;
@@ -34,25 +36,20 @@ struct controller {
     bool stopped;
     struct control_msg_queue queue;
     struct receiver receiver;
+
+    bool init(socket_t control_socket);
+
+    void destroy();
+
+    bool start();
+
+    void stop();
+
+    void join();
+
+    bool push_msg(
+            const struct control_msg *msg);
+
 };
-
-bool
-controller_init(struct controller *controller, socket_t control_socket);
-
-void
-controller_destroy(struct controller *controller);
-
-bool
-controller_start(struct controller *controller);
-
-void
-controller_stop(struct controller *controller);
-
-void
-controller_join(struct controller *controller);
-
-bool
-controller_push_msg(struct controller *controller,
-                    const struct control_msg *msg);
 
 #endif //ANDROID_IROBOT_CONTROLLER_HPP

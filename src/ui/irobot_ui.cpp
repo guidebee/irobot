@@ -13,7 +13,7 @@
 struct screen screen = SCREEN_INITIALIZER;
 
 extern struct video_buffer video_buffer;
-extern struct controller controller;
+extern class Controller controller;
 extern struct file_handler file_handler;
 
 struct input_manager input_manager = {

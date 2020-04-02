@@ -11,7 +11,8 @@
 #include "util/log.hpp"
 
 bool
-controller_init(struct controller *controller, socket_t control_socket) {
+Controller::init(socket_t control_socket) {
+    Controller *controller = this;
     cbuf_init(&controller->queue);
 
     if (!receiver_init(&controller->receiver, control_socket)) {
@@ -36,7 +37,8 @@ controller_init(struct controller *controller, socket_t control_socket) {
 }
 
 void
-controller_destroy(struct controller *controller) {
+Controller::destroy() {
+    Controller *controller = this;
     SDL_DestroyCond(controller->msg_cond);
     SDL_DestroyMutex(controller->mutex);
 
@@ -49,8 +51,9 @@ controller_destroy(struct controller *controller) {
 }
 
 bool
-controller_push_msg(struct controller *controller,
-                    const struct control_msg *msg) {
+Controller::push_msg(
+        const struct control_msg *msg) {
+    Controller *controller = this;
     mutex_lock(controller->mutex);
     bool was_empty = cbuf_is_empty(&controller->queue);
     bool res = cbuf_push(&controller->queue, *msg);
@@ -62,8 +65,9 @@ controller_push_msg(struct controller *controller,
 }
 
 static bool
-process_msg(struct controller *controller,
+process_msg(Controller *controller,
             const struct control_msg *msg) {
+
     unsigned char serialized_msg[CONTROL_MSG_SERIALIZED_MAX_SIZE];
     int length = control_msg_serialize(msg, serialized_msg);
     if (!length) {
@@ -75,7 +79,7 @@ process_msg(struct controller *controller,
 
 static int
 run_controller(void *data) {
-    auto *controller = static_cast<struct controller *>(data);
+    auto *controller = static_cast<Controller *>(data);
 
     for (;;) {
         mutex_lock(controller->mutex);
@@ -104,7 +108,8 @@ run_controller(void *data) {
 }
 
 bool
-controller_start(struct controller *controller) {
+Controller::start() {
+    Controller *controller = this;
     LOGD("Starting controller thread");
 
     controller->thread = SDL_CreateThread(run_controller, "controller",
@@ -115,7 +120,7 @@ controller_start(struct controller *controller) {
     }
 
     if (!receiver_start(&controller->receiver)) {
-        controller_stop(controller);
+        controller->stop();
         SDL_WaitThread(controller->thread, nullptr);
         return false;
     }
@@ -124,7 +129,8 @@ controller_start(struct controller *controller) {
 }
 
 void
-controller_stop(struct controller *controller) {
+Controller::stop() {
+    Controller *controller = this;
     mutex_lock(controller->mutex);
     controller->stopped = true;
     cond_signal(controller->msg_cond);
@@ -132,7 +138,8 @@ controller_stop(struct controller *controller) {
 }
 
 void
-controller_join(struct controller *controller) {
+Controller::join() {
+    Controller *controller = this;
     SDL_WaitThread(controller->thread, nullptr);
     receiver_join(&controller->receiver);
 }

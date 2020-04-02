@@ -30,7 +30,9 @@ struct video_buffer video_buffer;
 static struct stream stream;
 
 static struct recorder recorder;
-struct controller controller;
+
+class Controller controller{};
+
 struct file_handler file_handler;
 
 static struct decoder decoder;
@@ -114,8 +116,8 @@ IRobotOptions::IRobotOptions() {
     this->render_expired_frames = false;
     this->prefer_text = false;
     this->window_borderless = false;
-    this->help=false;
-    this->version=false;
+    this->help = false;
+    this->version = false;
 
 }
 
@@ -220,12 +222,12 @@ IRobotOptions::init() {
 
     if (!cannot_cont & options->display) {
         if (options->control) {
-            if (!controller_init(&controller, server.control_socket)) {
+            if (!controller.init(server.control_socket)) {
                 cannot_cont = true;
             }
             controller_initialized = true;
 
-            if (!controller_start(&controller)) {
+            if (!controller.start()) {
                 cannot_cont = true;
             }
             controller_started = true;
@@ -248,7 +250,7 @@ IRobotOptions::init() {
             msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
             msg.set_screen_power_mode.mode = SCREEN_POWER_MODE_OFF;
 
-            if (!controller_push_msg(&controller, &msg)) {
+            if (!controller.push_msg(&msg)) {
                 LOGW("Could not request 'set screen power mode'");
             }
         }
@@ -276,7 +278,7 @@ IRobotOptions::init() {
     stream_stop(&stream);
 
     if (controller_started) {
-        controller_stop(&controller);
+        controller.stop();
     }
     if (file_handler_initialized) {
         file_handler_stop(&file_handler);
@@ -294,10 +296,10 @@ IRobotOptions::init() {
 
 
     if (controller_started) {
-        controller_join(&controller);
+        controller.join();
     }
     if (controller_initialized) {
-        controller_destroy(&controller);
+        controller.destroy();
     }
 
     if (recorder_initialized) {

@@ -43,7 +43,7 @@ static const int ACTION_DOWN = 1;
 static const int ACTION_UP = 1 << 1;
 
 static void
-send_keycode(struct controller *controller, enum android_keycode keycode,
+send_keycode(Controller *controller, enum android_keycode keycode,
              int actions, const char *name) {
     // send DOWN event
     struct control_msg msg{};
@@ -53,7 +53,7 @@ send_keycode(struct controller *controller, enum android_keycode keycode,
 
     if (actions & ACTION_DOWN) {
         msg.inject_keycode.action = AKEY_EVENT_ACTION_DOWN;
-        if (!controller_push_msg(controller, &msg)) {
+        if (!controller->push_msg(&msg)) {
             LOGW("Could not request 'inject %s (DOWN)'", name);
             return;
         }
@@ -61,90 +61,90 @@ send_keycode(struct controller *controller, enum android_keycode keycode,
 
     if (actions & ACTION_UP) {
         msg.inject_keycode.action = AKEY_EVENT_ACTION_UP;
-        if (!controller_push_msg(controller, &msg)) {
+        if (!controller->push_msg( &msg)) {
             LOGW("Could not request 'inject %s (UP)'", name);
         }
     }
 }
 
 static inline void
-action_home(struct controller *controller, int actions) {
+action_home(Controller *controller, int actions) {
     send_keycode(controller, AKEYCODE_HOME, actions, "HOME");
 }
 
 static inline void
-action_back(struct controller *controller, int actions) {
+action_back(Controller *controller, int actions) {
     send_keycode(controller, AKEYCODE_BACK, actions, "BACK");
 }
 
 static inline void
-action_app_switch(struct controller *controller, int actions) {
+action_app_switch(Controller *controller, int actions) {
     send_keycode(controller, AKEYCODE_APP_SWITCH, actions, "APP_SWITCH");
 }
 
 static inline void
-action_power(struct controller *controller, int actions) {
+action_power(Controller *controller, int actions) {
     send_keycode(controller, AKEYCODE_POWER, actions, "POWER");
 }
 
 static inline void
-action_volume_up(struct controller *controller, int actions) {
+action_volume_up(Controller *controller, int actions) {
     send_keycode(controller, AKEYCODE_VOLUME_UP, actions, "VOLUME_UP");
 }
 
 static inline void
-action_volume_down(struct controller *controller, int actions) {
+action_volume_down(Controller *controller, int actions) {
     send_keycode(controller, AKEYCODE_VOLUME_DOWN, actions, "VOLUME_DOWN");
 }
 
 static inline void
-action_menu(struct controller *controller, int actions) {
+action_menu(Controller *controller, int actions) {
     send_keycode(controller, AKEYCODE_MENU, actions, "MENU");
 }
 
 // turn the screen on if it was off, press BACK otherwise
 static void
-press_back_or_turn_screen_on(struct controller *controller) {
+press_back_or_turn_screen_on(Controller *controller) {
     struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON;
 
-    if (!controller_push_msg(controller, &msg)) {
+    if (!controller->push_msg(&msg)) {
         LOGW("Could not request 'press back or turn screen on'");
     }
 }
 
 static void
-expand_notification_panel(struct controller *controller) {
+expand_notification_panel(Controller *controller) {
     struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL;
 
-    if (!controller_push_msg(controller, &msg)) {
+    if (!controller->push_msg( &msg)) {
         LOGW("Could not request 'expand notification panel'");
     }
 }
 
 static void
-collapse_notification_panel(struct controller *controller) {
+collapse_notification_panel(Controller *controller) {
     struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL;
 
-    if (!controller_push_msg(controller, &msg)) {
+    if (!controller->push_msg(&msg)) {
         LOGW("Could not request 'collapse notification panel'");
     }
 }
 
 static void
-request_device_clipboard(struct controller *controller) {
+request_device_clipboard(Controller *controller) {
     struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_GET_CLIPBOARD;
 
-    if (!controller_push_msg(controller, &msg)) {
+    if (!controller->push_msg(&msg)) {
         LOGW("Could not request device clipboard");
     }
 }
 
 static void
-set_device_clipboard(struct controller *controller) {
+set_device_clipboard(Controller *controller) {
     char *text = SDL_GetClipboardText();
     if (!text) {
         LOGW("Could not get clipboard text: %s", SDL_GetError());
@@ -160,20 +160,20 @@ set_device_clipboard(struct controller *controller) {
     msg.type = CONTROL_MSG_TYPE_SET_CLIPBOARD;
     msg.set_clipboard.text = text;
 
-    if (!controller_push_msg(controller, &msg)) {
+    if (!controller->push_msg(&msg)) {
         SDL_free(text);
         LOGW("Could not request 'set device clipboard'");
     }
 }
 
 static void
-set_screen_power_mode(struct controller *controller,
+set_screen_power_mode(Controller *controller,
                       enum screen_power_mode mode) {
     struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
     msg.set_screen_power_mode.mode = mode;
 
-    if (!controller_push_msg(controller, &msg)) {
+    if (!controller->push_msg(&msg)) {
         LOGW("Could not request 'set screen power mode'");
     }
 }
@@ -195,7 +195,7 @@ switch_fps_counter_state(struct fps_counter *fps_counter) {
 }
 
 static void
-clipboard_paste(struct controller *controller) {
+clipboard_paste(Controller *controller) {
     char *text = SDL_GetClipboardText();
     if (!text) {
         LOGW("Could not get clipboard text: %s", SDL_GetError());
@@ -210,18 +210,18 @@ clipboard_paste(struct controller *controller) {
     struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_INJECT_TEXT;
     msg.inject_text.text = text;
-    if (!controller_push_msg(controller, &msg)) {
+    if (!controller->push_msg(&msg)) {
         SDL_free(text);
         LOGW("Could not request 'paste clipboard'");
     }
 }
 
 static void
-rotate_device(struct controller *controller) {
+rotate_device(Controller *controller) {
     struct control_msg msg{};
     msg.type = CONTROL_MSG_TYPE_ROTATE_DEVICE;
 
-    if (!controller_push_msg(controller, &msg)) {
+    if (!controller->push_msg(&msg)) {
         LOGW("Could not request device rotation");
     }
 }
@@ -245,7 +245,7 @@ input_manager_process_text_input(struct input_manager *im,
         LOGW("Could not strdup input text");
         return;
     }
-    if (!controller_push_msg(im->controller, &msg)) {
+    if (!im->controller->push_msg(&msg)) {
         SDL_free(msg.inject_text.text);
         LOGW("Could not request 'inject text'");
     }
@@ -299,7 +299,7 @@ input_manager_process_key(struct input_manager *im,
         return;
     }
 
-    struct controller *controller = im->controller;
+    Controller *controller = im->controller;
 
     // capture all Ctrl events
     if (ctrl || cmd) {
@@ -421,7 +421,7 @@ input_manager_process_key(struct input_manager *im,
 
     struct control_msg msg{};
     if (convert_input_key(event, &msg, im->prefer_text)) {
-        if (!controller_push_msg(controller, &msg)) {
+        if (!controller->push_msg(&msg)) {
             LOGW("Could not request 'inject keycode'");
         }
     }
@@ -455,7 +455,7 @@ input_manager_process_mouse_motion(struct input_manager *im,
     }
     struct control_msg msg{};
     if (convert_mouse_motion(event, im->screen, &msg)) {
-        if (!controller_push_msg(im->controller, &msg)) {
+        if (!im->controller->push_msg( &msg)) {
             LOGW("Could not request 'inject mouse motion event'");
         }
     }
@@ -487,7 +487,7 @@ input_manager_process_touch(struct input_manager *im,
                             const SDL_TouchFingerEvent *event) {
     struct control_msg msg{};
     if (convert_touch(event, im->screen, &msg)) {
-        if (!controller_push_msg(im->controller, &msg)) {
+        if (!im->controller->push_msg(&msg)) {
             LOGW("Could not request 'inject touch event'");
         }
     }
@@ -554,7 +554,7 @@ input_manager_process_mouse_button(struct input_manager *im,
 
     struct control_msg msg{};
     if (convert_mouse_button(event, im->screen, &msg)) {
-        if (!controller_push_msg(im->controller, &msg)) {
+        if (!im->controller->push_msg(&msg)) {
             LOGW("Could not request 'inject mouse button event'");
         }
     }
@@ -582,7 +582,7 @@ input_manager_process_mouse_wheel(struct input_manager *im,
                                   const SDL_MouseWheelEvent *event) {
     struct control_msg msg{};
     if (convert_mouse_wheel(event, im->screen, &msg)) {
-        if (!controller_push_msg(im->controller, &msg)) {
+        if (!im->controller->push_msg(&msg)) {
             LOGW("Could not request 'inject mouse wheel event'");
         }
     }
