@@ -393,7 +393,7 @@ scrcpy_parse_args(struct scrcpy_cli_args *args, int argc, char *argv[]) {
             {nullptr, 0,                                 nullptr, 0},
     };
 
-    struct scrcpy_options *opts = &args->opts;
+    struct IRobotOptions *opts = &args->opts;
 
     optind = 0; // reset to start from the first argument in tests
 

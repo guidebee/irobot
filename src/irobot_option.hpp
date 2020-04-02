@@ -22,7 +22,7 @@ extern "C" {
 #include "ui/input_manager.hpp"
 #include "video/recorder.hpp"
 
-struct scrcpy_options {
+struct IRobotOptions {
     const char *serial;
     const char *crop;
     const char *record_filename;
@@ -48,35 +48,12 @@ struct scrcpy_options {
     bool window_borderless;
     uint16_t screen_width;
     uint16_t screen_height;
+
+    IRobotOptions();
+
+    bool init();
 };
 
-#define SCRCPY_OPTIONS_DEFAULT { \
-    .serial = nullptr, \
-    .crop = nullptr, \
-    .record_filename = nullptr, \
-    .window_title = nullptr, \
-    .push_target = nullptr, \
-    .record_format = RECORDER_FORMAT_AUTO, \
-    .port = DEFAULT_LOCAL_PORT, \
-    .max_size = DEFAULT_MAX_SIZE, \
-    .bit_rate = DEFAULT_BIT_RATE, \
-    .max_fps = 0, \
-    .window_x = -1, \
-    .window_y = -1, \
-    .window_width = 0, \
-    .window_height = 0, \
-    .show_touches = false, \
-    .fullscreen = false, \
-    .always_on_top = false, \
-    .control = true, \
-    .display = true, \
-    .turn_screen_off = false, \
-    .render_expired_frames = false, \
-    .prefer_text = false, \
-    .window_borderless = false, \
-}
 
-bool
-scrcpy(const struct scrcpy_options *options);
 
 #endif //ANDROID_IROBOT_SCRCPY_HPP

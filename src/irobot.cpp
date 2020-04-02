@@ -6,7 +6,7 @@
 //
 
 #define SDL_MAIN_HANDLED // avoid link error on Linux Windows Subsystem
-#include "scrcpy.hpp"
+#include "irobot_option.hpp"
 
 #include "config.hpp"
 #include "ui/cli.hpp"
@@ -47,7 +47,6 @@ main(int argc, char *argv[]) {
 #endif
 
     struct scrcpy_cli_args args = {
-            .opts = SCRCPY_OPTIONS_DEFAULT,
             .help = false,
             .version = false,
     };
@@ -75,7 +74,7 @@ main(int argc, char *argv[]) {
         return 1;
     }
 
-    int res = scrcpy(&args.opts) ? 0 : 1;
+    int res = args.opts.init() ? 0 : 1;
 
     avformat_network_deinit(); // ignore failure
 

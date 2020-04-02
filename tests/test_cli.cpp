@@ -76,7 +76,7 @@ TEST_CASE("options", "[ui][cli]") {
     bool ok = scrcpy_parse_args(&args, ARRAY_LEN(argv), argv);
     REQUIRE(ok);
 
-    const struct scrcpy_options *opts = &args.opts;
+    const struct IRobotOptions *opts = &args.opts;
     REQUIRE(opts->always_on_top);
 //    fprintf(stderr, "%d\n", (int) opts->bit_rate);
     REQUIRE(opts->bit_rate == 5000000);
@@ -119,7 +119,7 @@ TEST_CASE("options2", "[ui][cli]") {
     bool ok = scrcpy_parse_args(&args, ARRAY_LEN(argv), argv);
     REQUIRE(ok);
 
-    const struct scrcpy_options *opts = &args.opts;
+    const struct IRobotOptions *opts = &args.opts;
     REQUIRE(!opts->control);
     REQUIRE(!opts->display);
     REQUIRE(!strcmp(opts->record_filename, "file.mp4"));

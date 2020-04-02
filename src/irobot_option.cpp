@@ -3,7 +3,7 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#include "scrcpy.hpp"
+#include "irobot_option.hpp"
 
 #include <cstring>
 
@@ -88,8 +88,38 @@ av_log_callback(void *avcl, int level, const char *fmt, va_list vl) {
     SDL_free(local_fmt);
 }
 
+IRobotOptions::IRobotOptions() {
+    this->serial = nullptr;
+    this->crop = nullptr;
+    this->record_filename = nullptr;
+    this->window_title = nullptr;
+    this->push_target = nullptr;
+    this->record_format = RECORDER_FORMAT_AUTO;
+    this->port = DEFAULT_LOCAL_PORT;
+    this->max_size = DEFAULT_MAX_SIZE;
+    this->bit_rate = DEFAULT_BIT_RATE;
+    this->max_fps = 0;
+    this->window_x = -1;
+    this->window_y = -1;
+    this->screen_width = 0;
+    this->screen_height = 0;
+    this->window_width = 0;
+    this->window_height = 0;
+    this->show_touches = false;
+    this->fullscreen = false;
+    this->always_on_top = false;
+    this->control = true;
+    this->display = true;
+    this->turn_screen_off = false;
+    this->render_expired_frames = false;
+    this->prefer_text = false;
+    this->window_borderless = false;
+
+}
+
 bool
-scrcpy(const struct scrcpy_options *options) {
+IRobotOptions::init() {
+    const struct IRobotOptions *options = this;
     bool record = options->record_filename != nullptr;
     struct ServerParameters params = {
             .crop = options->crop,
@@ -199,10 +229,10 @@ scrcpy(const struct scrcpy_options *options) {
             controller_started = true;
         }
 
-        const char *window_title =
+        const char *_window_title =
                 options->window_title ? options->window_title : device_name;
 
-        if (!cannot_cont & !screen_init_rendering(&screen, window_title, frame_size,
+        if (!cannot_cont & !screen_init_rendering(&screen, _window_title, frame_size,
                                                   options->always_on_top, options->window_x,
                                                   options->window_y, options->window_width,
                                                   options->window_height, options->screen_width,

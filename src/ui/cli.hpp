@@ -17,10 +17,10 @@ extern "C" {
 #endif
 
 #include "config.hpp"
-#include "scrcpy.hpp"
+#include "irobot_option.hpp"
 
 struct scrcpy_cli_args {
-    struct scrcpy_options opts;
+    struct IRobotOptions opts{};
     bool help;
     bool version;
 };
