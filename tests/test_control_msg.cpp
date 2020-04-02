@@ -267,7 +267,7 @@ TEST_CASE("deserialize clipboard", "[message][ControlMessage]") {
             0x41, 0x42, 0x43, // "ABC"
     };
 
-    struct device_msg msg{};
+    struct DeviceMessage msg{};
     ssize_t r = device_msg_deserialize(input, sizeof(input), &msg);
     REQUIRE(r == 6);
 

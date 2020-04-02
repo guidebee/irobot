@@ -35,7 +35,7 @@ receiver_destroy(struct receiver *receiver) {
 }
 
 static void
-process_msg(struct device_msg *msg) {
+process_msg(struct DeviceMessage *msg) {
     switch (msg->type) {
         case DEVICE_MSG_TYPE_CLIPBOARD:
             LOGI("Device clipboard copied");
@@ -48,8 +48,8 @@ static ssize_t
 process_msgs(const unsigned char *buf, size_t len) {
     size_t head = 0;
     for (;;) {
-        struct device_msg msg{};
-        ssize_t r = device_msg_deserialize(&buf[head], len - head, &msg);
+        struct DeviceMessage msg{};
+        ssize_t r = msg.deserialize(&buf[head], len - head);
         if (r == -1) {
             return -1;
         }
@@ -58,7 +58,7 @@ process_msgs(const unsigned char *buf, size_t len) {
         }
 
         process_msg(&msg);
-        device_msg_destroy(&msg);
+        msg.destroy();
 
         head += r;
         assert(head <= len);

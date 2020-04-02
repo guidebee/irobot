@@ -9,14 +9,16 @@
 #include "util/log.hpp"
 
 ssize_t
-device_msg_deserialize(const unsigned char *buf, size_t len,
-                       struct device_msg *msg) {
+DeviceMessage::deserialize(const unsigned char *buf, size_t len
+                       ) {
+
+    struct DeviceMessage *msg = this;
     if (len < 3) {
         // at least type + empty string length
         return 0; // not available
     }
 
-    msg->type = (enum device_msg_type) buf[0];
+    msg->type = (enum DeviceMessageType) buf[0];
     switch (msg->type) {
         case DEVICE_MSG_TYPE_CLIPBOARD: {
             uint16_t clipboard_len = buffer_read16be(&buf[1]);
@@ -43,7 +45,8 @@ device_msg_deserialize(const unsigned char *buf, size_t len,
 }
 
 void
-device_msg_destroy(struct device_msg *msg) {
+DeviceMessage::destroy() {
+    struct DeviceMessage *msg = this;
     if (msg->type == DEVICE_MSG_TYPE_CLIPBOARD) {
         SDL_free(msg->clipboard.text);
     }
