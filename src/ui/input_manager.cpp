@@ -179,14 +179,14 @@ set_screen_power_mode(Controller *controller,
 }
 
 static void
-switch_fps_counter_state(struct fps_counter *fps_counter) {
+switch_fps_counter_state(FpsCounter *fps_counter) {
     // the started state can only be written from the current thread, so there
     // is no ToCToU issue
-    if (fps_counter_is_started(fps_counter)) {
-        fps_counter_stop(fps_counter);
+    if (fps_counter->is_started()) {
+        fps_counter->stop();
         LOGI("FPS counter stopped");
     } else {
-        if (fps_counter_start(fps_counter)) {
+        if (fps_counter->start()) {
             LOGI("FPS counter started");
         } else {
             LOGE("FPS counter starting failed");
@@ -390,7 +390,7 @@ InputManager::process_key(
                 return;
             case SDLK_i:
                 if (!shift && cmd && !repeat && down) {
-                    struct fps_counter *fps_counter =
+                    struct FpsCounter *fps_counter =
                             im->video_buffer->fps_counter;
                     switch_fps_counter_state(fps_counter);
                 }

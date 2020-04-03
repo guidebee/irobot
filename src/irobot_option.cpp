@@ -25,7 +25,7 @@
 #include "util/net.hpp"
 
 static Server server{};
-static struct fps_counter fps_counter;
+static struct FpsCounter fps_counter;
 struct VideoBuffer video_buffer;
 static struct stream stream;
 
@@ -173,7 +173,7 @@ IRobotOptions::init() {
 
     Decoder *dec = nullptr;
     if (!cannot_cont & options->display) {
-        if (!fps_counter_init(&fps_counter)) {
+        if (!fps_counter.init()) {
             cannot_cont = true;
         }
         fps_counter_initialized = true;
@@ -284,7 +284,7 @@ IRobotOptions::init() {
         file_handler.stop();
     }
     if (fps_counter_initialized) {
-        fps_counter_interrupt(&fps_counter);
+        fps_counter.interrupt();
     }
 
     // shutdown the sockets and kill the server
@@ -316,8 +316,8 @@ IRobotOptions::init() {
     }
 
     if (fps_counter_initialized) {
-        fps_counter_join(&fps_counter);
-        fps_counter_destroy(&fps_counter);
+        fps_counter.join();
+        fps_counter.destroy();
     }
 
     if (options->show_touches) {

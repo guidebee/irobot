@@ -25,7 +25,7 @@ public:
     VideoBuffer *video_buffer;
     AVCodecContext *codec_ctx;
 
-    void push_frame();
+
 
     void init(VideoBuffer *vb);
 
@@ -36,6 +36,9 @@ public:
     bool push(const AVPacket *packet);
 
     void interrupt();
+
+private:
+    void push_frame();
 };
 
 

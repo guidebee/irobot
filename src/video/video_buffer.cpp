@@ -10,7 +10,7 @@
 #include "util/lock.hpp"
 
 bool
-VideoBuffer::init(struct fps_counter *fps_counter,
+VideoBuffer::init(struct FpsCounter *fps_counter,
                   bool render_expired_frames) {
     VideoBuffer *vb = this;
     vb->fps_counter = fps_counter;
@@ -82,7 +82,7 @@ VideoBuffer::offer_decoded_frame(
             cond_wait(vb->rendering_frame_consumed_cond, vb->mutex);
         }
     } else if (!vb->rendering_frame_consumed) {
-        fps_counter_add_skipped_frame(vb->fps_counter);
+        vb->fps_counter->add_skipped_frame();
     }
 
     vb->swap_frames();
@@ -98,7 +98,7 @@ VideoBuffer::consume_rendered_frame() {
     VideoBuffer *vb = this;
     assert(!vb->rendering_frame_consumed);
     vb->rendering_frame_consumed = true;
-    fps_counter_add_rendered_frame(vb->fps_counter);
+    vb->fps_counter->add_rendered_frame();
     if (vb->render_expired_frames) {
         // unblock video_buffer_offer_decoded_frame()
         cond_signal(vb->rendering_frame_consumed_cond);

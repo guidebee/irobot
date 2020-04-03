@@ -24,7 +24,8 @@ extern "C" {
 
 #include "config.hpp"
 
-struct fps_counter {
+class FpsCounter {
+public:
     SDL_Thread *thread;
     SDL_mutex *mutex;
     SDL_cond *state_cond;
@@ -38,35 +39,35 @@ struct fps_counter {
     unsigned nr_rendered;
     unsigned nr_skipped;
     uint32_t next_timestamp;
+
+
+    bool init();
+
+    void destroy();
+
+    bool start();
+
+    void stop();
+
+    bool is_started();
+
+    // request to stop the thread (on quit)
+    // must be called before fps_counter_join()
+    void interrupt();
+
+    void join();
+
+    void add_rendered_frame();
+
+    void add_skipped_frame();
+
+    void check_interval_expired(uint32_t now);
+
+private:
+    void display_fps();
+
+
 };
 
-bool
-fps_counter_init(struct fps_counter *counter);
-
-void
-fps_counter_destroy(struct fps_counter *counter);
-
-bool
-fps_counter_start(struct fps_counter *counter);
-
-void
-fps_counter_stop(struct fps_counter *counter);
-
-bool
-fps_counter_is_started(struct fps_counter *counter);
-
-// request to stop the thread (on quit)
-// must be called before fps_counter_join()
-void
-fps_counter_interrupt(struct fps_counter *counter);
-
-void
-fps_counter_join(struct fps_counter *counter);
-
-void
-fps_counter_add_rendered_frame(struct fps_counter *counter);
-
-void
-fps_counter_add_skipped_frame(struct fps_counter *counter);
 
 #endif //ANDROID_IROBOT_FPS_COUNTER_HPP

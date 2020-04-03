@@ -35,14 +35,14 @@ public:
     bool interrupted;
     SDL_cond *rendering_frame_consumed_cond;
     bool rendering_frame_consumed;
-    struct fps_counter *fps_counter;
+    struct FpsCounter *fps_counter;
 
-    bool init(struct fps_counter *fps_counter,
+    bool init(struct FpsCounter *fps_counter,
               bool render_expired_frames);
 
     void destroy();
 
-    void swap_frames();
+
     // set the decoded frame as ready for rendering
     // this function locks frames->mutex during its execution
     // the output flag is set to report whether the previous frame has been skipped
@@ -57,6 +57,9 @@ public:
 
     // wake up and avoid any blocking call
     void interrupt();
+
+private:
+    void swap_frames();
 
 };
 

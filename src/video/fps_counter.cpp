@@ -13,7 +13,8 @@
 #define FPS_COUNTER_INTERVAL_MS 1000
 
 bool
-fps_counter_init(struct fps_counter *counter) {
+FpsCounter::init() {
+    FpsCounter *counter=this;
     counter->mutex = SDL_CreateMutex();
     if (!counter->mutex) {
         return false;
@@ -33,14 +34,16 @@ fps_counter_init(struct fps_counter *counter) {
 }
 
 void
-fps_counter_destroy(struct fps_counter *counter) {
+FpsCounter::destroy() {
+    FpsCounter *counter=this;
     SDL_DestroyCond(counter->state_cond);
     SDL_DestroyMutex(counter->mutex);
 }
 
 // must be called with mutex locked
-static void
-display_fps(struct fps_counter *counter) {
+void
+FpsCounter::display_fps() {
+    FpsCounter *counter=this;
     unsigned rendered_per_second =
             counter->nr_rendered * 1000 / FPS_COUNTER_INTERVAL_MS;
     if (counter->nr_skipped) {
@@ -52,13 +55,14 @@ display_fps(struct fps_counter *counter) {
 }
 
 // must be called with mutex locked
-static void
-check_interval_expired(struct fps_counter *counter, uint32_t now) {
+void
+FpsCounter::check_interval_expired( uint32_t now) {
+    FpsCounter *counter = this;
     if (now < counter->next_timestamp) {
         return;
     }
 
-    display_fps(counter);
+    counter->display_fps();
     counter->nr_rendered = 0;
     counter->nr_skipped = 0;
     // add a multiple of the interval
@@ -69,7 +73,7 @@ check_interval_expired(struct fps_counter *counter, uint32_t now) {
 
 static int
 run_fps_counter(void *data) {
-    auto *counter = (struct fps_counter *) data;
+    auto *counter = (struct FpsCounter *) data;
 
     mutex_lock(counter->mutex);
     while (!counter->interrupted) {
@@ -78,7 +82,7 @@ run_fps_counter(void *data) {
         }
         while (!counter->interrupted && SDL_AtomicGet(&counter->started)) {
             uint32_t now = SDL_GetTicks();
-            check_interval_expired(counter, now);
+            counter->check_interval_expired( now);
 
             assert(counter->next_timestamp > now);
             uint32_t remaining = counter->next_timestamp - now;
@@ -92,7 +96,8 @@ run_fps_counter(void *data) {
 }
 
 bool
-fps_counter_start(struct fps_counter *counter) {
+FpsCounter::start() {
+    FpsCounter *counter=this;
     mutex_lock(counter->mutex);
     counter->next_timestamp = SDL_GetTicks() + FPS_COUNTER_INTERVAL_MS;
     counter->nr_rendered = 0;
@@ -116,18 +121,21 @@ fps_counter_start(struct fps_counter *counter) {
 }
 
 void
-fps_counter_stop(struct fps_counter *counter) {
+FpsCounter::stop() {
+    FpsCounter *counter=this;
     SDL_AtomicSet(&counter->started, 0);
     cond_signal(counter->state_cond);
 }
 
 bool
-fps_counter_is_started(struct fps_counter *counter) {
-    return SDL_AtomicGet(&counter->started);
+FpsCounter::is_started() {
+     FpsCounter *counter=this;
+     return SDL_AtomicGet(&counter->started)==1;
 }
 
 void
-fps_counter_interrupt(struct fps_counter *counter) {
+FpsCounter::interrupt() {
+    FpsCounter *counter=this;
     if (!counter->thread) {
         return;
     }
@@ -140,34 +148,37 @@ fps_counter_interrupt(struct fps_counter *counter) {
 }
 
 void
-fps_counter_join(struct fps_counter *counter) {
+FpsCounter::join() {
+    FpsCounter *counter=this;
     if (counter->thread) {
         SDL_WaitThread(counter->thread, nullptr);
     }
 }
 
 void
-fps_counter_add_rendered_frame(struct fps_counter *counter) {
+FpsCounter::add_rendered_frame() {
+    FpsCounter *counter=this;
     if (!SDL_AtomicGet(&counter->started)) {
         return;
     }
 
     mutex_lock(counter->mutex);
     uint32_t now = SDL_GetTicks();
-    check_interval_expired(counter, now);
+    counter->check_interval_expired(now);
     ++counter->nr_rendered;
     mutex_unlock(counter->mutex);
 }
 
 void
-fps_counter_add_skipped_frame(struct fps_counter *counter) {
+FpsCounter::add_skipped_frame() {
+    FpsCounter *counter=this;
     if (!SDL_AtomicGet(&counter->started)) {
         return;
     }
 
     mutex_lock(counter->mutex);
     uint32_t now = SDL_GetTicks();
-    check_interval_expired(counter, now);
+    counter->check_interval_expired( now);
     ++counter->nr_skipped;
     mutex_unlock(counter->mutex);
 }
