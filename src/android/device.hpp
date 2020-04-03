@@ -13,8 +13,12 @@
 
 #define DEVICE_NAME_FIELD_LENGTH 64
 
-// name must be at least DEVICE_NAME_FIELD_LENGTH bytes
-bool device_read_info(socket_t device_socket,
-                      char *device_name, struct Size *size);
+namespace irobot::android {
 
+// name must be at least DEVICE_NAME_FIELD_LENGTH bytes
+    bool device_read_info(socket_t device_socket,
+                          char *device_name, struct Size *size);
+
+
+}
 #endif //ANDROID_IROBOT_DEVICE_HPP

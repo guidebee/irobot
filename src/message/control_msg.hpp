@@ -23,70 +23,74 @@
 #include "android/keycodes.hpp"
 
 
-enum ControlMessageType {
-    CONTROL_MSG_TYPE_INJECT_KEYCODE,
-    CONTROL_MSG_TYPE_INJECT_TEXT,
-    CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT,
-    CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT,
-    CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON,
-    CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL,
-    CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL,
-    CONTROL_MSG_TYPE_GET_CLIPBOARD,
-    CONTROL_MSG_TYPE_SET_CLIPBOARD,
-    CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE,
-    CONTROL_MSG_TYPE_ROTATE_DEVICE,
-};
+namespace irobot::message {
 
-enum ScreenPowerMode {
-    // see <https://android.googlesource.com/platform/frameworks/base.git/+/pie-release-2/core/java/android/view/SurfaceControl.java#305>
+    using namespace irobot::android;
 
-    SCREEN_POWER_MODE_OFF = 0,
-    SCREEN_POWER_MODE_NORMAL = 2,
-};
-
-struct ControlMessage {
-    enum ControlMessageType type;
-    union {
-        struct {
-            enum AndroidKeyEventAction action;
-            enum AndroidKeycode keycode;
-            enum AndroidMetaState metastate;
-        } inject_keycode;
-        struct {
-            char *text; // owned, to be freed by SDL_free()
-        } inject_text;
-        struct {
-            enum AndroidMotionEventAction action;
-            enum AndroidMotionEventButtons buttons;
-            uint64_t pointer_id;
-            struct Position position;
-            float pressure;
-        } inject_touch_event;
-        struct {
-            struct Position position;
-            int32_t hscroll;
-            int32_t vscroll;
-        } inject_scroll_event;
-        struct {
-            char *text; // owned, to be freed by SDL_free()
-        } set_clipboard;
-        struct {
-            enum ScreenPowerMode mode;
-        } set_screen_power_mode;
+    enum ControlMessageType {
+        CONTROL_MSG_TYPE_INJECT_KEYCODE,
+        CONTROL_MSG_TYPE_INJECT_TEXT,
+        CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT,
+        CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT,
+        CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON,
+        CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL,
+        CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL,
+        CONTROL_MSG_TYPE_GET_CLIPBOARD,
+        CONTROL_MSG_TYPE_SET_CLIPBOARD,
+        CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE,
+        CONTROL_MSG_TYPE_ROTATE_DEVICE,
     };
 
-    // buf size must be at least CONTROL_MSG_SERIALIZED_MAX_SIZE
-    // return the number of bytes written
-    size_t serialize(unsigned char *buf);
+    enum ScreenPowerMode {
+        // see <https://android.googlesource.com/platform/frameworks/base.git/+/pie-release-2/core/java/android/view/SurfaceControl.java#305>
 
-    void destroy();
+        SCREEN_POWER_MODE_OFF = 0,
+        SCREEN_POWER_MODE_NORMAL = 2,
+    };
 
-    static void write_position(uint8_t *buf, const struct Position *position);
+    struct ControlMessage {
+        enum ControlMessageType type;
+        union {
+            struct {
+                enum AndroidKeyEventAction action;
+                enum AndroidKeycode keycode;
+                enum AndroidMetaState metastate;
+            } inject_keycode;
+            struct {
+                char *text; // owned, to be freed by SDL_free()
+            } inject_text;
+            struct {
+                enum AndroidMotionEventAction action;
+                enum AndroidMotionEventButtons buttons;
+                uint64_t pointer_id;
+                struct Position position;
+                float pressure;
+            } inject_touch_event;
+            struct {
+                struct Position position;
+                int32_t hscroll;
+                int32_t vscroll;
+            } inject_scroll_event;
+            struct {
+                char *text; // owned, to be freed by SDL_free()
+            } set_clipboard;
+            struct {
+                enum ScreenPowerMode mode;
+            } set_screen_power_mode;
+        };
 
-    // write length (2 bytes) + string (non nul-terminated)
-    static size_t write_string(const char *utf8, size_t max_len, unsigned char *buf);
+        // buf size must be at least CONTROL_MSG_SERIALIZED_MAX_SIZE
+        // return the number of bytes written
+        size_t serialize(unsigned char *buf);
 
-    static uint16_t to_fixed_point_16(float f);
-};
+        void destroy();
 
+        static void write_position(uint8_t *buf, const struct Position *position);
+
+        // write length (2 bytes) + string (non nul-terminated)
+        static size_t write_string(const char *utf8, size_t max_len, unsigned char *buf);
+
+        static uint16_t to_fixed_point_16(float f);
+    };
+}
 #endif //ANDROID_IROBOT_CONTROL_MSG_HPP

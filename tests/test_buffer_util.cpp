@@ -6,6 +6,8 @@
 #include "catch.hpp"
 #include "util/buffer_util.hpp"
 
+using namespace irobot::util;
+
 TEST_CASE("utility buffer write16be", "[util][buffer]") {
     uint16_t val = 0xABCD;
     uint8_t buf[2];

@@ -24,52 +24,53 @@ extern "C" {
 
 #include "config.hpp"
 
-class FpsCounter {
-public:
-    SDL_Thread *thread;
-    SDL_mutex *mutex;
-    SDL_cond *state_cond;
+namespace irobot::video {
+    class FpsCounter {
+    public:
+        SDL_Thread *thread;
+        SDL_mutex *mutex;
+        SDL_cond *state_cond;
 
-    // atomic so that we can check without locking the mutex
-    // if the FPS counter is disabled, we don't want to lock unnecessarily
-    SDL_atomic_t started;
+        // atomic so that we can check without locking the mutex
+        // if the FPS counter is disabled, we don't want to lock unnecessarily
+        SDL_atomic_t started;
 
-    // the following fields are protected by the mutex
-    bool interrupted;
-    unsigned nr_rendered;
-    unsigned nr_skipped;
-    uint32_t next_timestamp;
-
-
-    bool init();
-
-    void destroy();
-
-    bool start();
-
-    void stop();
-
-    bool is_started();
-
-    // request to stop the thread (on quit)
-    // must be called before fps_counter_join()
-    void interrupt();
-
-    void join();
-
-    void add_rendered_frame();
-
-    void add_skipped_frame();
-
-    void check_interval_expired(uint32_t now);
-
-    static int run_fps_counter(void *data);
-
-private:
-    void display_fps();
+        // the following fields are protected by the mutex
+        bool interrupted;
+        unsigned nr_rendered;
+        unsigned nr_skipped;
+        uint32_t next_timestamp;
 
 
-};
+        bool init();
+
+        void destroy();
+
+        bool start();
+
+        void stop();
+
+        bool is_started();
+
+        // request to stop the thread (on quit)
+        // must be called before fps_counter_join()
+        void interrupt();
+
+        void join();
+
+        void add_rendered_frame();
+
+        void add_skipped_frame();
+
+        void check_interval_expired(uint32_t now);
+
+        static int run_fps_counter(void *data);
+
+    private:
+        void display_fps();
 
 
+    };
+
+}
 #endif //ANDROID_IROBOT_FPS_COUNTER_HPP

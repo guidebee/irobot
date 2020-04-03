@@ -22,61 +22,65 @@ extern "C" {
 
 #include "util/cbuf.hpp"
 
-typedef enum {
-    ACTION_INSTALL_APK,
-    ACTION_PUSH_FILE,
-} FileHandlerActionType;
+namespace irobot::android {
 
-struct FileHandlerRequest {
+    using namespace irobot::platform;
 
-    FileHandlerActionType action;
-    char *file;
+    typedef enum {
+        ACTION_INSTALL_APK,
+        ACTION_PUSH_FILE,
+    } FileHandlerActionType;
 
-    inline void destroy() {
-        SDL_free(this->file);
-    }
-};
+    struct FileHandlerRequest {
 
-struct FileHandlerRequestQueue CBUF(struct FileHandlerRequest, 16);
+        FileHandlerActionType action;
+        char *file;
 
-class FileHandler {
+        inline void destroy() {
+            SDL_free(this->file);
+        }
+    };
 
-public:
-    char *serial;
-    const char *push_target;
-    SDL_Thread *thread;
-    SDL_mutex *mutex;
-    SDL_cond *event_cond;
-    bool stopped;
-    bool initialized;
-    ProcessType current_process;
-    struct FileHandlerRequestQueue queue;
+    struct FileHandlerRequestQueue CBUF(struct FileHandlerRequest, 16);
 
-    bool init(const char *serial, const char *push_target);
+    class FileHandler {
 
-    void destroy();
+    public:
+        char *serial;
+        const char *push_target;
+        SDL_Thread *thread;
+        SDL_mutex *mutex;
+        SDL_cond *event_cond;
+        bool stopped;
+        bool initialized;
+        ProcessType current_process;
+        struct FileHandlerRequestQueue queue;
 
-    bool start();
+        bool init(const char *serial, const char *push_target);
 
-    void stop();
+        void destroy();
 
-    void join();
+        bool start();
 
-    // take ownership of file, and will SDL_free() it
-    bool request(FileHandlerActionType action, char *file);
+        void stop();
 
-    static int run_file_handler(void *data);
+        void join();
 
-    static ProcessType
-    install_apk(const char *serial, const char *file) {
-        return adb_install(serial, file);
-    }
+        // take ownership of file, and will SDL_free() it
+        bool request(FileHandlerActionType action, char *file);
 
-    static ProcessType
-    push_file(const char *serial, const char *file, const char *push_target) {
-        return adb_push(serial, file, push_target);
-    }
+        static int run_file_handler(void *data);
 
-};
+        static ProcessType
+        install_apk(const char *serial, const char *file) {
+            return adb_install(serial, file);
+        }
 
+        static ProcessType
+        push_file(const char *serial, const char *file, const char *push_target) {
+            return adb_push(serial, file, push_target);
+        }
+
+    };
+}
 #endif //ANDROID_IROBOT_FILE_HANDLER_HPP

@@ -14,22 +14,24 @@
 #define MIN(X, Y) (X) < (Y) ? (X) : (Y)
 #define MAX(X, Y) (X) > (Y) ? (X) : (Y)
 
-struct Size {
-    uint16_t width;
-    uint16_t height;
-};
+namespace irobot {
 
-struct Point {
-    int32_t x;
-    int32_t y;
-};
+    struct Size {
+        uint16_t width;
+        uint16_t height;
+    };
 
-struct Position {
-    // The video screen size may be different from the real device screen size,
-    // so store to which size the absolute position apply, to scale it
-    // accordingly.
-    struct Size screen_size;
-    struct Point point;
-};
+    struct Point {
+        int32_t x;
+        int32_t y;
+    };
 
+    struct Position {
+        // The video screen size may be different from the real device screen size,
+        // so store to which size the absolute position apply, to scale it
+        // accordingly.
+        struct Size screen_size;
+        struct Point point;
+    };
+}
 #endif //ANDROID_IROBOT_COMMON_HPP

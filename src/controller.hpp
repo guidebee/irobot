@@ -24,37 +24,42 @@ extern "C" {
 #include "util/cbuf.hpp"
 #include "platform/net.hpp"
 
-struct ControlMessageQueue CBUF(struct ControlMessage, 64);
+namespace irobot {
+
+    using namespace irobot::message;
+
+    struct ControlMessageQueue CBUF(struct ControlMessage, 64);
 
 
-class Controller {
-public:
-    socket_t control_socket;
-    SDL_Thread *thread;
-    SDL_mutex *mutex;
-    SDL_cond *msg_cond;
-    bool stopped;
-    struct ControlMessageQueue queue;
+    class Controller {
+    public:
+        socket_t control_socket;
+        SDL_Thread *thread;
+        SDL_mutex *mutex;
+        SDL_cond *msg_cond;
+        bool stopped;
+        struct ControlMessageQueue queue;
 
-    class Receiver receiver;
+        class Receiver receiver;
 
-    bool init(socket_t control_socket);
+        bool init(socket_t control_socket);
 
-    void destroy();
+        void destroy();
 
-    bool start();
+        bool start();
 
-    void stop();
+        void stop();
 
-    void join();
+        void join();
 
-    bool push_msg(const struct ControlMessage *msg);
+        bool push_msg(const struct ControlMessage *msg);
 
-    static int run_controller(void *data);
+        static int run_controller(void *data);
 
-private:
-    bool process_msg(struct ControlMessage *msg);
+    private:
+        bool process_msg(struct ControlMessage *msg);
 
-};
+    };
+}
 
 #endif //ANDROID_IROBOT_CONTROLLER_HPP

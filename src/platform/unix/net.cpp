@@ -5,15 +5,18 @@
 
 #include "platform/net.hpp"
 
-bool net_init() {
-    // do nothing
-    return true;
-}
+namespace irobot::platform {
+    bool net_init() {
+        // do nothing
+        return true;
+    }
 
-void net_cleanup() {
-    // do nothing
-}
+    void net_cleanup() {
+        // do nothing
+    }
 
-bool net_close(socket_t socket) {
-    return !close(socket);
+    bool net_close(socket_t socket) {
+        return !close(socket);
+    }
+
 }

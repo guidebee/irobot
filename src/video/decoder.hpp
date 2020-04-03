@@ -18,27 +18,28 @@ extern "C" {
 
 #include "config.hpp"
 
-class VideoBuffer;
+namespace irobot::video {
+    class VideoBuffer;
 
-class Decoder {
+    class Decoder {
 
-public:
-    VideoBuffer *video_buffer;
-    AVCodecContext *codec_ctx;
+    public:
+        VideoBuffer *video_buffer;
+        AVCodecContext *codec_ctx;
 
-    void init(VideoBuffer *vb);
+        void init(VideoBuffer *vb);
 
-    bool open(const AVCodec *codec);
+        bool open(const AVCodec *codec);
 
-    void close();
+        void close();
 
-    bool push(const AVPacket *packet);
+        bool push(const AVPacket *packet);
 
-    void interrupt();
+        void interrupt();
 
-private:
-    void push_frame();
-};
-
+    private:
+        void push_frame();
+    };
+}
 
 #endif //ANDROID_IROBOT_DECODER_HPP

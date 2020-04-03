@@ -8,6 +8,8 @@
 #include "message/control_msg.hpp"
 #include "message/device_msg.hpp"
 
+using namespace irobot::message;
+
 TEST_CASE("serialize inject keycode", "[message][ControlMessage]") {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_INJECT_KEYCODE,

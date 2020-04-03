@@ -18,33 +18,37 @@ extern "C" {
 #endif
 
 #include "config.hpp"
-
+#include "message/device_msg.hpp"
 #include "platform/net.hpp"
+
+namespace irobot::android {
+
+    using namespace irobot::message;
 
 // receive events from the device
 // managed by the controller
 class Receiver {
 
-public:
-    socket_t control_socket;
-    SDL_Thread *thread;
-    SDL_mutex *mutex;
+    public:
+        socket_t control_socket;
+        SDL_Thread *thread;
+        SDL_mutex *mutex;
 
-    bool init(socket_t control_socket);
+        bool init(socket_t control_socket);
 
-    void destroy();
+        void destroy();
 
-    bool start();
+        bool start();
 
-    // no receiver_stop(), it will automatically stop on control_socket shutdown
+        // no receiver_stop(), it will automatically stop on control_socket shutdown
 
-    void join();
+        void join();
 
-    static void process_msg(struct DeviceMessage *msg);
+        static void process_msg(struct DeviceMessage *msg);
 
-    static ssize_t process_msgs(const unsigned char *buf, size_t len);
+        static ssize_t process_msgs(const unsigned char *buf, size_t len);
 
-    static int run_receiver(void *data);
-};
-
+        static int run_receiver(void *data);
+    };
+}
 #endif //ANDROID_IROBOT_RECEIVER_HPP

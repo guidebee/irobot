@@ -20,21 +20,28 @@ extern "C" {
 
 #include "message/control_msg.hpp"
 
-bool convert_keycode_action(SDL_EventType from,
-                            enum AndroidKeyEventAction *to);
 
-enum AndroidMetaState convert_meta_state(SDL_Keymod mod);
+namespace irobot::ui {
 
-bool convert_keycode(SDL_Keycode from, enum AndroidKeycode *to,
-                     uint16_t mod,
-                     bool prefer_text);
+    using namespace irobot::android;
 
-enum AndroidMotionEventButtons convert_mouse_buttons(uint32_t state);
 
-bool convert_mouse_action(SDL_EventType from,
-                          enum AndroidMotionEventAction *to);
+    bool convert_keycode_action(SDL_EventType from,
+                                enum AndroidKeyEventAction *to);
 
-bool convert_touch_action(SDL_EventType from,
-                          enum AndroidMotionEventAction *to);
+    enum AndroidMetaState convert_meta_state(SDL_Keymod mod);
 
+    bool convert_keycode(SDL_Keycode from, enum AndroidKeycode *to,
+                         uint16_t mod,
+                         bool prefer_text);
+
+    enum AndroidMotionEventButtons convert_mouse_buttons(uint32_t state);
+
+    bool convert_mouse_action(SDL_EventType from,
+                              enum AndroidMotionEventAction *to);
+
+    bool convert_touch_action(SDL_EventType from,
+                              enum AndroidMotionEventAction *to);
+
+}
 #endif //ANDROID_IROBOT_EVENT_CONVERTER_HPP

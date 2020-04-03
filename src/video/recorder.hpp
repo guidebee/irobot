@@ -23,126 +23,127 @@ extern "C" {
 
 #include "util/queue.hpp"
 
-enum RecordFormat {
-    RECORDER_FORMAT_AUTO,
-    RECORDER_FORMAT_MP4,
-    RECORDER_FORMAT_MKV,
-};
+namespace irobot::video {
+    enum RecordFormat {
+        RECORDER_FORMAT_AUTO,
+        RECORDER_FORMAT_MP4,
+        RECORDER_FORMAT_MKV,
+    };
 
-struct RecordPacket {
-    AVPacket packet;
-    struct RecordPacket *next;
-};
+    struct RecordPacket {
+        AVPacket packet;
+        struct RecordPacket *next;
+    };
 
-struct RecordQueue QUEUE(struct RecordPacket);
+    struct RecordQueue QUEUE(struct RecordPacket);
 
-class Recorder {
-public:
+    class Recorder {
+    public:
 
-    char *filename;
-    enum RecordFormat format;
-    AVFormatContext *ctx;
-    struct Size declared_frame_size;
-    bool header_written;
+        char *filename;
+        enum RecordFormat format;
+        AVFormatContext *ctx;
+        struct Size declared_frame_size;
+        bool header_written;
 
-    SDL_Thread *thread;
-    SDL_mutex *mutex;
-    SDL_cond *queue_cond;
-    bool stopped; // set on recorder_stop() by the stream reader
-    bool failed; // set on packet write failure
-    struct RecordQueue queue;
+        SDL_Thread *thread;
+        SDL_mutex *mutex;
+        SDL_cond *queue_cond;
+        bool stopped; // set on recorder_stop() by the stream reader
+        bool failed; // set on packet write failure
+        struct RecordQueue queue;
 
-    // we can write a packet only once we received the next one so that we can
-    // set its duration (next_pts - current_pts)
-    // "previous" is only accessed from the recorder thread, so it does not
-    // need to be protected by the mutex
-    struct RecordPacket *previous;
+        // we can write a packet only once we received the next one so that we can
+        // set its duration (next_pts - current_pts)
+        // "previous" is only accessed from the recorder thread, so it does not
+        // need to be protected by the mutex
+        struct RecordPacket *previous;
 
-    bool init(const char *filename,
-              enum RecordFormat format, struct Size declared_frame_size);
+        bool init(const char *filename,
+                  enum RecordFormat format, struct Size declared_frame_size);
 
-    void destroy();
+        void destroy();
 
-    bool open(const AVCodec *input_codec);
+        bool open(const AVCodec *input_codec);
 
-    void close();
+        void close();
 
-    bool start();
+        bool start();
 
-    void stop();
+        void stop();
 
-    void join();
+        void join();
 
-    bool push(const AVPacket *packet);
+        bool push(const AVPacket *packet);
 
-    bool write(AVPacket *packet);
+        bool write(AVPacket *packet);
 
-    static inline const AVOutputFormat *find_muxer(const char *name) {
+        static inline const AVOutputFormat *find_muxer(const char *name) {
 #ifdef SCRCPY_LAVF_HAS_NEW_MUXER_ITERATOR_API
-        void *opaque = nullptr;
+            void *opaque = nullptr;
 #endif
-        const AVOutputFormat *oformat = nullptr;
-        do {
+            const AVOutputFormat *oformat = nullptr;
+            do {
 #ifdef SCRCPY_LAVF_HAS_NEW_MUXER_ITERATOR_API
-            oformat = av_muxer_iterate(&opaque);
+                oformat = av_muxer_iterate(&opaque);
 #else
-            oformat = av_oformat_next(oformat);
+                oformat = av_oformat_next(oformat);
 #endif
-            // until null or with name "mp4"
-        } while (oformat && strcmp(oformat->name, name));
-        return oformat;
-    }
-
-    static inline struct RecordPacket *record_packet_new(const AVPacket *packet) {
-        auto rec = (struct RecordPacket *) SDL_malloc(sizeof(struct RecordPacket));
-        if (!rec) {
-            return nullptr;
+                // until null or with name "mp4"
+            } while (oformat && strcmp(oformat->name, name));
+            return oformat;
         }
 
-        // av_packet_ref() does not initialize all fields in old FFmpeg versions
-        // See <https://github.com/Genymobile/scrcpy/issues/707>
-        av_init_packet(&rec->packet);
-
-        if (av_packet_ref(&rec->packet, packet)) {
-            SDL_free(rec);
-            return nullptr;
-        }
-        return rec;
-    }
-
-    static inline void record_packet_delete(struct RecordPacket *rec) {
-        av_packet_unref(&rec->packet);
-        SDL_free(rec);
-    }
-
-    static inline void recorder_queue_clear(struct RecordQueue *queue) {
-        while (!queue_is_empty(queue)) {
-            struct RecordPacket *rec;
-            queue_take(queue, next, &rec);
-            record_packet_delete(rec);
-        }
-    }
-
-    static const char *recorder_get_format_name(enum RecordFormat format) {
-        switch (format) {
-            case RECORDER_FORMAT_MP4:
-                return "mp4";
-            case RECORDER_FORMAT_MKV:
-                return "matroska";
-            default:
+        static inline struct RecordPacket *record_packet_new(const AVPacket *packet) {
+            auto rec = (struct RecordPacket *) SDL_malloc(sizeof(struct RecordPacket));
+            if (!rec) {
                 return nullptr;
+            }
+
+            // av_packet_ref() does not initialize all fields in old FFmpeg versions
+            // See <https://github.com/Genymobile/scrcpy/issues/707>
+            av_init_packet(&rec->packet);
+
+            if (av_packet_ref(&rec->packet, packet)) {
+                SDL_free(rec);
+                return nullptr;
+            }
+            return rec;
         }
-    }
 
-    static int run_recorder(void *data);
+        static inline void record_packet_delete(struct RecordPacket *rec) {
+            av_packet_unref(&rec->packet);
+            SDL_free(rec);
+        }
 
-private:
+        static inline void recorder_queue_clear(struct RecordQueue *queue) {
+            while (!queue_is_empty(queue)) {
+                struct RecordPacket *rec;
+                queue_take(queue, next, &rec);
+                record_packet_delete(rec);
+            }
+        }
 
-    bool write_header(const AVPacket *packet);
+        static const char *recorder_get_format_name(enum RecordFormat format) {
+            switch (format) {
+                case RECORDER_FORMAT_MP4:
+                    return "mp4";
+                case RECORDER_FORMAT_MKV:
+                    return "matroska";
+                default:
+                    return nullptr;
+            }
+        }
 
-    void rescale_packet(AVPacket *packet);
+        static int run_recorder(void *data);
 
-};
+    private:
 
+        bool write_header(const AVPacket *packet);
+
+        void rescale_packet(AVPacket *packet);
+
+    };
+}
 
 #endif //ANDROID_IROBOT_RECORDER_HPP

@@ -30,48 +30,50 @@ extern "C" {
 #include "platform/net.hpp"
 #include "video/decoder.hpp"
 
-class VideoStream {
+namespace irobot::video {
+    class VideoStream {
 
-public:
-    socket_t socket;
-    SDL_Thread *thread;
-    struct Decoder *decoder;
-    struct Recorder *recorder;
-    AVCodecContext *codec_ctx;
-    AVCodecParserContext *parser;
-    // successive packets may need to be concatenated, until a non-config
-    // packet is available
-    bool has_pending;
-    AVPacket pending;
+    public:
+        socket_t socket;
+        SDL_Thread *thread;
+        struct Decoder *decoder;
+        struct Recorder *recorder;
+        AVCodecContext *codec_ctx;
+        AVCodecParserContext *parser;
+        // successive packets may need to be concatenated, until a non-config
+        // packet is available
+        bool has_pending;
+        AVPacket pending;
 
-    void init(socket_t socket,
-              struct Decoder *decoder, Recorder *recorder);
+        void init(socket_t socket,
+                  struct Decoder *decoder, Recorder *recorder);
 
-    bool start();
+        bool start();
 
-    void stop();
+        void stop();
 
-    void join();
+        void join();
 
-    bool recv_packet(AVPacket *packet);
+        bool recv_packet(AVPacket *packet);
 
-    bool push_packet(AVPacket *packet);
+        bool push_packet(AVPacket *packet);
 
-    static void notify_stopped();
+        static void notify_stopped();
 
-    static int run_stream(void *data);
+        static int run_stream(void *data);
 
-private:
-
-
-    bool process_config_packet(AVPacket *packet);
-
-    bool process_frame(AVPacket *packet);
-
-    bool parse(AVPacket *packet);
+    private:
 
 
-};
+        bool process_config_packet(AVPacket *packet);
 
+        bool process_frame(AVPacket *packet);
+
+        bool parse(AVPacket *packet);
+
+
+    };
+
+}
 
 #endif //ANDROID_IROBOT_STREAM_HPP

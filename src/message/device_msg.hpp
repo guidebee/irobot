@@ -24,22 +24,24 @@ extern "C" {
 #define DEVICE_MSG_TEXT_MAX_LENGTH 4093
 #define DEVICE_MSG_SERIALIZED_MAX_SIZE (3 + DEVICE_MSG_TEXT_MAX_LENGTH)
 
-enum DeviceMessageType {
-    DEVICE_MSG_TYPE_CLIPBOARD,
-};
+namespace irobot::message {
 
-struct DeviceMessage {
-    enum DeviceMessageType type;
-    union {
-        struct {
-            char *text; // owned, to be freed by SDL_free()
-        } clipboard;
+    enum DeviceMessageType {
+        DEVICE_MSG_TYPE_CLIPBOARD,
     };
 
-    ssize_t deserialize(const unsigned char *buf, size_t len);
+    struct DeviceMessage {
+        enum DeviceMessageType type;
+        union {
+            struct {
+                char *text; // owned, to be freed by SDL_free()
+            } clipboard;
+        };
 
-    void destroy();
-};
+        ssize_t deserialize(const unsigned char *buf, size_t len);
 
+        void destroy();
+    };
 
+}
 #endif //ANDROID_IROBOT_DEVICE_MSG_HPP

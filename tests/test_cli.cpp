@@ -7,6 +7,9 @@
 #include "irobot_core.hpp"
 #include "common.hpp"
 
+using namespace irobot;
+using namespace irobot::ui;
+
 TEST_CASE("flag version", "[ui][cli]") {
     struct IRobotCore args = {
 

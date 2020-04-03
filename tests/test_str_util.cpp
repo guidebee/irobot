@@ -6,6 +6,7 @@
 #include "catch.hpp"
 #include "util/str_util.hpp"
 
+
 #if defined (__cplusplus)
 extern "C" {
 #endif
@@ -16,6 +17,7 @@ extern "C" {
 }
 #endif
 
+using namespace irobot::util;
 
 TEST_CASE("utility xstrncpy simple", "[util][str_util]") {
     char s[] = "xxxxxxxxxx";
