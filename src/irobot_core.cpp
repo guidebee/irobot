@@ -262,12 +262,12 @@ namespace irobot {
             const char *_window_title =
                     options->window_title ? options->window_title : device_name;
 
-            if (!cannot_cont & !screen.init_rendering(_window_title, frame_size,
-                                                      options->always_on_top, options->window_x,
-                                                      options->window_y, options->window_width,
-                                                      options->window_height, options->screen_width,
-                                                      options->screen_height,
-                                                      options->window_borderless)) {
+            if (!cannot_cont & !screen.InitRendering(_window_title, frame_size,
+                                                     options->always_on_top, options->window_x,
+                                                     options->window_y, options->window_width,
+                                                     options->window_height, options->screen_width,
+                                                     options->screen_height,
+                                                     options->window_borderless)) {
                 cannot_cont = true;
             }
 #endif
@@ -282,7 +282,7 @@ namespace irobot {
             }
 #ifdef UI_SCREEN
             if (options->fullscreen) {
-                screen.switch_fullscreen();
+                screen.SwitchFullscreen();
             }
 #endif
         }
@@ -295,7 +295,7 @@ namespace irobot {
 #ifdef UI_SCREEN
         ret = Screen::event_loop(options->display, options->control);
         LOGD("quit...");
-        screen.destroy();
+        screen.Destroy();
 #else
         char c;
         while (true) {

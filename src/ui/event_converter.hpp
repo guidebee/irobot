@@ -25,22 +25,22 @@ namespace irobot::ui {
 
     using namespace irobot::android;
 
-    bool convert_keycode_action(SDL_EventType from,
-                                enum AndroidKeyEventAction *to);
+    bool ConvertKeycodeAction(SDL_EventType from,
+                              enum AndroidKeyEventAction *to);
 
-    enum AndroidMetaState convert_meta_state(SDL_Keymod mod);
+    enum AndroidMetaState ConvertMetaState(SDL_Keymod mod);
 
-    bool convert_keycode(SDL_Keycode from, enum AndroidKeycode *to,
-                         uint16_t mod,
-                         bool prefer_text);
+    bool ConvertKeycode(SDL_Keycode from, enum AndroidKeycode *to,
+                        uint16_t mod,
+                        bool prefer_text);
 
-    enum AndroidMotionEventButtons convert_mouse_buttons(uint32_t state);
+    enum AndroidMotionEventButtons ConvertMouseButtons(uint32_t state);
 
-    bool convert_mouse_action(SDL_EventType from,
-                              enum AndroidMotionEventAction *to);
+    bool ConvertMouseAction(SDL_EventType from,
+                            enum AndroidMotionEventAction *to);
 
-    bool convert_touch_action(SDL_EventType from,
-                              enum AndroidMotionEventAction *to);
+    bool ConvertTouchAction(SDL_EventType from,
+                            enum AndroidMotionEventAction *to);
 
 }
 #endif //ANDROID_IROBOT_EVENT_CONVERTER_HPP

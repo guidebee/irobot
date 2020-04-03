@@ -147,7 +147,7 @@ namespace irobot {
             return window_size;
         }
 
-        void Screen::init() {
+        void Screen::Init() {
             this->window = nullptr;
             this->renderer = nullptr;
             this->texture = nullptr;
@@ -170,11 +170,11 @@ namespace irobot {
         }
 
 
-        bool Screen::init_rendering(const char *window_title,
-                                    struct Size frame_size, bool always_on_top,
-                                    int16_t window_x, int16_t window_y, uint16_t window_width,
-                                    uint16_t window_height, uint16_t screen_width,
-                                    uint16_t screen_height, bool window_borderless) {
+        bool Screen::InitRendering(const char *window_title,
+                                   struct Size frame_size, bool always_on_top,
+                                   int16_t window_x, int16_t window_y, uint16_t window_width,
+                                   uint16_t window_height, uint16_t screen_width,
+                                   uint16_t screen_height, bool window_borderless) {
             this->frame_size = frame_size;
 
             if (screen_width * screen_height != 0) {
@@ -212,14 +212,14 @@ namespace irobot {
                                                 SDL_RENDERER_ACCELERATED);
             if (!this->renderer) {
                 LOGC("Could not create renderer: %s", SDL_GetError());
-                this->destroy();
+                this->Destroy();
                 return false;
             }
 
             if (SDL_RenderSetLogicalSize(this->renderer, frame_size.width,
                                          frame_size.height)) {
                 LOGE("Could not set renderer logical size: %s", SDL_GetError());
-                this->destroy();
+                this->Destroy();
                 return false;
             }
 
@@ -232,7 +232,7 @@ namespace irobot {
             this->texture = create_texture(this->renderer, frame_size);
             if (!this->texture) {
                 LOGC("Could not create texture: %s", SDL_GetError());
-                this->destroy();
+                this->Destroy();
                 return false;
             }
 
@@ -241,11 +241,11 @@ namespace irobot {
             return true;
         }
 
-        void Screen::show_window() {
+        void Screen::ShowWindow() {
             SDL_ShowWindow(this->window);
         }
 
-        void Screen::destroy() {
+        void Screen::Destroy() {
             if (this->texture) {
                 SDL_DestroyTexture(this->texture);
             }
@@ -305,7 +305,7 @@ namespace irobot {
                                  frame->data[2], frame->linesize[2]);
         }
 
-        bool Screen::update_frame(video::VideoBuffer *vb) {
+        bool Screen::UpdateFrame(video::VideoBuffer *vb) {
             util::mutex_lock(vb->mutex);
             const AVFrame *frame = vb->consume_rendered_frame();
             struct Size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
@@ -316,18 +316,18 @@ namespace irobot {
             update_texture(frame);
             util::mutex_unlock(vb->mutex);
 
-            this->render();
+            this->Render();
             return true;
         }
 
-        void Screen::render() {
+        void Screen::Render() {
             SDL_RenderClear(this->renderer);
             SDL_RenderCopy(this->renderer, this->texture,
                            nullptr, nullptr);
             SDL_RenderPresent(this->renderer);
         }
 
-        void Screen::switch_fullscreen() {
+        void Screen::SwitchFullscreen() {
             uint32_t new_mode = this->fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
             if (SDL_SetWindowFullscreen(this->window, new_mode)) {
                 LOGW("Could not switch fullscreen mode: %s", SDL_GetError());
@@ -338,10 +338,10 @@ namespace irobot {
             apply_windowed_size();
 
             LOGD("Switched to %s mode", this->fullscreen ? "fullscreen" : "windowed");
-            this->render();
+            this->Render();
         }
 
-        void Screen::resize_to_fit() {
+        void Screen::ResizeToFit() {
             if (this->fullscreen) {
                 return;
             }
@@ -376,7 +376,7 @@ namespace irobot {
                 const SDL_WindowEvent *event) {
             switch (event->event) {
                 case SDL_WINDOWEVENT_EXPOSED:
-                    this->render();
+                    this->Render();
                     break;
                 case SDL_WINDOWEVENT_SIZE_CHANGED:
                     if (!this->fullscreen && !this->maximized) {
@@ -391,7 +391,7 @@ namespace irobot {
                         // window is maximized or fullscreen is enabled.
                         this->windowed_window_size = get_window_size(this->window);
                     }
-                    this->render();
+                    this->Render();
                     break;
                 case SDL_WINDOWEVENT_MAXIMIZED:
                     // The backup size must be non-nul.
@@ -473,7 +473,7 @@ namespace irobot {
             if (event->type == SDL_WINDOWEVENT
                 && event->window.event == SDL_WINDOWEVENT_RESIZED) {
                 // called from another thread, not very safe, but it's a workaround!
-                screen.render();
+                screen.Render();
             }
             return 0;
         }
@@ -493,9 +493,9 @@ namespace irobot {
                     if (!screen.has_frame) {
                         screen.has_frame = true;
                         // this is the very first frame, show the window
-                        screen.show_window();
+                        screen.ShowWindow();
                     }
-                    if (!screen.update_frame(&video_buffer)) {
+                    if (!screen.UpdateFrame(&video_buffer)) {
                         return EVENT_RESULT_CONTINUE;
                     }
                     break;
@@ -506,37 +506,37 @@ namespace irobot {
                     if (!control) {
                         break;
                     }
-                    input_manager.process_text_input(&event->text);
+                    input_manager.ProcessTextInput(&event->text);
                     break;
                 case SDL_KEYDOWN:
                 case SDL_KEYUP:
                     // some key events do not interact with the device, so process the
                     // event even if control is disabled
-                    input_manager.process_key(&event->key, control);
+                    input_manager.ProcessKey(&event->key, control);
                     break;
                 case SDL_MOUSEMOTION:
                     if (!control) {
                         break;
                     }
-                    input_manager.process_mouse_motion(&event->motion);
+                    input_manager.ProcessMouseMotion(&event->motion);
                     break;
                 case SDL_MOUSEWHEEL:
                     if (!control) {
                         break;
                     }
-                    input_manager.process_mouse_wheel(&event->wheel);
+                    input_manager.ProcessMouseWheel(&event->wheel);
                     break;
                 case SDL_MOUSEBUTTONDOWN:
                 case SDL_MOUSEBUTTONUP:
                     // some mouse events do not interact with the device, so process
                     // the event even if control is disabled
-                    input_manager.process_mouse_button(&event->button,
-                                                       control);
+                    input_manager.ProcessMouseButton(&event->button,
+                                                     control);
                     break;
                 case SDL_FINGERMOTION:
                 case SDL_FINGERDOWN:
                 case SDL_FINGERUP:
-                    input_manager.process_touch(&event->tfinger);
+                    input_manager.ProcessTouch(&event->tfinger);
                     break;
                 case SDL_DROPFILE: {
                     if (!control) {

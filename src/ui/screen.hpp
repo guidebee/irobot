@@ -50,32 +50,32 @@ namespace irobot::ui {
         struct Size device_screen_size;
 
         // initialize default values
-        void init();
+        void Init();
 
         // initialize screen, create window, renderer and texture (window is hidden)
-        bool init_rendering(const char *window_title,
-                            struct Size frame_size, bool always_on_top,
-                            int16_t window_x, int16_t window_y, uint16_t window_width,
-                            uint16_t window_height, uint16_t screen_width,
-                            uint16_t screen_height, bool window_borderless);
+        bool InitRendering(const char *window_title,
+                           struct Size frame_size, bool always_on_top,
+                           int16_t window_x, int16_t window_y, uint16_t window_width,
+                           uint16_t window_height, uint16_t screen_width,
+                           uint16_t screen_height, bool window_borderless);
 
         // show the window
-        void show_window();
+        void ShowWindow();
 
         // destroy window, renderer and texture (if any)
-        void destroy();
+        void Destroy();
 
         // resize if necessary and write the rendered frame into the texture
-        bool update_frame(video::VideoBuffer *vb);
+        bool UpdateFrame(video::VideoBuffer *vb);
 
         // render the texture to the renderer
-        void render();
+        void Render();
 
         // switch the fullscreen mode
-        void switch_fullscreen();
+        void SwitchFullscreen();
 
         // resize window to optimal size (remove black borders)
-        void resize_to_fit();
+        void ResizeToFit();
 
         // resize window to 1:1 (pixel-perfect)
         void resize_to_pixel_perfect();

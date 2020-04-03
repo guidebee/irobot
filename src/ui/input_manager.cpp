@@ -23,8 +23,8 @@ namespace irobot::ui {
 //
 // See my question:
 // <https://stackoverflow.com/questions/49111054/how-to-get-mouse-position-on-mouse-wheel-event>
-    void InputManager::convert_to_renderer_coordinates(SDL_Renderer *renderer,
-                                                       int *x, int *y) {
+    void InputManager::ConvertToRendererCoordinates(SDL_Renderer *renderer,
+                                                    int *x, int *y) {
         SDL_Rect viewport;
         float scale_x, scale_y;
         SDL_RenderGetViewport(renderer, &viewport);
@@ -33,11 +33,11 @@ namespace irobot::ui {
         *y = (int) (static_cast<float>(*y) / scale_y) - viewport.y;
     }
 
-    struct Point InputManager::get_mouse_point(Screen *screen) {
+    struct Point InputManager::GetMousePoint(Screen *screen) {
         int x;
         int y;
         SDL_GetMouseState(&x, &y);
-        convert_to_renderer_coordinates(screen->renderer, &x, &y);
+        ConvertToRendererCoordinates(screen->renderer, &x, &y);
         return (struct Point) {
                 .x = x,
                 .y = y,
@@ -45,8 +45,8 @@ namespace irobot::ui {
     }
 
 
-    void InputManager::send_keycode(Controller *controller, enum AndroidKeycode keycode,
-                                    int actions, const char *name) {
+    void InputManager::SendKeycode(Controller *controller, enum AndroidKeycode keycode,
+                                   int actions, const char *name) {
         // send DOWN event
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_INJECT_KEYCODE;
@@ -71,7 +71,7 @@ namespace irobot::ui {
 
 
 // turn the screen on if it was off, press BACK otherwise
-    void InputManager::press_back_or_turn_screen_on(Controller *controller) {
+    void InputManager::PressBackOrTurnScreenOn(Controller *controller) {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON;
 
@@ -80,7 +80,7 @@ namespace irobot::ui {
         }
     }
 
-    void InputManager::expand_notification_panel(Controller *controller) {
+    void InputManager::ExpandNotificationPanel(Controller *controller) {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL;
 
@@ -89,7 +89,7 @@ namespace irobot::ui {
         }
     }
 
-    void InputManager::collapse_notification_panel(Controller *controller) {
+    void InputManager::CollapseNotificationPanel(Controller *controller) {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL;
 
@@ -98,7 +98,7 @@ namespace irobot::ui {
         }
     }
 
-    void InputManager::request_device_clipboard(Controller *controller) {
+    void InputManager::RequestDeviceClipboard(Controller *controller) {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_GET_CLIPBOARD;
 
@@ -107,7 +107,7 @@ namespace irobot::ui {
         }
     }
 
-    void InputManager::set_device_clipboard(Controller *controller) {
+    void InputManager::SetDeviceClipboard(Controller *controller) {
         char *text = SDL_GetClipboardText();
         if (!text) {
             LOGW("Could not get clipboard text: %s", SDL_GetError());
@@ -129,8 +129,8 @@ namespace irobot::ui {
         }
     }
 
-    void InputManager::set_screen_power_mode(Controller *controller,
-                                             enum ScreenPowerMode mode) {
+    void InputManager::SetScreenPowerMode(Controller *controller,
+                                          enum ScreenPowerMode mode) {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
         msg.set_screen_power_mode.mode = mode;
@@ -140,7 +140,7 @@ namespace irobot::ui {
         }
     }
 
-    void InputManager::switch_fps_counter_state(video::FpsCounter *fps_counter) {
+    void InputManager::SwitchFpsCounterState(video::FpsCounter *fps_counter) {
         // the started state can only be written from the current thread, so there
         // is no ToCToU issue
         if (fps_counter->is_started()) {
@@ -155,7 +155,7 @@ namespace irobot::ui {
         }
     }
 
-    void InputManager::clipboard_paste(Controller *controller) {
+    void InputManager::PasteClipboard(Controller *controller) {
         char *text = SDL_GetClipboardText();
         if (!text) {
             LOGW("Could not get clipboard text: %s", SDL_GetError());
@@ -176,7 +176,7 @@ namespace irobot::ui {
         }
     }
 
-    void InputManager::rotate_device(Controller *controller) {
+    void InputManager::RotateDevice(Controller *controller) {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_ROTATE_DEVICE;
 
@@ -185,7 +185,7 @@ namespace irobot::ui {
         }
     }
 
-    void InputManager::process_text_input(
+    void InputManager::ProcessTextInput(
             const SDL_TextInputEvent *event) {
         if (!this->prefer_text) {
             char c = event->text[0];
@@ -209,27 +209,27 @@ namespace irobot::ui {
         }
     }
 
-    bool InputManager::convert_input_key(const SDL_KeyboardEvent *from,
-                                         struct ControlMessage *to,
-                                         bool prefer_text) {
+    bool InputManager::ConvertInputKey(const SDL_KeyboardEvent *from,
+                                       struct ControlMessage *to,
+                                       bool prefer_text) {
         to->type = CONTROL_MSG_TYPE_INJECT_KEYCODE;
 
-        if (!convert_keycode_action(static_cast<SDL_EventType>(from->type), &to->inject_keycode.action)) {
+        if (!ConvertKeycodeAction(static_cast<SDL_EventType>(from->type), &to->inject_keycode.action)) {
             return false;
         }
 
         uint16_t mod = from->keysym.mod;
-        if (!convert_keycode(from->keysym.sym, &to->inject_keycode.keycode, mod,
-                             prefer_text)) {
+        if (!ConvertKeycode(from->keysym.sym, &to->inject_keycode.keycode, mod,
+                            prefer_text)) {
             return false;
         }
 
-        to->inject_keycode.metastate = convert_meta_state(static_cast<SDL_Keymod>(mod));
+        to->inject_keycode.metastate = ConvertMetaState(static_cast<SDL_Keymod>(mod));
 
         return true;
     }
 
-    void InputManager::process_key(
+    void InputManager::ProcessKey(
             const SDL_KeyboardEvent *event,
             bool control) {
         // control: indicates the state of the command-line option --no-control
@@ -270,73 +270,73 @@ namespace irobot::ui {
                     // Ctrl+h on all platform, since Cmd+h is already captured by
                     // the system on macOS to hide the window
                     if (control && ctrl && !meta && !shift && !repeat) {
-                        action_home(controller, action);
+                        ActionHome(controller, action);
                     }
                     return;
                 case SDLK_b: // fall-through
                 case SDLK_BACKSPACE:
                     if (control && cmd && !shift && !repeat) {
-                        action_back(controller, action);
+                        ActionBack(controller, action);
                     }
                     return;
                 case SDLK_s:
                     if (control && cmd && !shift && !repeat) {
-                        action_app_switch(controller, action);
+                        ActionAppSwitch(controller, action);
                     }
                     return;
                 case SDLK_m:
                     // Ctrl+m on all platform, since Cmd+m is already captured by
                     // the system on macOS to minimize the window
                     if (control && ctrl && !meta && !shift && !repeat) {
-                        action_menu(controller, action);
+                        ActionMenu(controller, action);
                     }
                     return;
                 case SDLK_p:
                     if (control && cmd && !shift && !repeat) {
-                        action_power(controller, action);
+                        ActionPower(controller, action);
                     }
                     return;
                 case SDLK_o:
                     if (control && cmd && !shift && down) {
-                        set_screen_power_mode(controller, SCREEN_POWER_MODE_OFF);
+                        SetScreenPowerMode(controller, SCREEN_POWER_MODE_OFF);
                     }
                     return;
                 case SDLK_DOWN:
                     if (control && cmd && !shift) {
                         // forward repeated events
-                        action_volume_down(controller, action);
+                        ActionVolumeDown(controller, action);
                     }
                     return;
                 case SDLK_UP:
                     if (control && cmd && !shift) {
                         // forward repeated events
-                        action_volume_up(controller, action);
+                        ActionVolumeUp(controller, action);
                     }
                     return;
                 case SDLK_c:
                     if (control && cmd && !shift && !repeat && down) {
-                        request_device_clipboard(controller);
+                        RequestDeviceClipboard(controller);
                     }
                     return;
                 case SDLK_v:
                     if (control && cmd && !repeat && down) {
                         if (shift) {
                             // store the text in the device clipboard
-                            set_device_clipboard(controller);
+                            SetDeviceClipboard(controller);
                         } else {
                             // inject the text as input events
-                            clipboard_paste(controller);
+                            PasteClipboard(controller);
                         }
                     }
                     return;
                 case SDLK_f:
                     if (!shift && cmd && !repeat && down) {
-                        this->screen->switch_fullscreen();
+                        this->screen->SwitchFullscreen();
                     }
                     return;
                 case SDLK_x:
                     if (!shift && cmd && !repeat && down) {
-                        this->screen->resize_to_fit();
+                        this->screen->ResizeToFit();
                     }
                     return;
                 case SDLK_g:
@@ -348,21 +348,21 @@ namespace irobot::ui {
                     if (!shift && cmd && !repeat && down) {
                         struct video::FpsCounter *fps_counter =
                                 this->video_buffer->fps_counter;
-                        switch_fps_counter_state(fps_counter);
+                        SwitchFpsCounterState(fps_counter);
                     }
                     return;
                 case SDLK_n:
                     if (control && cmd && !repeat && down) {
                         if (shift) {
-                            collapse_notification_panel(controller);
+                            CollapseNotificationPanel(controller);
                         } else {
-                            expand_notification_panel(controller);
+                            ExpandNotificationPanel(controller);
                         }
                     }
                     return;
                 case SDLK_r:
                     if (control && cmd && !shift && !repeat && down) {
-                        rotate_device(controller);
+                        RotateDevice(controller);
                     }
                     return;
                 default:
@@ -377,16 +377,16 @@ namespace irobot::ui {
         }
 
         struct ControlMessage msg{};
-        if (convert_input_key(event, &msg, this->prefer_text)) {
+        if (ConvertInputKey(event, &msg, this->prefer_text)) {
             if (!controller->push_msg(&msg)) {
                 LOGW("Could not request 'inject keycode'");
             }
         }
     }
 
-    bool InputManager::convert_mouse_motion(const SDL_MouseMotionEvent *from,
-                                            Screen *screen,
-                                            struct ControlMessage *to) {
+    bool InputManager::ConvertMouseMotion(const SDL_MouseMotionEvent *from,
+                                          Screen *screen,
+                                          struct ControlMessage *to) {
         to->type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT;
         to->inject_touch_event.action = AMOTION_EVENT_ACTION_MOVE;
         to->inject_touch_event.pointer_id = POINTER_ID_MOUSE;
@@ -394,12 +394,12 @@ namespace irobot::ui {
         to->inject_touch_event.position.point.x = from->x;
         to->inject_touch_event.position.point.y = from->y;
         to->inject_touch_event.pressure = 1.f;
-        to->inject_touch_event.buttons = convert_mouse_buttons(from->state);
+        to->inject_touch_event.buttons = ConvertMouseButtons(from->state);
 
         return true;
     }
 
-    void InputManager::process_mouse_motion(
+    void InputManager::ProcessMouseMotion(
             const SDL_MouseMotionEvent *event) {
         if (!event->state) {
             // do not send motion events when no button is pressed
@@ -410,18 +410,18 @@ namespace irobot::ui {
             return;
         }
         struct ControlMessage msg{};
-        if (convert_mouse_motion(event, this->screen, &msg)) {
+        if (ConvertMouseMotion(event, this->screen, &msg)) {
             if (!this->controller->push_msg(&msg)) {
                 LOGW("Could not request 'inject mouse motion event'");
             }
         }
     }
 
-    bool InputManager::convert_touch(const SDL_TouchFingerEvent *from, Screen *screen,
-                                     struct ControlMessage *to) {
+    bool InputManager::ConvertTouch(const SDL_TouchFingerEvent *from, Screen *screen,
+                                    struct ControlMessage *to) {
         to->type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT;
 
-        if (!convert_touch_action(static_cast<SDL_EventType>(from->type), &to->inject_touch_event.action)) {
+        if (!ConvertTouchAction(static_cast<SDL_EventType>(from->type), &to->inject_touch_event.action)) {
             return false;
         }
 
@@ -437,28 +437,28 @@ namespace irobot::ui {
         return true;
     }
 
-    void InputManager::process_touch(
+    void InputManager::ProcessTouch(
             const SDL_TouchFingerEvent *event) {
         struct ControlMessage msg{};
-        if (convert_touch(event, this->screen, &msg)) {
+        if (ConvertTouch(event, this->screen, &msg)) {
             if (!this->controller->push_msg(&msg)) {
                 LOGW("Could not request 'inject touch event'");
             }
         }
     }
 
-    bool InputManager::is_outside_device_screen(int x, int y) {
+    bool InputManager::IsOutsideDeviceScreen(int x, int y) {
         return x < 0 || x >= this->screen->frame_size.width ||
                y < 0 || y >= this->screen->frame_size.height;
     }
 
-    bool InputManager::convert_mouse_button(const SDL_MouseButtonEvent *from,
-                                            Screen *screen,
-                                            struct ControlMessage *to) {
+    bool InputManager::ConvertMouseButton(const SDL_MouseButtonEvent *from,
+                                          Screen *screen,
+                                          struct ControlMessage *to) {
         to->type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT;
 
-        if (!convert_mouse_action(static_cast<SDL_EventType>(from->type),
-                                  &to->inject_touch_event.action)) {
+        if (!ConvertMouseAction(static_cast<SDL_EventType>(from->type),
+                                &to->inject_touch_event.action)) {
             return false;
         }
 
@@ -468,12 +468,12 @@ namespace irobot::ui {
         to->inject_touch_event.position.point.y = from->y;
         to->inject_touch_event.pressure = 1.f;
         to->inject_touch_event.buttons =
-                convert_mouse_buttons(SDL_BUTTON(from->button));
+                ConvertMouseButtons(SDL_BUTTON(from->button));
 
         return true;
     }
 
-    void InputManager::process_mouse_button(
+    void InputManager::ProcessMouseButton(
             const SDL_MouseButtonEvent *event,
             bool control) {
         if (event->which == SDL_TOUCH_MOUSEID) {
@@ -482,19 +482,19 @@ namespace irobot::ui {
         }
         if (event->type == SDL_MOUSEBUTTONDOWN) {
             if (control && event->button == SDL_BUTTON_RIGHT) {
-                press_back_or_turn_screen_on(this->controller);
+                PressBackOrTurnScreenOn(this->controller);
                 return;
             }
             if (control && event->button == SDL_BUTTON_MIDDLE) {
-                action_home(this->controller, ACTION_DOWN | ACTION_UP);
+                ActionHome(this->controller, ACTION_DOWN | ACTION_UP);
                 return;
             }
             // double-click on black borders resize to fit the device screen
             if (event->button == SDL_BUTTON_LEFT && event->clicks == 2) {
                 bool outside =
-                        this->is_outside_device_screen(event->x, event->y);
+                        this->IsOutsideDeviceScreen(event->x, event->y);
                 if (outside) {
-                    this->screen->resize_to_fit();
+                    this->screen->ResizeToFit();
                     return;
                 }
             }
@@ -506,19 +506,19 @@ namespace irobot::ui {
         }
 
         struct ControlMessage msg{};
-        if (convert_mouse_button(event, this->screen, &msg)) {
+        if (ConvertMouseButton(event, this->screen, &msg)) {
             if (!this->controller->push_msg(&msg)) {
                 LOGW("Could not request 'inject mouse button event'");
             }
         }
     }
 
-    bool InputManager::convert_mouse_wheel(const SDL_MouseWheelEvent *from,
-                                           Screen *screen,
-                                           struct ControlMessage *to) {
+    bool InputManager::ConvertMouseWheel(const SDL_MouseWheelEvent *from,
+                                         Screen *screen,
+                                         struct ControlMessage *to) {
         struct Position position = {
                 .screen_size = screen->frame_size,
-                .point = get_mouse_point(screen),
+                .point = GetMousePoint(screen),
         };
 
         to->type = CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT;
@@ -530,10 +530,10 @@ namespace irobot::ui {
         return true;
     }
 
-    void InputManager::process_mouse_wheel(
+    void InputManager::ProcessMouseWheel(
             const SDL_MouseWheelEvent *event) {
         struct ControlMessage msg{};
-        if (convert_mouse_wheel(event, this->screen, &msg)) {
+        if (ConvertMouseWheel(event, this->screen, &msg)) {
             if (!this->controller->push_msg(&msg)) {
                 LOGW("Could not request 'inject mouse wheel event'");
             }

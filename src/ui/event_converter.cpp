@@ -10,8 +10,8 @@
 #define FAIL default: return false
 
 namespace irobot::ui {
-    bool convert_keycode_action(SDL_EventType from,
-                                enum AndroidKeyEventAction *to) {
+    bool ConvertKeycodeAction(SDL_EventType from,
+                              enum AndroidKeyEventAction *to) {
         switch (from) {
             MAP(SDL_KEYDOWN, AKEY_EVENT_ACTION_DOWN);
             MAP(SDL_KEYUP, AKEY_EVENT_ACTION_UP);
@@ -44,7 +44,7 @@ namespace irobot::ui {
         return metastate;
     }
 
-    enum AndroidMetaState convert_meta_state(SDL_Keymod mod) {
+    enum AndroidMetaState ConvertMetaState(SDL_Keymod mod) {
         auto metastate = static_cast<AndroidMetaState>(0);
         if (mod & KMOD_LSHIFT) {
             metastate = static_cast<AndroidMetaState>(metastate
@@ -103,8 +103,8 @@ namespace irobot::ui {
         return autocomplete_metastate(metastate);
     }
 
-    bool convert_keycode(SDL_Keycode from, enum AndroidKeycode *to,
-                         uint16_t mod, bool prefer_text) {
+    bool ConvertKeycode(SDL_Keycode from, enum AndroidKeycode *to,
+                        uint16_t mod, bool prefer_text) {
         switch (from) {
             MAP(SDLK_RETURN, AKEYCODE_ENTER);
             MAP(SDLK_KP_ENTER, AKEYCODE_NUMPAD_ENTER);
@@ -166,7 +166,7 @@ namespace irobot::ui {
         }
     }
 
-    enum AndroidMotionEventButtons convert_mouse_buttons(uint32_t state) {
+    enum AndroidMotionEventButtons ConvertMouseButtons(uint32_t state) {
         auto buttons = static_cast<AndroidMotionEventButtons>(0);
         if (state & SDL_BUTTON_LMASK) {
             buttons = static_cast<AndroidMotionEventButtons>(buttons
@@ -195,8 +195,8 @@ namespace irobot::ui {
         return buttons;
     }
 
-    bool convert_mouse_action(SDL_EventType from,
-                              enum AndroidMotionEventAction *to) {
+    bool ConvertMouseAction(SDL_EventType from,
+                            enum AndroidMotionEventAction *to) {
         switch (from) {
             MAP(SDL_MOUSEBUTTONDOWN, AMOTION_EVENT_ACTION_DOWN);
             MAP(SDL_MOUSEBUTTONUP, AMOTION_EVENT_ACTION_UP);
@@ -204,8 +204,8 @@ namespace irobot::ui {
         }
     }
 
-    bool convert_touch_action(SDL_EventType from,
-                              enum AndroidMotionEventAction *to) {
+    bool ConvertTouchAction(SDL_EventType from,
+                            enum AndroidMotionEventAction *to) {
         switch (from) {
             MAP(SDL_FINGERMOTION, AMOTION_EVENT_ACTION_MOVE);
             MAP(SDL_FINGERDOWN, AMOTION_EVENT_ACTION_DOWN);
