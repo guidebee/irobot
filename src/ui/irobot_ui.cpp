@@ -13,7 +13,9 @@
 Screen screen{};
 
 extern struct VideoBuffer video_buffer;
+
 extern class Controller controller;
+
 extern class FileHandler file_handler;
 
 struct InputManager input_manager = {
@@ -23,16 +25,14 @@ struct InputManager input_manager = {
         .prefer_text = false, // initialized later
 };
 
-static bool
-is_apk(const char *file) {
+static bool is_apk(const char *file) {
     const char *ext = strrchr(file, '.');
     return ext && !strcmp(ext, ".apk");
 }
 
 
 // init SDL and set appropriate hints
-bool
-sdl_init_and_configure(bool display) {
+bool sdl_init_and_configure(bool display) {
     uint32_t flags = display ? SDL_INIT_VIDEO : SDL_INIT_EVENTS;
     if (SDL_Init(flags)) {
         LOGC("Could not initialize SDL: %s", SDL_GetError());
@@ -81,8 +81,7 @@ sdl_init_and_configure(bool display) {
 //
 // <https://bugzilla.libsdl.org/show_bug.cgi?id=2077>
 // <https://stackoverflow.com/a/40693139/1987178>
-int
-event_watcher(void *data, SDL_Event *event) {
+int event_watcher(void *data, SDL_Event *event) {
     (void) data;
     if (event->type == SDL_WINDOWEVENT
         && event->window.event == SDL_WINDOWEVENT_RESIZED) {
@@ -100,8 +99,7 @@ enum event_result {
     EVENT_RESULT_STOPPED_BY_EOS,
 };
 
-static enum event_result
-handle_event(SDL_Event *event, bool control) {
+static enum event_result handle_event(SDL_Event *event, bool control) {
     switch (event->type) {
         case EVENT_STREAM_STOPPED:
             LOGD("Video stream stopped");
@@ -115,48 +113,48 @@ handle_event(SDL_Event *event, bool control) {
                 // this is the very first frame, show the window
                 screen.show_window();
             }
-            if (!screen.update_frame( &video_buffer)) {
+            if (!screen.update_frame(&video_buffer)) {
                 return EVENT_RESULT_CONTINUE;
             }
             break;
         case SDL_WINDOWEVENT:
-            screen.handle_window_event( &event->window);
+            screen.handle_window_event(&event->window);
             break;
         case SDL_TEXTINPUT:
             if (!control) {
                 break;
             }
-            input_manager.process_text_input( &event->text);
+            input_manager.process_text_input(&event->text);
             break;
         case SDL_KEYDOWN:
         case SDL_KEYUP:
             // some key events do not interact with the device, so process the
             // event even if control is disabled
-            input_manager.process_key( &event->key, control);
+            input_manager.process_key(&event->key, control);
             break;
         case SDL_MOUSEMOTION:
             if (!control) {
                 break;
             }
-            input_manager.process_mouse_motion( &event->motion);
+            input_manager.process_mouse_motion(&event->motion);
             break;
         case SDL_MOUSEWHEEL:
             if (!control) {
                 break;
             }
-            input_manager.process_mouse_wheel( &event->wheel);
+            input_manager.process_mouse_wheel(&event->wheel);
             break;
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
             // some mouse events do not interact with the device, so process
             // the event even if control is disabled
-            input_manager.process_mouse_button( &event->button,
+            input_manager.process_mouse_button(&event->button,
                                                control);
             break;
         case SDL_FINGERMOTION:
         case SDL_FINGERDOWN:
         case SDL_FINGERUP:
-            input_manager.process_touch( &event->tfinger);
+            input_manager.process_touch(&event->tfinger);
             break;
         case SDL_DROPFILE: {
             if (!control) {
@@ -175,8 +173,7 @@ handle_event(SDL_Event *event, bool control) {
     return EVENT_RESULT_CONTINUE;
 }
 
-bool
-event_loop(bool display, bool control) {
+bool event_loop(bool display, bool control) {
     (void) display;
 #ifdef CONTINUOUS_RESIZING_WORKAROUND
     if (display) {

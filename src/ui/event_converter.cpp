@@ -9,8 +9,8 @@
 #define MAP(FROM, TO) case FROM: *to = TO; return true
 #define FAIL default: return false
 
-bool
-convert_keycode_action(SDL_EventType from, enum android_keyevent_action *to) {
+bool convert_keycode_action(SDL_EventType from,
+                            enum android_keyevent_action *to) {
     switch (from) {
         MAP(SDL_KEYDOWN, AKEY_EVENT_ACTION_DOWN);
         MAP(SDL_KEYUP, AKEY_EVENT_ACTION_UP);
@@ -18,68 +18,80 @@ convert_keycode_action(SDL_EventType from, enum android_keyevent_action *to) {
     }
 }
 
-static enum android_metastate
-autocomplete_metastate(enum android_metastate metastate) {
+static enum android_metastate autocomplete_metastate(enum android_metastate metastate) {
     // fill dependant flags
     if (metastate & (AMETA_SHIFT_LEFT_ON | AMETA_SHIFT_RIGHT_ON)) {
-        metastate = static_cast<android_metastate>(metastate | AMETA_SHIFT_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_SHIFT_ON);
     }
     if (metastate & (AMETA_CTRL_LEFT_ON | AMETA_CTRL_RIGHT_ON)) {
-        metastate = static_cast<android_metastate>(metastate | AMETA_CTRL_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_CTRL_ON);
 
     }
     if (metastate & (AMETA_ALT_LEFT_ON | AMETA_ALT_RIGHT_ON)) {
-        metastate = static_cast<android_metastate>(metastate | AMETA_ALT_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_ALT_ON);
 
     }
     if (metastate & (AMETA_META_LEFT_ON | AMETA_META_RIGHT_ON)) {
-        metastate = static_cast<android_metastate>(metastate | AMETA_META_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_META_ON);
 
     }
 
     return metastate;
 }
 
-enum android_metastate
-convert_meta_state(SDL_Keymod mod) {
+enum android_metastate convert_meta_state(SDL_Keymod mod) {
     auto metastate = static_cast<android_metastate>(0);
     if (mod & KMOD_LSHIFT) {
-        metastate = static_cast<android_metastate>(metastate | AMETA_SHIFT_LEFT_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_SHIFT_LEFT_ON);
     }
     if (mod & KMOD_RSHIFT) {
-        metastate = static_cast<android_metastate>(metastate | AMETA_SHIFT_RIGHT_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_SHIFT_RIGHT_ON);
 
     }
     if (mod & KMOD_LCTRL) {
-        metastate = static_cast<android_metastate>(metastate | AMETA_CTRL_LEFT_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_CTRL_LEFT_ON);
 
     }
     if (mod & KMOD_RCTRL) {
-        metastate = static_cast<android_metastate>(metastate | AMETA_CTRL_RIGHT_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_CTRL_RIGHT_ON);
 
     }
     if (mod & KMOD_LALT) {
-        metastate = static_cast<android_metastate>(metastate | AMETA_ALT_LEFT_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_ALT_LEFT_ON);
 
     }
     if (mod & KMOD_RALT) {
-        metastate = static_cast<android_metastate>(metastate | AMETA_ALT_RIGHT_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_ALT_RIGHT_ON);
 
     }
     if (mod & KMOD_LGUI) { // Windows key
-        metastate = static_cast<android_metastate>(metastate | AMETA_META_LEFT_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_META_LEFT_ON);
 
     }
     if (mod & KMOD_RGUI) { // Windows key
-        metastate = static_cast<android_metastate>(metastate | AMETA_META_RIGHT_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_META_RIGHT_ON);
 
     }
     if (mod & KMOD_NUM) {
-        metastate = static_cast<android_metastate>(metastate | AMETA_NUM_LOCK_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_NUM_LOCK_ON);
 
     }
     if (mod & KMOD_CAPS) {
-        metastate = static_cast<android_metastate>(metastate | AMETA_CAPS_LOCK_ON);
+        metastate = static_cast<android_metastate>(metastate
+                                                   | AMETA_CAPS_LOCK_ON);
 
     }
     if (mod & KMOD_MODE) { // Alt Gr
@@ -90,9 +102,8 @@ convert_meta_state(SDL_Keymod mod) {
     return autocomplete_metastate(metastate);
 }
 
-bool
-convert_keycode(SDL_Keycode from, enum android_keycode *to, uint16_t mod,
-                bool prefer_text) {
+bool convert_keycode(SDL_Keycode from, enum android_keycode *to,
+                     uint16_t mod, bool prefer_text) {
     switch (from) {
         MAP(SDLK_RETURN, AKEYCODE_ENTER);
         MAP(SDLK_KP_ENTER, AKEYCODE_NUMPAD_ENTER);
@@ -154,33 +165,37 @@ convert_keycode(SDL_Keycode from, enum android_keycode *to, uint16_t mod,
     }
 }
 
-enum android_motionevent_buttons
-convert_mouse_buttons(uint32_t state) {
+enum android_motionevent_buttons convert_mouse_buttons(uint32_t state) {
     auto buttons = static_cast<android_motionevent_buttons>(0);
     if (state & SDL_BUTTON_LMASK) {
-        buttons = static_cast<android_motionevent_buttons>(buttons | AMOTION_EVENT_BUTTON_PRIMARY);
+        buttons = static_cast<android_motionevent_buttons>(buttons
+                                                           | AMOTION_EVENT_BUTTON_PRIMARY);
     }
     if (state & SDL_BUTTON_RMASK) {
-        buttons = static_cast<android_motionevent_buttons>(buttons | AMOTION_EVENT_BUTTON_SECONDARY);
+        buttons = static_cast<android_motionevent_buttons>(buttons
+                                                           | AMOTION_EVENT_BUTTON_SECONDARY);
 
     }
     if (state & SDL_BUTTON_MMASK) {
-        buttons = static_cast<android_motionevent_buttons>(buttons | AMOTION_EVENT_BUTTON_TERTIARY);
+        buttons = static_cast<android_motionevent_buttons>(buttons
+                                                           | AMOTION_EVENT_BUTTON_TERTIARY);
 
     }
     if (state & SDL_BUTTON_X1MASK) {
-        buttons = static_cast<android_motionevent_buttons>(buttons | AMOTION_EVENT_BUTTON_BACK);
+        buttons = static_cast<android_motionevent_buttons>(buttons
+                                                           | AMOTION_EVENT_BUTTON_BACK);
 
     }
     if (state & SDL_BUTTON_X2MASK) {
-        buttons = static_cast<android_motionevent_buttons>(buttons | AMOTION_EVENT_BUTTON_FORWARD);
+        buttons = static_cast<android_motionevent_buttons>(buttons
+                                                           | AMOTION_EVENT_BUTTON_FORWARD);
 
     }
     return buttons;
 }
 
-bool
-convert_mouse_action(SDL_EventType from, enum android_motionevent_action *to) {
+bool convert_mouse_action(SDL_EventType from,
+                          enum android_motionevent_action *to) {
     switch (from) {
         MAP(SDL_MOUSEBUTTONDOWN, AMOTION_EVENT_ACTION_DOWN);
         MAP(SDL_MOUSEBUTTONUP, AMOTION_EVENT_ACTION_UP);
@@ -188,8 +203,8 @@ convert_mouse_action(SDL_EventType from, enum android_motionevent_action *to) {
     }
 }
 
-bool
-convert_touch_action(SDL_EventType from, enum android_motionevent_action *to) {
+bool convert_touch_action(SDL_EventType from,
+                          enum android_motionevent_action *to) {
     switch (from) {
         MAP(SDL_FINGERMOTION, AMOTION_EVENT_ACTION_MOVE);
         MAP(SDL_FINGERDOWN, AMOTION_EVENT_ACTION_DOWN);

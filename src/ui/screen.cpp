@@ -17,8 +17,7 @@
 #define DISPLAY_MARGINS 96
 
 // get the window size in a struct size
-static struct size
-get_window_size(SDL_Window *window) {
+struct size Screen::get_window_size(SDL_Window *window) {
     int width;
     int height;
     SDL_GetWindowSize(window, &width, &height);
@@ -30,35 +29,31 @@ get_window_size(SDL_Window *window) {
 }
 
 // get the windowed window size
-static struct size
-get_windowed_window_size(const struct Screen *screen) {
-    if (screen->fullscreen || screen->maximized) {
-        return screen->windowed_window_size;
+struct size Screen::get_windowed_window_size() {
+    if (this->fullscreen || this->maximized) {
+        return this->windowed_window_size;
     }
-    return get_window_size(screen->window);
+    return get_window_size(this->window);
 }
 
 // apply the windowed window size if fullscreen and maximized are disabled
-static void
-apply_windowed_size(struct Screen *screen) {
-    if (!screen->fullscreen && !screen->maximized) {
-        SDL_SetWindowSize(screen->window, screen->windowed_window_size.width,
-                          screen->windowed_window_size.height);
+void Screen::apply_windowed_size() {
+    if (!this->fullscreen && !this->maximized) {
+        SDL_SetWindowSize(this->window, this->windowed_window_size.width,
+                          this->windowed_window_size.height);
     }
 }
 
 // set the window size to be applied when fullscreen is disabled
-static void
-set_window_size(struct Screen *screen, struct size new_size) {
+void Screen::set_window_size(struct size new_size) {
     // setting the window size during fullscreen is implementation defined,
     // so apply the resize only after fullscreen is disabled
-    screen->windowed_window_size = new_size;
-    apply_windowed_size(screen);
+    this->windowed_window_size = new_size;
+    apply_windowed_size();
 }
 
 // get the preferred display bounds (i.e. the screen bounds with some margins)
-static bool
-get_preferred_display_bounds(struct size *bounds) {
+bool Screen::get_preferred_display_bounds(struct size *bounds) {
     SDL_Rect rect;
 # define GET_DISPLAY_BOUNDS(i, r) SDL_GetDisplayUsableBounds((i), (r))
     if (GET_DISPLAY_BOUNDS(0, &rect)) {
@@ -76,8 +71,8 @@ get_preferred_display_bounds(struct size *bounds) {
 //    crops the black borders)
 //  - it keeps the aspect ratio
 //  - it scales down to make it fit in the display_size
-static struct size
-get_optimal_size(struct size current_size, struct size frame_size) {
+struct size Screen::get_optimal_size(struct size current_size,
+        struct size frame_size) {
     if (frame_size.width == 0 || frame_size.height == 0) {
         // avoid division by 0
         return current_size;
@@ -113,17 +108,15 @@ get_optimal_size(struct size current_size, struct size frame_size) {
 }
 
 // same as get_optimal_size(), but read the current size from the window
-static inline struct size
-get_optimal_window_size(const struct Screen *screen, struct size frame_size) {
-    struct size windowed_size = get_windowed_window_size(screen);
+struct size Screen::get_optimal_window_size(struct size frame_size) {
+    struct size windowed_size = get_windowed_window_size();
     return get_optimal_size(windowed_size, frame_size);
 }
 
 // initially, there is no current size, so use the frame size as current size
 // req_width and req_height, if not 0, are the sizes requested by the user
-static inline struct size
-get_initial_optimal_size(struct size frame_size, uint16_t req_width,
-                         uint16_t req_height) {
+struct size Screen::get_initial_optimal_size(struct size frame_size, uint16_t req_width,
+                                             uint16_t req_height) {
     struct size window_size{};
     if (!req_width && !req_height) {
         window_size = get_optimal_size(frame_size, frame_size);
@@ -146,8 +139,7 @@ get_initial_optimal_size(struct size frame_size, uint16_t req_width,
     return window_size;
 }
 
-void
-Screen::init() {
+void Screen::init() {
     this->window = nullptr;
     this->renderer = nullptr;
     this->texture = nullptr;
@@ -170,19 +162,12 @@ Screen::init() {
 
 }
 
-static inline SDL_Texture *
-create_texture(SDL_Renderer *renderer, struct size frame_size) {
-    return SDL_CreateTexture(renderer, SDL_PIXELFORMAT_YV12,
-                             SDL_TEXTUREACCESS_STREAMING,
-                             frame_size.width, frame_size.height);
-}
 
-bool
-Screen::init_rendering(const char *window_title,
-                       struct size frame_size, bool always_on_top,
-                       int16_t window_x, int16_t window_y, uint16_t window_width,
-                       uint16_t window_height, uint16_t screen_width,
-                       uint16_t screen_height, bool window_borderless) {
+bool Screen::init_rendering(const char *window_title,
+                            struct size frame_size, bool always_on_top,
+                            int16_t window_x, int16_t window_y, uint16_t window_width,
+                            uint16_t window_height, uint16_t screen_width,
+                            uint16_t screen_height, bool window_borderless) {
     Screen *screen = this;
     screen->frame_size = frame_size;
 
@@ -250,14 +235,12 @@ Screen::init_rendering(const char *window_title,
     return true;
 }
 
-void
-Screen::show_window() {
+void Screen::show_window() {
     Screen *screen = this;
     SDL_ShowWindow(screen->window);
 }
 
-void
-Screen::destroy() {
+void Screen::destroy() {
     Screen *screen = this;
     if (screen->texture) {
         SDL_DestroyTexture(screen->texture);
@@ -271,38 +254,37 @@ Screen::destroy() {
 }
 
 // recreate the texture and resize the window if the frame size has changed
-static bool
-prepare_for_frame(Screen *screen, struct size new_frame_size) {
-    if (screen->frame_size.width != new_frame_size.width
-        || screen->frame_size.height != new_frame_size.height) {
-        if (SDL_RenderSetLogicalSize(screen->renderer, new_frame_size.width,
+bool Screen::prepare_for_frame(struct size new_frame_size) {
+    if (this->frame_size.width != new_frame_size.width
+        || this->frame_size.height != new_frame_size.height) {
+        if (SDL_RenderSetLogicalSize(this->renderer, new_frame_size.width,
                                      new_frame_size.height)) {
             LOGE("Could not set renderer logical size: %s", SDL_GetError());
             return false;
         }
 
         // frame dimension changed, destroy texture
-        SDL_DestroyTexture(screen->texture);
+        SDL_DestroyTexture(this->texture);
 
-        struct size windowed_size = get_windowed_window_size(screen);
+        struct size windowed_size = get_windowed_window_size();
         struct size target_size = {
                 (uint16_t) ((uint32_t) windowed_size.width * new_frame_size.width
-                            / screen->frame_size.width),
+                            / this->frame_size.width),
                 (uint16_t) ((uint32_t) windowed_size.height * new_frame_size.height
-                            / screen->frame_size.height),
+                            / this->frame_size.height),
         };
         target_size = get_optimal_size(target_size, new_frame_size);
-        set_window_size(screen, target_size);
+        set_window_size(target_size);
 
-        screen->frame_size = new_frame_size;
+        this->frame_size = new_frame_size;
 
         LOGI("New texture: %"
                      PRIu16
                      "x%"
                      PRIu16,
-             screen->frame_size.width, screen->frame_size.height);
-        screen->texture = create_texture(screen->renderer, new_frame_size);
-        if (!screen->texture) {
+             this->frame_size.width, this->frame_size.height);
+        this->texture = create_texture(this->renderer, new_frame_size);
+        if (!this->texture) {
             LOGC("Could not create texture: %s", SDL_GetError());
             return false;
         }
@@ -312,41 +294,37 @@ prepare_for_frame(Screen *screen, struct size new_frame_size) {
 }
 
 // write the frame into the texture
-static void
-update_texture(Screen *screen, const AVFrame *frame) {
-    SDL_UpdateYUVTexture(screen->texture, nullptr,
+void Screen::update_texture(const AVFrame *frame) {
+    SDL_UpdateYUVTexture(this->texture, nullptr,
                          frame->data[0], frame->linesize[0],
                          frame->data[1], frame->linesize[1],
                          frame->data[2], frame->linesize[2]);
 }
 
-bool
-Screen::update_frame(VideoBuffer *vb) {
+bool Screen::update_frame(VideoBuffer *vb) {
     Screen *screen = this;
     mutex_lock(vb->mutex);
     const AVFrame *frame = vb->consume_rendered_frame();
     struct size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
-    if (!prepare_for_frame(screen, new_frame_size)) {
+    if (!prepare_for_frame(new_frame_size)) {
         mutex_unlock(vb->mutex);
         return false;
     }
-    update_texture(screen, frame);
+    update_texture(frame);
     mutex_unlock(vb->mutex);
 
     screen->render();
     return true;
 }
 
-void
-Screen::render() {
+void Screen::render() {
     Screen *screen = this;
     SDL_RenderClear(screen->renderer);
     SDL_RenderCopy(screen->renderer, screen->texture, nullptr, nullptr);
     SDL_RenderPresent(screen->renderer);
 }
 
-void
-Screen::switch_fullscreen() {
+void Screen::switch_fullscreen() {
     Screen *screen = this;
     uint32_t new_mode = screen->fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
     if (SDL_SetWindowFullscreen(screen->window, new_mode)) {
@@ -355,14 +333,13 @@ Screen::switch_fullscreen() {
     }
 
     screen->fullscreen = !screen->fullscreen;
-    apply_windowed_size(screen);
+    apply_windowed_size();
 
     LOGD("Switched to %s mode", screen->fullscreen ? "fullscreen" : "windowed");
     screen->render();
 }
 
-void
-Screen::resize_to_fit() {
+void Screen::resize_to_fit() {
     Screen *screen = this;
     if (screen->fullscreen) {
         return;
@@ -374,13 +351,12 @@ Screen::resize_to_fit() {
     }
 
     struct size optimal_size =
-            get_optimal_window_size(screen, screen->frame_size);
+            get_optimal_window_size(screen->frame_size);
     SDL_SetWindowSize(screen->window, optimal_size.width, optimal_size.height);
     LOGD("Resized to optimal size");
 }
 
-void
-Screen::resize_to_pixel_perfect() {
+void Screen::resize_to_pixel_perfect() {
     Screen *screen = this;
     if (screen->fullscreen) {
         return;
@@ -396,8 +372,7 @@ Screen::resize_to_pixel_perfect() {
     LOGD("Resized to pixel-perfect");
 }
 
-void
-Screen::handle_window_event(
+void Screen::handle_window_event(
         const SDL_WindowEvent *event) {
     Screen *screen = this;
     switch (event->event) {
@@ -434,7 +409,7 @@ Screen::handle_window_event(
             break;
         case SDL_WINDOWEVENT_RESTORED:
             screen->maximized = false;
-            apply_windowed_size(screen);
+            apply_windowed_size();
             break;
     }
 }

@@ -16,12 +16,10 @@ extern "C" {
 }
 #endif
 
-bool
-sdl_init_and_configure(bool display);
+bool sdl_init_and_configure(bool display);
 
-int
-event_watcher(void *data, SDL_Event *event);
+int event_watcher(void *data, SDL_Event *event);
 
-bool
-event_loop(bool display, bool control);
+bool event_loop(bool display, bool control);
+
 #endif //ANDROID_IROBOT_IROBOT_UI_HPP

@@ -12,13 +12,16 @@
 #include "util/lock.hpp"
 #include "util/log.hpp"
 
+static const int ACTION_DOWN = 1;
+static const int ACTION_UP = 1 << 1;
+
 // Convert window coordinates (as provided by SDL_GetMouseState() to renderer
 // coordinates (as provided in SDL mouse events)
 //
 // See my question:
 // <https://stackoverflow.com/questions/49111054/how-to-get-mouse-position-on-mouse-wheel-event>
-static void
-convert_to_renderer_coordinates(SDL_Renderer *renderer, int *x, int *y) {
+void InputManager::convert_to_renderer_coordinates(SDL_Renderer *renderer,
+                                                   int *x, int *y) {
     SDL_Rect viewport;
     float scale_x, scale_y;
     SDL_RenderGetViewport(renderer, &viewport);
@@ -27,8 +30,7 @@ convert_to_renderer_coordinates(SDL_Renderer *renderer, int *x, int *y) {
     *y = (int) (static_cast<float>(*y) / scale_y) - viewport.y;
 }
 
-static struct point
-get_mouse_point(struct Screen *screen) {
+struct point InputManager::get_mouse_point(Screen *screen) {
     int x;
     int y;
     SDL_GetMouseState(&x, &y);
@@ -39,12 +41,9 @@ get_mouse_point(struct Screen *screen) {
     };
 }
 
-static const int ACTION_DOWN = 1;
-static const int ACTION_UP = 1 << 1;
 
-static void
-send_keycode(Controller *controller, enum android_keycode keycode,
-             int actions, const char *name) {
+void InputManager::send_keycode(Controller *controller, enum android_keycode keycode,
+                                int actions, const char *name) {
     // send DOWN event
     struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_INJECT_KEYCODE;
@@ -67,44 +66,9 @@ send_keycode(Controller *controller, enum android_keycode keycode,
     }
 }
 
-static inline void
-action_home(Controller *controller, int actions) {
-    send_keycode(controller, AKEYCODE_HOME, actions, "HOME");
-}
-
-static inline void
-action_back(Controller *controller, int actions) {
-    send_keycode(controller, AKEYCODE_BACK, actions, "BACK");
-}
-
-static inline void
-action_app_switch(Controller *controller, int actions) {
-    send_keycode(controller, AKEYCODE_APP_SWITCH, actions, "APP_SWITCH");
-}
-
-static inline void
-action_power(Controller *controller, int actions) {
-    send_keycode(controller, AKEYCODE_POWER, actions, "POWER");
-}
-
-static inline void
-action_volume_up(Controller *controller, int actions) {
-    send_keycode(controller, AKEYCODE_VOLUME_UP, actions, "VOLUME_UP");
-}
-
-static inline void
-action_volume_down(Controller *controller, int actions) {
-    send_keycode(controller, AKEYCODE_VOLUME_DOWN, actions, "VOLUME_DOWN");
-}
-
-static inline void
-action_menu(Controller *controller, int actions) {
-    send_keycode(controller, AKEYCODE_MENU, actions, "MENU");
-}
 
 // turn the screen on if it was off, press BACK otherwise
-static void
-press_back_or_turn_screen_on(Controller *controller) {
+void InputManager::press_back_or_turn_screen_on(Controller *controller) {
     struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON;
 
@@ -113,8 +77,7 @@ press_back_or_turn_screen_on(Controller *controller) {
     }
 }
 
-static void
-expand_notification_panel(Controller *controller) {
+void InputManager::expand_notification_panel(Controller *controller) {
     struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL;
 
@@ -123,8 +86,7 @@ expand_notification_panel(Controller *controller) {
     }
 }
 
-static void
-collapse_notification_panel(Controller *controller) {
+void InputManager::collapse_notification_panel(Controller *controller) {
     struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL;
 
@@ -133,8 +95,7 @@ collapse_notification_panel(Controller *controller) {
     }
 }
 
-static void
-request_device_clipboard(Controller *controller) {
+void InputManager::request_device_clipboard(Controller *controller) {
     struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_GET_CLIPBOARD;
 
@@ -143,8 +104,7 @@ request_device_clipboard(Controller *controller) {
     }
 }
 
-static void
-set_device_clipboard(Controller *controller) {
+void InputManager::set_device_clipboard(Controller *controller) {
     char *text = SDL_GetClipboardText();
     if (!text) {
         LOGW("Could not get clipboard text: %s", SDL_GetError());
@@ -166,9 +126,8 @@ set_device_clipboard(Controller *controller) {
     }
 }
 
-static void
-set_screen_power_mode(Controller *controller,
-                      enum ScreenPowerMode mode) {
+void InputManager::set_screen_power_mode(Controller *controller,
+                                         enum ScreenPowerMode mode) {
     struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
     msg.set_screen_power_mode.mode = mode;
@@ -178,8 +137,7 @@ set_screen_power_mode(Controller *controller,
     }
 }
 
-static void
-switch_fps_counter_state(FpsCounter *fps_counter) {
+void InputManager::switch_fps_counter_state(FpsCounter *fps_counter) {
     // the started state can only be written from the current thread, so there
     // is no ToCToU issue
     if (fps_counter->is_started()) {
@@ -194,8 +152,7 @@ switch_fps_counter_state(FpsCounter *fps_counter) {
     }
 }
 
-static void
-clipboard_paste(Controller *controller) {
+void InputManager::clipboard_paste(Controller *controller) {
     char *text = SDL_GetClipboardText();
     if (!text) {
         LOGW("Could not get clipboard text: %s", SDL_GetError());
@@ -216,8 +173,7 @@ clipboard_paste(Controller *controller) {
     }
 }
 
-static void
-rotate_device(Controller *controller) {
+void InputManager::rotate_device(Controller *controller) {
     struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_ROTATE_DEVICE;
 
@@ -226,8 +182,7 @@ rotate_device(Controller *controller) {
     }
 }
 
-void
-InputManager::process_text_input(
+void InputManager::process_text_input(
         const SDL_TextInputEvent *event) {
     struct InputManager *im = this;
     if (!im->prefer_text) {
@@ -252,9 +207,9 @@ InputManager::process_text_input(
     }
 }
 
-static bool
-convert_input_key(const SDL_KeyboardEvent *from, struct ControlMessage *to,
-                  bool prefer_text) {
+bool InputManager::convert_input_key(const SDL_KeyboardEvent *from,
+                                     struct ControlMessage *to,
+                                     bool prefer_text) {
     to->type = CONTROL_MSG_TYPE_INJECT_KEYCODE;
 
     if (!convert_keycode_action(static_cast<SDL_EventType>(from->type), &to->inject_keycode.action)) {
@@ -272,8 +227,7 @@ convert_input_key(const SDL_KeyboardEvent *from, struct ControlMessage *to,
     return true;
 }
 
-void
-InputManager::process_key(
+void InputManager::process_key(
         const SDL_KeyboardEvent *event,
         bool control) {
     // control: indicates the state of the command-line option --no-control
@@ -428,9 +382,9 @@ InputManager::process_key(
     }
 }
 
-static bool
-convert_mouse_motion(const SDL_MouseMotionEvent *from, struct Screen *screen,
-                     struct ControlMessage *to) {
+bool InputManager::convert_mouse_motion(const SDL_MouseMotionEvent *from,
+                                        Screen *screen,
+                                        struct ControlMessage *to) {
     to->type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT;
     to->inject_touch_event.action = AMOTION_EVENT_ACTION_MOVE;
     to->inject_touch_event.pointer_id = POINTER_ID_MOUSE;
@@ -443,8 +397,7 @@ convert_mouse_motion(const SDL_MouseMotionEvent *from, struct Screen *screen,
     return true;
 }
 
-void
-InputManager::process_mouse_motion(
+void InputManager::process_mouse_motion(
         const SDL_MouseMotionEvent *event) {
     InputManager *im = this;
     if (!event->state) {
@@ -463,9 +416,8 @@ InputManager::process_mouse_motion(
     }
 }
 
-static bool
-convert_touch(const SDL_TouchFingerEvent *from, struct Screen *screen,
-              struct ControlMessage *to) {
+bool InputManager::convert_touch(const SDL_TouchFingerEvent *from, Screen *screen,
+                                 struct ControlMessage *to) {
     to->type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT;
 
     if (!convert_touch_action(static_cast<SDL_EventType>(from->type), &to->inject_touch_event.action)) {
@@ -484,8 +436,7 @@ convert_touch(const SDL_TouchFingerEvent *from, struct Screen *screen,
     return true;
 }
 
-void
-InputManager::process_touch(
+void InputManager::process_touch(
         const SDL_TouchFingerEvent *event) {
     InputManager *im = this;
     struct ControlMessage msg{};
@@ -496,18 +447,18 @@ InputManager::process_touch(
     }
 }
 
-static bool
-is_outside_device_screen(InputManager *im, int x, int y) {
-    return x < 0 || x >= im->screen->frame_size.width ||
-           y < 0 || y >= im->screen->frame_size.height;
+bool InputManager::is_outside_device_screen(int x, int y) {
+    return x < 0 || x >= this->screen->frame_size.width ||
+           y < 0 || y >= this->screen->frame_size.height;
 }
 
-static bool
-convert_mouse_button(const SDL_MouseButtonEvent *from, struct Screen *screen,
-                     struct ControlMessage *to) {
+bool InputManager::convert_mouse_button(const SDL_MouseButtonEvent *from,
+                                        Screen *screen,
+                                        struct ControlMessage *to) {
     to->type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT;
 
-    if (!convert_mouse_action(static_cast<SDL_EventType>(from->type), &to->inject_touch_event.action)) {
+    if (!convert_mouse_action(static_cast<SDL_EventType>(from->type),
+                              &to->inject_touch_event.action)) {
         return false;
     }
 
@@ -522,8 +473,7 @@ convert_mouse_button(const SDL_MouseButtonEvent *from, struct Screen *screen,
     return true;
 }
 
-void
-InputManager::process_mouse_button(
+void InputManager::process_mouse_button(
         const SDL_MouseButtonEvent *event,
         bool control) {
     InputManager *im = this;
@@ -543,7 +493,7 @@ InputManager::process_mouse_button(
         // double-click on black borders resize to fit the device screen
         if (event->button == SDL_BUTTON_LEFT && event->clicks == 2) {
             bool outside =
-                    is_outside_device_screen(im, event->x, event->y);
+                    this->is_outside_device_screen(event->x, event->y);
             if (outside) {
                 im->screen->resize_to_fit();
                 return;
@@ -564,9 +514,9 @@ InputManager::process_mouse_button(
     }
 }
 
-static bool
-convert_mouse_wheel(const SDL_MouseWheelEvent *from, struct Screen *screen,
-                    struct ControlMessage *to) {
+bool InputManager::convert_mouse_wheel(const SDL_MouseWheelEvent *from,
+                                       Screen *screen,
+                                       struct ControlMessage *to) {
     struct position position = {
             .screen_size = screen->frame_size,
             .point = get_mouse_point(screen),
@@ -581,8 +531,7 @@ convert_mouse_wheel(const SDL_MouseWheelEvent *from, struct Screen *screen,
     return true;
 }
 
-void
-InputManager::process_mouse_wheel(
+void InputManager::process_mouse_wheel(
         const SDL_MouseWheelEvent *event) {
     InputManager *im = this;
     struct ControlMessage msg{};
