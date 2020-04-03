@@ -25,8 +25,7 @@ extern "C" {
 #include <climits>
 #include <cstdlib>
 
-size_t
-xstrncpy(char *dest, const char *src, size_t n) {
+size_t xstrncpy(char *dest, const char *src, size_t n) {
     size_t i;
     for (i = 0; i < n - 1 && src[i] != '\0'; ++i)
         dest[i] = src[i];
@@ -35,8 +34,7 @@ xstrncpy(char *dest, const char *src, size_t n) {
     return src[i] == '\0' ? i : n;
 }
 
-size_t
-xstrjoin(char *dst, const char *const tokens[], char sep, size_t n) {
+size_t xstrjoin(char *dst, const char *const tokens[], char sep, size_t n) {
     const char *const *remaining = tokens;
     const char *token = *remaining++;
     size_t i = 0;
@@ -59,8 +57,7 @@ xstrjoin(char *dst, const char *const tokens[], char sep, size_t n) {
     return n;
 }
 
-char *
-strquote(const char *src) {
+char *strquote(const char *src) {
     size_t len = strlen(src);
     char *quoted = (char *) SDL_malloc(len + 3);
     if (!quoted) {
@@ -73,8 +70,7 @@ strquote(const char *src) {
     return quoted;
 }
 
-bool
-parse_integer(const char *s, long *out) {
+bool parse_integer(const char *s, long *out) {
     char *endptr;
     if (*s == '\0') {
         return false;
@@ -92,8 +88,7 @@ parse_integer(const char *s, long *out) {
     return true;
 }
 
-bool
-parse_integer_with_suffix(const char *s, long *out) {
+bool parse_integer_with_suffix(const char *s, long *out) {
     char *endptr;
     if (*s == '\0') {
         return false;
@@ -126,8 +121,7 @@ parse_integer_with_suffix(const char *s, long *out) {
     return true;
 }
 
-size_t
-utf8_truncation_index(const char *utf8, size_t max_len) {
+size_t utf8_truncation_index(const char *utf8, size_t max_len) {
     size_t len = strlen(utf8);
     if (len <= max_len) {
         return len;
@@ -192,8 +186,7 @@ char *str_replace(char *orig, char *rep, char *with) {
 
 #ifdef _WIN32
 
-wchar_t *
-utf8_to_wide_char(const char *utf8) {
+wchar_t * utf8_to_wide_char(const char *utf8) {
     int len = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
     if (!len) {
         return NULL;
@@ -208,8 +201,7 @@ utf8_to_wide_char(const char *utf8) {
     return wide;
 }
 
-char *
-utf8_from_wide_char(const wchar_t *ws) {
+char * utf8_from_wide_char(const wchar_t *ws) {
     int len = WideCharToMultiByte(CP_UTF8, 0, ws, -1, NULL, 0, NULL, NULL);
     if (!len) {
         return NULL;
