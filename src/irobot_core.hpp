@@ -6,6 +6,8 @@
 #ifndef ANDROID_IROBOT_SCRCPY_HPP
 #define ANDROID_IROBOT_SCRCPY_HPP
 
+#define SDL_MAIN_HANDLED // avoid link error on Linux Windows Subsystem
+
 #if defined (__cplusplus)
 extern "C" {
 #endif
@@ -60,7 +62,9 @@ struct IRobotOptions {
 };
 
 void irobot_print_usage(const char *arg0);
+
 void print_version();
+
 int irobot_main(int argc, char *argv[]);
 
 #endif //ANDROID_IROBOT_SCRCPY_HPP
