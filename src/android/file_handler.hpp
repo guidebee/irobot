@@ -25,16 +25,17 @@ extern "C" {
 typedef enum {
     ACTION_INSTALL_APK,
     ACTION_PUSH_FILE,
-} file_handler_action_t;
+} FileHandlerActionType;
 
-struct file_handler_request {
-    file_handler_action_t action;
+struct FileHandlerRequest {
+    FileHandlerActionType action;
     char *file;
 };
 
-struct file_handler_request_queue CBUF(struct file_handler_request, 16);
+struct FileHandlerRequestQueue CBUF(struct FileHandlerRequest, 16);
 
-struct file_handler {
+class FileHandler {
+public:
     char *serial;
     const char *push_target;
     SDL_Thread *thread;
@@ -43,29 +44,31 @@ struct file_handler {
     bool stopped;
     bool initialized;
     process_t current_process;
-    struct file_handler_request_queue queue;
-};
+    struct FileHandlerRequestQueue queue;
 
-bool
-file_handler_init(struct file_handler *file_handler, const char *serial,
-                  const char *push_target);
+    bool
+    init( const char *serial,
+                      const char *push_target);
 
-void
-file_handler_destroy(struct file_handler *file_handler);
+    void
+    destroy();
 
-bool
-file_handler_start(struct file_handler *file_handler);
+    bool
+    start();
 
-void
-file_handler_stop(struct file_handler *file_handler);
+    void
+    stop();
 
-void
-file_handler_join(struct file_handler *file_handler);
+    void
+    join();
 
 // take ownership of file, and will SDL_free() it
-bool
-file_handler_request(struct file_handler *file_handler,
-                     file_handler_action_t action,
-                     char *file);
+    bool
+    request(
+                         FileHandlerActionType action,
+                         char *file);
+};
+
+
 
 #endif //ANDROID_IROBOT_FILE_HANDLER_HPP

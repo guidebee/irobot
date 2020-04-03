@@ -33,7 +33,7 @@ static struct recorder recorder;
 
 class Controller controller{};
 
-struct file_handler file_handler;
+struct FileHandler file_handler;
 
 static struct decoder decoder;
 extern struct input_manager input_manager;
@@ -185,7 +185,7 @@ IRobotOptions::init() {
         video_buffer_initialized = true;
 
         if (!cannot_cont & options->control) {
-            if (!file_handler_init(&file_handler, server.serial,
+            if (!file_handler.init(server.serial,
                                    options->push_target)) {
                 cannot_cont = true;
             }
@@ -281,7 +281,7 @@ IRobotOptions::init() {
         controller.stop();
     }
     if (file_handler_initialized) {
-        file_handler_stop(&file_handler);
+        file_handler.stop();
     }
     if (fps_counter_initialized) {
         fps_counter_interrupt(&fps_counter);
@@ -307,8 +307,8 @@ IRobotOptions::init() {
     }
 
     if (file_handler_initialized) {
-        file_handler_join(&file_handler);
-        file_handler_destroy(&file_handler);
+        file_handler.join();
+        file_handler.destroy();
     }
 
     if (video_buffer_initialized) {

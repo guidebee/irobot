@@ -14,7 +14,7 @@ struct screen screen = SCREEN_INITIALIZER;
 
 extern struct video_buffer video_buffer;
 extern class Controller controller;
-extern struct file_handler file_handler;
+extern class FileHandler file_handler;
 
 struct input_manager input_manager = {
         .controller = &controller,
@@ -162,13 +162,13 @@ handle_event(SDL_Event *event, bool control) {
             if (!control) {
                 break;
             }
-            file_handler_action_t action;
+            FileHandlerActionType action;
             if (is_apk(event->drop.file)) {
                 action = ACTION_INSTALL_APK;
             } else {
                 action = ACTION_PUSH_FILE;
             }
-            file_handler_request(&file_handler, action, event->drop.file);
+            file_handler.request(action, event->drop.file);
             break;
         }
     }

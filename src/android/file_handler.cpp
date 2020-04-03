@@ -14,14 +14,15 @@
 #define DEFAULT_PUSH_TARGET "/sdcard/"
 
 static void
-file_handler_request_destroy(struct file_handler_request *req) {
+file_handler_request_destroy(struct FileHandlerRequest *req) {
     SDL_free(req->file);
 }
 
 bool
-file_handler_init(struct file_handler *file_handler, const char *serial,
+FileHandler::init(const char *serial,
                   const char *push_target) {
 
+    FileHandler *file_handler = this;
     cbuf_init(&file_handler->queue);
 
     if (!(file_handler->mutex = SDL_CreateMutex())) {
@@ -57,12 +58,13 @@ file_handler_init(struct file_handler *file_handler, const char *serial,
 }
 
 void
-file_handler_destroy(struct file_handler *file_handler) {
+FileHandler::destroy() {
+    FileHandler *file_handler = this;
     SDL_DestroyCond(file_handler->event_cond);
     SDL_DestroyMutex(file_handler->mutex);
     SDL_free(file_handler->serial);
 
-    struct file_handler_request req{};
+    struct FileHandlerRequest req{};
     while (cbuf_take(&file_handler->queue, &req)) {
         file_handler_request_destroy(&req);
     }
@@ -79,11 +81,12 @@ push_file(const char *serial, const char *file, const char *push_target) {
 }
 
 bool
-file_handler_request(struct file_handler *file_handler,
-                     file_handler_action_t action, char *file) {
+FileHandler::request(
+        FileHandlerActionType action, char *file) {
+    FileHandler *file_handler = this;
     // start file_handler if it's used for the first time
     if (!file_handler->initialized) {
-        if (!file_handler_start(file_handler)) {
+        if (!file_handler->start()) {
             return false;
         }
         file_handler->initialized = true;
@@ -91,7 +94,7 @@ file_handler_request(struct file_handler *file_handler,
 
     LOGI("Request to %s %s", action == ACTION_INSTALL_APK ? "install" : "push",
          file);
-    struct file_handler_request req = {
+    struct FileHandlerRequest req = {
             .action = action,
             .file = file,
     };
@@ -108,7 +111,7 @@ file_handler_request(struct file_handler *file_handler,
 
 static int
 run_file_handler(void *data) {
-    auto *file_handler = (struct file_handler *) data;
+    auto *file_handler = (FileHandler *) data;
 
     for (;;) {
         mutex_lock(file_handler->mutex);
@@ -121,7 +124,7 @@ run_file_handler(void *data) {
             mutex_unlock(file_handler->mutex);
             break;
         }
-        struct file_handler_request req{};
+        struct FileHandlerRequest req{};
         bool non_empty = cbuf_take(&file_handler->queue, &req);
         assert(non_empty);
         (void) non_empty;
@@ -160,7 +163,8 @@ run_file_handler(void *data) {
 }
 
 bool
-file_handler_start(struct file_handler *file_handler) {
+FileHandler::start() {
+    FileHandler *file_handler = this;
     LOGD("Starting file_handler thread");
 
     file_handler->thread = SDL_CreateThread(run_file_handler, "file_handler",
@@ -174,7 +178,8 @@ file_handler_start(struct file_handler *file_handler) {
 }
 
 void
-file_handler_stop(struct file_handler *file_handler) {
+FileHandler::stop() {
+    FileHandler *file_handler = this;
     mutex_lock(file_handler->mutex);
     file_handler->stopped = true;
     cond_signal(file_handler->event_cond);
@@ -189,6 +194,7 @@ file_handler_stop(struct file_handler *file_handler) {
 }
 
 void
-file_handler_join(struct file_handler *file_handler) {
+FileHandler::join() {
+    FileHandler *file_handler = this;
     SDL_WaitThread(file_handler->thread, nullptr);
 }

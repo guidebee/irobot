@@ -268,14 +268,14 @@ TEST_CASE("deserialize clipboard", "[message][ControlMessage]") {
     };
 
     struct DeviceMessage msg{};
-    ssize_t r = device_msg_deserialize(input, sizeof(input), &msg);
+    ssize_t r =msg.deserialize(input, sizeof(input));
     REQUIRE(r == 6);
 
     REQUIRE(msg.type == DEVICE_MSG_TYPE_CLIPBOARD);
     REQUIRE(msg.clipboard.text);
     REQUIRE(!strcmp("ABC", msg.clipboard.text));
 
-    device_msg_destroy(&msg);
+    msg.destroy();
 }
 
 
