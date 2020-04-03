@@ -59,7 +59,7 @@ struct IRobotOptions {
     bool parse_args(int argc, char *argv[]);
 };
 
-void scrcpy_print_usage(const char *arg0);
+void irobot_print_usage(const char *arg0);
 void print_version();
 int irobot_main(int argc, char *argv[]);
 

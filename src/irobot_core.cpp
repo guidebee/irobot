@@ -3,7 +3,7 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#include "irobot_option.hpp"
+#include "irobot_core.hpp"
 
 #include <cstring>
 
@@ -31,6 +31,7 @@
 #include "ui/screen.hpp"
 
 extern Screen screen;
+extern InputManager input_manager;
 
 #endif
 
@@ -255,6 +256,7 @@ bool IRobotOptions::init() {
         }
 
 #ifdef UI_SCREEN
+        input_manager.prefer_text=options->prefer_text;
         const char *_window_title =
                 options->window_title ? options->window_title : device_name;
 
@@ -366,7 +368,7 @@ bool IRobotOptions::init() {
 }
 
 
-void scrcpy_print_usage(const char *arg0) {
+void irobot_print_usage(const char *arg0) {
 #ifdef __APPLE__
 # define CTRL_OR_CMD "Cmd"
 #else
@@ -919,7 +921,7 @@ int irobot_main(int argc, char *argv[]) {
     }
 
     if (args.help) {
-        scrcpy_print_usage(argv[0]);
+        irobot_print_usage(argv[0]);
         return 0;
     }
 

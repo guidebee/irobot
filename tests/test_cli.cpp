@@ -4,7 +4,7 @@
 //
 
 #include "catch.hpp"
-#include "irobot_option.hpp"
+#include "irobot_core.hpp"
 #include "common.hpp"
 
 TEST_CASE("flag version", "[ui][cli]") {

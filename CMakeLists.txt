@@ -49,7 +49,7 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/controller.hpp
         ${CMAKE_HOME_DIRECTORY}/src/command.hpp
         ${CMAKE_HOME_DIRECTORY}/src/server.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/irobot_option.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/irobot_core.hpp
         )
 
 SET(COMMON_SOURCES
@@ -74,7 +74,7 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/command.cpp
         ${CMAKE_HOME_DIRECTORY}/src/controller.cpp
         ${CMAKE_HOME_DIRECTORY}/src/server.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/irobot_option.cpp)
+        ${CMAKE_HOME_DIRECTORY}/src/irobot_core.cpp)
 
 
 if (WIN32)
