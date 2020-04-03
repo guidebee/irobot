@@ -10,26 +10,16 @@
 #include "ui/input_manager.hpp"
 #include "android/file_handler.hpp"
 
-Screen screen{};
-
-extern struct VideoBuffer video_buffer;
-
-extern class Controller controller;
-
-extern class FileHandler file_handler;
-
-struct InputManager input_manager = {
-        .controller = &controller,
-        .video_buffer = &video_buffer,
-        .screen = &screen,
-        .prefer_text = false, // initialized later
-};
+extern Screen screen;
+extern InputManager input_manager;
+extern VideoBuffer video_buffer;
+extern Controller controller;
+extern FileHandler file_handler;
 
 static bool is_apk(const char *file) {
     const char *ext = strrchr(file, '.');
     return ext && !strcmp(ext, ".apk");
 }
-
 
 // init SDL and set appropriate hints
 bool sdl_init_and_configure(bool display) {
@@ -93,13 +83,13 @@ int event_watcher(void *data, SDL_Event *event) {
 
 #endif
 
-enum event_result {
+enum EventResult {
     EVENT_RESULT_CONTINUE,
     EVENT_RESULT_STOPPED_BY_USER,
     EVENT_RESULT_STOPPED_BY_EOS,
 };
 
-static enum event_result handle_event(SDL_Event *event, bool control) {
+static enum EventResult handle_event(SDL_Event *event, bool control) {
     switch (event->type) {
         case EVENT_STREAM_STOPPED:
             LOGD("Video stream stopped");
@@ -182,7 +172,7 @@ bool event_loop(bool display, bool control) {
 #endif
     SDL_Event event;
     while (SDL_WaitEvent(&event)) {
-        enum event_result result = handle_event(&event, control);
+        enum EventResult result = handle_event(&event, control);
         switch (result) {
             case EVENT_RESULT_STOPPED_BY_USER:
                 return true;

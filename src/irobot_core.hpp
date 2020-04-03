@@ -22,6 +22,7 @@ extern "C" {
 #include <cstdint>
 
 #include "config.hpp"
+#include "command.hpp"
 #include "ui/input_manager.hpp"
 #include "video/recorder.hpp"
 
@@ -59,6 +60,11 @@ struct IRobotOptions {
     bool init();
 
     bool parse_args(int argc, char *argv[]);
+
+    static ProcessType set_show_touches_enabled(const char *serial, bool enabled);
+    static void wait_show_touches(ProcessType process);
+    static SDL_LogPriority sdl_priority_from_av_level(int level);
+    static void av_log_callback(void *avcl, int level, const char *fmt, va_list vl);
 };
 
 void irobot_print_usage(const char *arg0);

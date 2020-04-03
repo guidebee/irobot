@@ -8,14 +8,14 @@
 #include <cstring>
 
 #include "config.hpp"
-#include "command.hpp"
+
 #include "common.hpp"
 #include "controller.hpp"
 #include "server.hpp"
 
 #include "android/device.hpp"
 #include "android/file_handler.hpp"
-
+#include "ui/screen.hpp"
 #include "ui/irobot_ui.hpp"
 #include "video/decoder.hpp"
 #include "video/fps_counter.hpp"
@@ -25,15 +25,6 @@
 #include "util/log.hpp"
 #include "util/net.hpp"
 #include "util/str_util.hpp"
-
-#ifdef UI_SCREEN
-
-#include "ui/screen.hpp"
-
-extern Screen screen;
-extern InputManager input_manager;
-
-#endif
 
 
 #define OPT_RENDER_EXPIRED_FRAMES 1000
@@ -52,21 +43,25 @@ extern InputManager input_manager;
 #define OPT_SCREEN_WIDTH          1013
 #define OPT_SCREEN_HEIGHT         1014
 
-static Server server;
-static FpsCounter fps_counter;
+Server server;
+FpsCounter fps_counter;
 VideoBuffer video_buffer;
-static VideoStream stream;
-
-static Recorder recorder;
-
-class Controller controller;
-
+VideoStream stream;
+Recorder recorder;
+Controller controller;
 FileHandler file_handler;
+Decoder decoder;
+Screen screen;
+InputManager input_manager = {
+        .controller = &controller,
+        .video_buffer = &video_buffer,
+        .screen = &screen,
+        .prefer_text = false, // initialized later
+};
 
-static Decoder decoder;
 
 
-static ProcessType set_show_touches_enabled(const char *serial, bool enabled) {
+ProcessType IRobotOptions::set_show_touches_enabled(const char *serial, bool enabled) {
     const char *value = enabled ? "1" : "0";
     const char *const adb_cmd[] = {
             "shell", "settings", "put", "system", "show_touches", value
@@ -74,12 +69,12 @@ static ProcessType set_show_touches_enabled(const char *serial, bool enabled) {
     return adb_execute(serial, adb_cmd, ARRAY_LEN(adb_cmd));
 }
 
-static void wait_show_touches(ProcessType process) {
+void IRobotOptions::wait_show_touches(ProcessType process) {
     // reap the process, ignore the result
     process_check_success(process, "show_touches");
 }
 
-static SDL_LogPriority sdl_priority_from_av_level(int level) {
+SDL_LogPriority IRobotOptions::sdl_priority_from_av_level(int level) {
     switch (level) {
         case AV_LOG_PANIC:
         case AV_LOG_FATAL:
@@ -95,7 +90,7 @@ static SDL_LogPriority sdl_priority_from_av_level(int level) {
     }
 }
 
-static void av_log_callback(void *avcl, int level, const char *fmt, va_list vl) {
+void IRobotOptions::av_log_callback(void *avcl, int level, const char *fmt, va_list vl) {
     (void) avcl;
     SDL_LogPriority priority = sdl_priority_from_av_level(level);
     if (priority == 0) {
@@ -256,7 +251,7 @@ bool IRobotOptions::init() {
         }
 
 #ifdef UI_SCREEN
-        input_manager.prefer_text=options->prefer_text;
+        input_manager.prefer_text = options->prefer_text;
         const char *_window_title =
                 options->window_title ? options->window_title : device_name;
 
@@ -299,7 +294,7 @@ bool IRobotOptions::init() {
     while (true) {
         printf("Press Q to exit\n");
         c = getchar();
-        if(c=='Q' || c=='q'){
+        if (c == 'Q' || c == 'q') {
             break;
         }
     }

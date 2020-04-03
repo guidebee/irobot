@@ -24,7 +24,7 @@ extern "C" {
 #include "util/cbuf.hpp"
 #include "util/net.hpp"
 
-struct control_msg_queue CBUF(struct ControlMessage, 64);
+struct ControlMessageQueue CBUF(struct ControlMessage, 64);
 
 
 class Controller {
@@ -34,7 +34,7 @@ public:
     SDL_mutex *mutex;
     SDL_cond *msg_cond;
     bool stopped;
-    struct control_msg_queue queue;
+    struct ControlMessageQueue queue;
 
     class Receiver receiver;
 
