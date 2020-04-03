@@ -7,7 +7,7 @@
 
 #include <cassert>
 
-#include "command.hpp"
+#include "platform/command.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"
 

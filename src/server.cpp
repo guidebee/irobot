@@ -10,9 +10,9 @@
 #include <cstdio>
 
 #include "config.hpp"
-#include "command.hpp"
+#include "platform/command.hpp"
 #include "util/log.hpp"
-#include "util/net.hpp"
+#include "platform/net.hpp"
 
 
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"

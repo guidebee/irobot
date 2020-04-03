@@ -33,7 +33,6 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/util/log.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/queue.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/util/net.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/buffer_util.hpp
         ${CMAKE_HOME_DIRECTORY}/src/video/utils.hpp
         ${CMAKE_HOME_DIRECTORY}/src/video/fps_counter.hpp
@@ -46,7 +45,8 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/ui/event_converter.hpp
         ${CMAKE_HOME_DIRECTORY}/src/common.hpp
         ${CMAKE_HOME_DIRECTORY}/src/controller.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/command.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/platform/command.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/platform/net.hpp
         ${CMAKE_HOME_DIRECTORY}/src/server.hpp
         ${CMAKE_HOME_DIRECTORY}/src/irobot_core.hpp
         )
@@ -62,14 +62,14 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/ui/screen.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/input_manager.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/util/net.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/utils.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/fps_counter.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/recorder.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/video_buffer.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/decoder.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/stream.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/command.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/platform/command.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/platform/net.cpp
         ${CMAKE_HOME_DIRECTORY}/src/controller.cpp
         ${CMAKE_HOME_DIRECTORY}/src/server.cpp
         ${CMAKE_HOME_DIRECTORY}/src/irobot_core.cpp)

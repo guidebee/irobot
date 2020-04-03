@@ -5,7 +5,7 @@
 
 #include "config.hpp"
 
-#include "util/net.hpp"
+#include "platform/net.hpp"
 #include "util/log.hpp"
 
 bool net_init(void) {

@@ -22,7 +22,7 @@ extern "C" {
 #include "android/receiver.hpp"
 #include "message/control_msg.hpp"
 #include "util/cbuf.hpp"
-#include "util/net.hpp"
+#include "platform/net.hpp"
 
 struct ControlMessageQueue CBUF(struct ControlMessage, 64);
 

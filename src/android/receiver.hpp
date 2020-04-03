@@ -19,7 +19,7 @@ extern "C" {
 
 #include "config.hpp"
 
-#include "util/net.hpp"
+#include "platform/net.hpp"
 
 // receive events from the device
 // managed by the controller

@@ -19,8 +19,8 @@ extern "C" {
 #include <cstdint>
 
 #include "config.hpp"
-#include "command.hpp"
-#include "util/net.hpp"
+#include "platform/command.hpp"
+#include "platform/net.hpp"
 
 
 struct ServerParameters {

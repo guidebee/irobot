@@ -3,7 +3,7 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#include "command.hpp"
+#include "platform/command.hpp"
 #include "config.hpp"
 
 #include "util/log.hpp"

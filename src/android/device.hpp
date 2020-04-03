@@ -9,7 +9,7 @@
 #include "config.hpp"
 #include "common.hpp"
 
-#include "util/net.hpp"
+#include "platform/net.hpp"
 
 #define DEVICE_NAME_FIELD_LENGTH 64
 

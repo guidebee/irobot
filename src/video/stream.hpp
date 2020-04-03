@@ -27,7 +27,7 @@ extern "C" {
 
 #include "config.hpp"
 
-#include "util/net.hpp"
+#include "platform/net.hpp"
 #include "video/decoder.hpp"
 
 class VideoStream {
