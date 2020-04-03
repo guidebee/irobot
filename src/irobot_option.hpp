@@ -60,6 +60,7 @@ struct IRobotOptions {
 };
 
 void scrcpy_print_usage(const char *arg0);
-
+void print_version();
+int irobot_main(int argc, char *argv[]);
 
 #endif //ANDROID_IROBOT_SCRCPY_HPP

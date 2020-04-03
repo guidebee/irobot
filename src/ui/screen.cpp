@@ -158,7 +158,6 @@ void Screen::init() {
     this->has_frame = false;
     this->fullscreen = false;
     this->maximized = false;
-    this->no_window = false;
 
 }
 

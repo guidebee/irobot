@@ -39,7 +39,6 @@ public:
     bool has_frame;
     bool fullscreen;
     bool maximized;
-    bool no_window;
 
     struct Size device_screen_size;
 

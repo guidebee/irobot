@@ -222,6 +222,9 @@ int VideoStream::run_stream(void *data) {
             // cannot process packet (error already logged)
             break;
         }
+#ifndef UI_SCREEN
+        LOGI("Receiving package ...");
+#endif
     }
 
     LOGD("End of frames");

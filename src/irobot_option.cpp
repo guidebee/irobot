@@ -15,7 +15,7 @@
 
 #include "android/device.hpp"
 #include "android/file_handler.hpp"
-#include "ui/screen.hpp"
+
 #include "ui/irobot_ui.hpp"
 #include "video/decoder.hpp"
 #include "video/fps_counter.hpp"
@@ -25,6 +25,15 @@
 #include "util/log.hpp"
 #include "util/net.hpp"
 #include "util/str_util.hpp"
+
+#ifdef UI_SCREEN
+
+#include "ui/screen.hpp"
+
+extern Screen screen;
+
+#endif
+
 
 #define OPT_RENDER_EXPIRED_FRAMES 1000
 #define OPT_WINDOW_TITLE          1001
@@ -54,8 +63,7 @@ class Controller controller;
 FileHandler file_handler;
 
 static Decoder decoder;
-extern InputManager input_manager;
-extern Screen screen;
+
 
 static ProcessType set_show_touches_enabled(const char *serial, bool enabled) {
     const char *value = enabled ? "1" : "0";
@@ -246,6 +254,7 @@ bool IRobotOptions::init() {
             controller_started = true;
         }
 
+#ifdef UI_SCREEN
         const char *_window_title =
                 options->window_title ? options->window_title : device_name;
 
@@ -257,7 +266,7 @@ bool IRobotOptions::init() {
                                                   options->window_borderless)) {
             cannot_cont = true;
         }
-
+#endif
         if (!cannot_cont & options->turn_screen_off) {
             struct ControlMessage msg{};
             msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
@@ -267,24 +276,32 @@ bool IRobotOptions::init() {
                 LOGW("Could not request 'set screen power mode'");
             }
         }
-
+#ifdef UI_SCREEN
         if (options->fullscreen) {
             screen.switch_fullscreen();
         }
+#endif
     }
 
     if (options->show_touches) {
         wait_show_touches(proc_show_touches);
         show_touches_waited = true;
     }
-
-    input_manager.prefer_text = options->prefer_text;
-
-    bool ret = event_loop(options->display, options->control);
+    bool ret = false;
+#ifdef UI_SCREEN
+    ret = event_loop(options->display, options->control);
     LOGD("quit...");
-
     screen.destroy();
-
+#else
+    char c;
+    while (true) {
+        printf("Press Q to exit\n");
+        c = getchar();
+        if(c=='Q' || c=='q'){
+            break;
+        }
+    }
+#endif
 
     // stop stream and controller so that they don't continue once their socket
     // is shutdown
@@ -544,7 +561,7 @@ void scrcpy_print_usage(const char *arg0) {
 }
 
 static bool parse_integer_arg(const char *s, long *out, bool accept_suffix, long min,
-                  long max, const char *name) {
+                              long max, const char *name) {
     long value;
     bool ok;
     if (accept_suffix) {
@@ -864,3 +881,72 @@ bool IRobotOptions::parse_args(int argc, char *argv[]) {
 
     return true;
 }
+
+void print_version() {
+    fprintf(stderr, "scrcpy %s\n\n", SCRCPY_VERSION);
+
+    fprintf(stderr, "dependencies:\n");
+    fprintf(stderr, " - SDL %d.%d.%d\n", SDL_MAJOR_VERSION, SDL_MINOR_VERSION,
+            SDL_PATCHLEVEL);
+    fprintf(stderr, " - libavcodec %d.%d.%d\n", LIBAVCODEC_VERSION_MAJOR,
+            LIBAVCODEC_VERSION_MINOR,
+            LIBAVCODEC_VERSION_MICRO);
+    fprintf(stderr, " - libavformat %d.%d.%d\n", LIBAVFORMAT_VERSION_MAJOR,
+            LIBAVFORMAT_VERSION_MINOR,
+            LIBAVFORMAT_VERSION_MICRO);
+    fprintf(stderr, " - libavutil %d.%d.%d\n", LIBAVUTIL_VERSION_MAJOR,
+            LIBAVUTIL_VERSION_MINOR,
+            LIBAVUTIL_VERSION_MICRO);
+}
+
+int irobot_main(int argc, char *argv[]) {
+
+#ifdef __WINDOWS__
+    // disable buffering, we want logs immediately
+    // even line buffering (setvbuf() with mode _IOLBF) is not sufficient
+    setbuf(stdout, nullptr);
+    setbuf(stderr, nullptr);
+#endif
+
+#ifndef NDEBUG
+    SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
+#endif
+
+    struct IRobotOptions args = {};
+
+    if (!args.parse_args(argc, argv)) {
+        return 1;
+    }
+
+    if (args.help) {
+        scrcpy_print_usage(argv[0]);
+        return 0;
+    }
+
+    if (args.version) {
+        print_version();
+        return 0;
+    }
+
+    LOGI("scrcpy "
+                 SCRCPY_VERSION
+                 " <https://github.com/Genymobile/scrcpy>");
+
+
+    if (avformat_network_init()) {
+        return 1;
+    }
+
+    int res = args.init() ? 0 : 1;
+
+    avformat_network_deinit(); // ignore failure
+
+#if defined (__WINDOWS__)
+    if (res != 0) {
+        fprintf(stderr, "Press any key to continue...\n");
+        getchar();
+    }
+#endif
+    return res;
+}
+
