@@ -3,8 +3,6 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-
-
 #include "command.hpp"
 
 #if defined (__cplusplus)
@@ -23,12 +21,9 @@ extern "C" {
 #include <csignal>
 #include <cstdlib>
 
-
-
 #include "util/log.hpp"
 
-enum process_result
-cmd_execute(const char *const argv[], pid_t *pid) {
+enum process_result cmd_execute(const char *const argv[], pid_t *pid) {
     int fd[2];
 
     if (pipe(fd) == -1) {
@@ -89,8 +84,7 @@ cmd_execute(const char *const argv[], pid_t *pid) {
     return ret;
 }
 
-bool
-cmd_terminate(pid_t pid) {
+bool cmd_terminate(pid_t pid) {
     if (pid <= 0) {
         LOGC("Requested to kill %d, this is an error. Please report the bug.\n",
              (int) pid);
@@ -99,8 +93,7 @@ cmd_terminate(pid_t pid) {
     return kill(pid, SIGTERM) != -1;
 }
 
-bool
-cmd_simple_wait(pid_t pid, int *exit_code) {
+bool cmd_simple_wait(pid_t pid, int *exit_code) {
     int status;
     int code;
     if (waitpid(pid, &status, 0) == -1 || !WIFEXITED(status)) {
@@ -119,8 +112,7 @@ cmd_simple_wait(pid_t pid, int *exit_code) {
 #endif
 }
 
-char *
-get_executable_path() {
+char *get_executable_path() {
 // <https://stackoverflow.com/a/1024937/1987178>
 #ifdef __linux__
     char buf[PATH_MAX + 1]; // +1 for the null byte

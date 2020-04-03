@@ -9,8 +9,7 @@
 #include "util/log.hpp"
 #include "util/str_util.hpp"
 
-static int
-build_cmd(char *cmd, size_t len, const char *const argv[]) {
+static int build_cmd(char *cmd, size_t len, const char *const argv[]) {
     // Windows command-line parsing is WTF:
     // <http://daviddeley.com/autohotkey/parameters/parameters.htm#WINPASS>
     // only make it work for this very specific program
@@ -25,8 +24,7 @@ build_cmd(char *cmd, size_t len, const char *const argv[]) {
     return 0;
 }
 
-enum process_result
-cmd_execute(const char *const argv[], HANDLE *handle) {
+enum process_result cmd_execute(const char *const argv[], HANDLE *handle) {
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     memset(&si, 0, sizeof(si));
@@ -61,13 +59,11 @@ cmd_execute(const char *const argv[], HANDLE *handle) {
     return PROCESS_SUCCESS;
 }
 
-bool
-cmd_terminate(HANDLE handle) {
+bool cmd_terminate(HANDLE handle) {
     return TerminateProcess(handle, 1) && CloseHandle(handle);
 }
 
-bool
-cmd_simple_wait(HANDLE handle, DWORD *exit_code) {
+bool cmd_simple_wait(HANDLE handle, DWORD *exit_code) {
     DWORD code;
     if (WaitForSingleObject(handle, INFINITE) != WAIT_OBJECT_0
         || !GetExitCodeProcess(handle, &code)) {
@@ -80,8 +76,7 @@ cmd_simple_wait(HANDLE handle, DWORD *exit_code) {
     return !code;
 }
 
-char *
-get_executable_path(void) {
+char * get_executable_path(void) {
     HMODULE hModule = GetModuleHandleW(NULL);
     if (!hModule) {
         return NULL;

@@ -3,21 +3,17 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-
 #include "util/net.hpp"
 
-bool
-net_init() {
+bool net_init() {
     // do nothing
     return true;
 }
 
-void
-net_cleanup() {
+void net_cleanup() {
     // do nothing
 }
 
-bool
-net_close(socket_t socket) {
+bool net_close(socket_t socket) {
     return !close(socket);
 }
