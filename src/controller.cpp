@@ -15,17 +15,17 @@ Controller::init(socket_t control_socket) {
     Controller *controller = this;
     cbuf_init(&controller->queue);
 
-    if (!receiver_init(&controller->receiver, control_socket)) {
+    if (!controller->receiver.init(control_socket)) {
         return false;
     }
 
     if (!(controller->mutex = SDL_CreateMutex())) {
-        receiver_destroy(&controller->receiver);
+        controller->receiver.destroy();
         return false;
     }
 
     if (!(controller->msg_cond = SDL_CreateCond())) {
-        receiver_destroy(&controller->receiver);
+        controller->receiver.destroy();
         SDL_DestroyMutex(controller->mutex);
         return false;
     }
@@ -47,7 +47,7 @@ Controller::destroy() {
         msg.destroy();
     }
 
-    receiver_destroy(&controller->receiver);
+    controller->receiver.destroy();
 }
 
 bool
@@ -66,7 +66,7 @@ Controller::push_msg(
 
 static bool
 process_msg(Controller *controller,
-        struct ControlMessage *msg) {
+            struct ControlMessage *msg) {
 
     unsigned char serialized_msg[CONTROL_MSG_SERIALIZED_MAX_SIZE];
     int length = msg->serialize(serialized_msg);
@@ -119,7 +119,7 @@ Controller::start() {
         return false;
     }
 
-    if (!receiver_start(&controller->receiver)) {
+    if (!controller->receiver.start()) {
         controller->stop();
         SDL_WaitThread(controller->thread, nullptr);
         return false;
@@ -141,6 +141,6 @@ void
 Controller::join() {
     Controller *controller = this;
     SDL_WaitThread(controller->thread, nullptr);
-    receiver_join(&controller->receiver);
+    controller->receiver.join();
 }
 

@@ -35,7 +35,7 @@ public:
     SDL_cond *msg_cond;
     bool stopped;
     struct control_msg_queue queue;
-    struct receiver receiver;
+    class Receiver receiver;
 
     bool init(socket_t control_socket);
 

@@ -23,24 +23,22 @@ extern "C" {
 
 // receive events from the device
 // managed by the controller
-struct receiver {
+class Receiver {
+public:
     socket_t control_socket;
     SDL_Thread *thread;
     SDL_mutex *mutex;
+
+    bool init(socket_t control_socket);
+
+    void destroy();
+
+    bool start();
+
+    // no receiver_stop(), it will automatically stop on control_socket shutdown
+
+    void join();
 };
 
-bool
-receiver_init(struct receiver *receiver, socket_t control_socket);
-
-void
-receiver_destroy(struct receiver *receiver);
-
-bool
-receiver_start(struct receiver *receiver);
-
-// no receiver_stop(), it will automatically stop on control_socket shutdown
-
-void
-receiver_join(struct receiver *receiver);
 
 #endif //ANDROID_IROBOT_RECEIVER_HPP

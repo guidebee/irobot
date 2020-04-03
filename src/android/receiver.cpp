@@ -21,7 +21,8 @@ extern "C" {
 #include "util/log.hpp"
 
 bool
-receiver_init(struct receiver *receiver, socket_t control_socket) {
+Receiver::init(socket_t control_socket) {
+    Receiver *receiver = this;
     if (!(receiver->mutex = SDL_CreateMutex())) {
         return false;
     }
@@ -30,7 +31,8 @@ receiver_init(struct receiver *receiver, socket_t control_socket) {
 }
 
 void
-receiver_destroy(struct receiver *receiver) {
+Receiver::destroy() {
+    Receiver *receiver = this;
     SDL_DestroyMutex(receiver->mutex);
 }
 
@@ -70,7 +72,7 @@ process_msgs(const unsigned char *buf, size_t len) {
 
 static int
 run_receiver(void *data) {
-    auto *receiver = (struct receiver *) data;
+    auto *receiver = (Receiver *) data;
 
     unsigned char buf[DEVICE_MSG_SERIALIZED_MAX_SIZE];
     size_t head = 0;
@@ -101,7 +103,8 @@ run_receiver(void *data) {
 }
 
 bool
-receiver_start(struct receiver *receiver) {
+Receiver::start() {
+    Receiver *receiver = this;
     LOGD("Starting receiver thread");
 
     receiver->thread = SDL_CreateThread(run_receiver, "receiver", receiver);
@@ -114,6 +117,7 @@ receiver_start(struct receiver *receiver) {
 }
 
 void
-receiver_join(struct receiver *receiver) {
+Receiver::join() {
+    Receiver *receiver = this;
     SDL_WaitThread(receiver->thread, nullptr);
 }
