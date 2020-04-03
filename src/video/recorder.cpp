@@ -13,58 +13,8 @@
 
 static const AVRational SCRCPY_TIME_BASE = {1, 1000000}; // timestamps in us
 
-static const AVOutputFormat *
-find_muxer(const char *name) {
-#ifdef SCRCPY_LAVF_HAS_NEW_MUXER_ITERATOR_API
-    void *opaque = nullptr;
-#endif
-    const AVOutputFormat *oformat = nullptr;
-    do {
-#ifdef SCRCPY_LAVF_HAS_NEW_MUXER_ITERATOR_API
-        oformat = av_muxer_iterate(&opaque);
-#else
-        oformat = av_oformat_next(oformat);
-#endif
-        // until null or with name "mp4"
-    } while (oformat && strcmp(oformat->name, name));
-    return oformat;
-}
 
-static struct RecordPacket *
-record_packet_new(const AVPacket *packet) {
-    auto rec = (struct RecordPacket *) SDL_malloc(sizeof(struct RecordPacket));
-    if (!rec) {
-        return nullptr;
-    }
-
-    // av_packet_ref() does not initialize all fields in old FFmpeg versions
-    // See <https://github.com/Genymobile/scrcpy/issues/707>
-    av_init_packet(&rec->packet);
-
-    if (av_packet_ref(&rec->packet, packet)) {
-        SDL_free(rec);
-        return nullptr;
-    }
-    return rec;
-}
-
-static void
-record_packet_delete(struct RecordPacket *rec) {
-    av_packet_unref(&rec->packet);
-    SDL_free(rec);
-}
-
-static void
-recorder_queue_clear(struct RecordQueue *queue) {
-    while (!queue_is_empty(queue)) {
-        struct RecordPacket *rec;
-        queue_take(queue, next, &rec);
-        record_packet_delete(rec);
-    }
-}
-
-bool
-Recorder::init(
+bool Recorder::init(
         const char *filename,
         enum RecordFormat format,
         struct size declared_frame_size) {
@@ -101,28 +51,15 @@ Recorder::init(
     return true;
 }
 
-void
-Recorder::destroy() {
+void Recorder::destroy() {
     Recorder *recorder = this;
     SDL_DestroyCond(recorder->queue_cond);
     SDL_DestroyMutex(recorder->mutex);
     SDL_free(recorder->filename);
 }
 
-static const char *
-recorder_get_format_name(enum RecordFormat format) {
-    switch (format) {
-        case RECORDER_FORMAT_MP4:
-            return "mp4";
-        case RECORDER_FORMAT_MKV:
-            return "matroska";
-        default:
-            return nullptr;
-    }
-}
 
-bool
-Recorder::open(const AVCodec *input_codec) {
+bool Recorder::open(const AVCodec *input_codec) {
     Recorder *recorder = this;
     const char *format_name = recorder_get_format_name(recorder->format);
     assert(format_name);
@@ -176,8 +113,7 @@ Recorder::open(const AVCodec *input_codec) {
     return true;
 }
 
-void
-Recorder::close() {
+void Recorder::close() {
     Recorder *recorder = this;
     if (recorder->header_written) {
         int ret = av_write_trailer(recorder->ctx);
@@ -200,8 +136,7 @@ Recorder::close() {
     }
 }
 
-bool
-Recorder::write_header(const AVPacket *packet) {
+bool Recorder::write_header(const AVPacket *packet) {
     Recorder *recorder = this;
     AVStream *ostream = recorder->ctx->streams[0];
 
@@ -227,15 +162,13 @@ Recorder::write_header(const AVPacket *packet) {
     return true;
 }
 
-void
-Recorder::rescale_packet(AVPacket *packet) {
+void Recorder::rescale_packet(AVPacket *packet) {
     Recorder *recorder = this;
     AVStream *ostream = recorder->ctx->streams[0];
     av_packet_rescale_ts(packet, SCRCPY_TIME_BASE, ostream->time_base);
 }
 
-bool
-Recorder::write(AVPacket *packet) {
+bool Recorder::write(AVPacket *packet) {
     Recorder *recorder = this;
     if (!recorder->header_written) {
         if (packet->pts != AV_NOPTS_VALUE) {
@@ -259,8 +192,7 @@ Recorder::write(AVPacket *packet) {
     return av_write_frame(recorder->ctx, packet) >= 0;
 }
 
-static int
-run_recorder(void *data) {
+int Recorder::run_recorder(void *data) {
     auto *recorder = static_cast<struct Recorder *>(data);
 
     for (;;) {
@@ -332,8 +264,7 @@ run_recorder(void *data) {
     return 0;
 }
 
-bool
-Recorder::start() {
+bool Recorder::start() {
     LOGD("Starting recorder thread");
     Recorder *recorder = this;
     recorder->thread = SDL_CreateThread(run_recorder, "recorder", recorder);
@@ -345,8 +276,7 @@ Recorder::start() {
     return true;
 }
 
-void
-Recorder::stop() {
+void Recorder::stop() {
     Recorder *recorder = this;
     mutex_lock(recorder->mutex);
     recorder->stopped = true;
@@ -354,14 +284,12 @@ Recorder::stop() {
     mutex_unlock(recorder->mutex);
 }
 
-void
-Recorder::join() {
+void Recorder::join() {
     Recorder *recorder = this;
     SDL_WaitThread(recorder->thread, nullptr);
 }
 
-bool
-Recorder::push(const AVPacket *packet) {
+bool Recorder::push(const AVPacket *packet) {
     Recorder *recorder = this;
     mutex_lock(recorder->mutex);
     assert(!recorder->stopped);

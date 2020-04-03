@@ -31,8 +31,8 @@ extern "C" {
 #include "video/decoder.hpp"
 
 class VideoStream {
-public:
 
+public:
     socket_t socket;
     SDL_Thread *thread;
     struct Decoder *decoder;
@@ -52,9 +52,14 @@ public:
     void stop();
 
     void join();
+
     bool recv_packet(AVPacket *packet);
-    bool
-    push_packet( AVPacket *packet);
+
+    bool push_packet(AVPacket *packet);
+
+    static void notify_stopped();
+
+    static int run_stream(void *data);
 
 private:
 

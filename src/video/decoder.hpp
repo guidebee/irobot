@@ -21,11 +21,10 @@ extern "C" {
 class VideoBuffer;
 
 class Decoder {
+
 public:
     VideoBuffer *video_buffer;
     AVCodecContext *codec_ctx;
-
-
 
     void init(VideoBuffer *vb);
 

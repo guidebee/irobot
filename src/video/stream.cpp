@@ -13,8 +13,7 @@
 #define HEADER_SIZE 12
 #define NO_PTS UINT64_C(-1)
 
-bool
-VideoStream::recv_packet(AVPacket *packet) {
+bool VideoStream::recv_packet(AVPacket *packet) {
     // The video stream contains raw packets, without time information. When we
     // record, we retrieve the timestamps separately, from a "meta" header
     // added by the server before each raw packet.
@@ -27,9 +26,8 @@ VideoStream::recv_packet(AVPacket *packet) {
     //
     // It is followed by <packet_size> bytes containing the packet/frame.
 
-    VideoStream *stream = this;
     uint8_t header[HEADER_SIZE];
-    ssize_t r = net_recv_all(stream->socket, header, HEADER_SIZE);
+    ssize_t r = net_recv_all(this->socket, header, HEADER_SIZE);
     if (r < HEADER_SIZE) {
         return false;
     }
@@ -44,7 +42,7 @@ VideoStream::recv_packet(AVPacket *packet) {
         return false;
     }
 
-    r = net_recv_all(stream->socket, packet->data, len);
+    r = net_recv_all(this->socket, packet->data, len);
     if (r < 0 || ((uint32_t) r) < len) {
         av_packet_unref(packet);
         return false;
@@ -55,34 +53,29 @@ VideoStream::recv_packet(AVPacket *packet) {
     return true;
 }
 
-static void
-notify_stopped() {
+void VideoStream::notify_stopped() {
     SDL_Event stop_event;
     stop_event.type = EVENT_STREAM_STOPPED;
     SDL_PushEvent(&stop_event);
 }
 
-bool
-VideoStream::process_config_packet(AVPacket *packet) {
-    VideoStream *stream = this;
-    if (stream->recorder && !stream->recorder->push(packet)) {
+bool VideoStream::process_config_packet(AVPacket *packet) {
+    if (this->recorder && !this->recorder->push(packet)) {
         LOGE("Could not send config packet to recorder");
         return false;
     }
     return true;
 }
 
-bool
-VideoStream::process_frame(AVPacket *packet) {
-    VideoStream *stream = this;
-    if (stream->decoder && !stream->decoder->push(packet)) {
+bool VideoStream::process_frame(AVPacket *packet) {
+    if (this->decoder && !this->decoder->push(packet)) {
         return false;
     }
 
-    if (stream->recorder) {
+    if (this->recorder) {
         packet->dts = packet->pts;
 
-        if (!stream->recorder->push(packet)) {
+        if (!this->recorder->push(packet)) {
             LOGE("Could not send packet to recorder");
             return false;
         }
@@ -91,14 +84,12 @@ VideoStream::process_frame(AVPacket *packet) {
     return true;
 }
 
-bool
-VideoStream::parse(AVPacket *packet) {
-    VideoStream *stream = this;
+bool VideoStream::parse(AVPacket *packet) {
     uint8_t *in_data = packet->data;
     int in_len = packet->size;
     uint8_t *out_data = nullptr;
     int out_len = 0;
-    int r = av_parser_parse2(stream->parser, stream->codec_ctx,
+    int r = av_parser_parse2(this->parser, this->codec_ctx,
                              &out_data, &out_len, in_data, in_len,
                              AV_NOPTS_VALUE, AV_NOPTS_VALUE, -1);
 
@@ -107,11 +98,11 @@ VideoStream::parse(AVPacket *packet) {
     (void) r;
     assert(out_len == in_len);
 
-    if (stream->parser->key_frame == 1) {
+    if (this->parser->key_frame == 1) {
         packet->flags |= AV_PKT_FLAG_KEY;
     }
 
-    bool ok = stream->process_frame(packet);
+    bool ok = this->process_frame(packet);
     if (!ok) {
         LOGE("Could not process frame");
         return false;
@@ -120,55 +111,53 @@ VideoStream::parse(AVPacket *packet) {
     return true;
 }
 
-bool
-VideoStream::push_packet(AVPacket *packet) {
-    VideoStream *stream = this;
+bool VideoStream::push_packet(AVPacket *packet) {
     bool is_config = packet->pts == AV_NOPTS_VALUE;
 
     // A config packet must not be decoded immetiately (it contains no
     // frame); instead, it must be concatenated with the future data packet.
-    if (stream->has_pending || is_config) {
+    if (this->has_pending || is_config) {
         size_t offset;
-        if (stream->has_pending) {
-            offset = stream->pending.size;
-            if (av_grow_packet(&stream->pending, packet->size)) {
+        if (this->has_pending) {
+            offset = this->pending.size;
+            if (av_grow_packet(&this->pending, packet->size)) {
                 LOGE("Could not grow packet");
                 return false;
             }
         } else {
             offset = 0;
-            if (av_new_packet(&stream->pending, packet->size)) {
+            if (av_new_packet(&this->pending, packet->size)) {
                 LOGE("Could not create packet");
                 return false;
             }
-            stream->has_pending = true;
+            this->has_pending = true;
         }
 
-        memcpy(stream->pending.data + offset, packet->data, packet->size);
+        memcpy(this->pending.data + offset, packet->data, packet->size);
 
         if (!is_config) {
             // prepare the concat packet to send to the decoder
-            stream->pending.pts = packet->pts;
-            stream->pending.dts = packet->dts;
-            stream->pending.flags = packet->flags;
-            packet = &stream->pending;
+            this->pending.pts = packet->pts;
+            this->pending.dts = packet->dts;
+            this->pending.flags = packet->flags;
+            packet = &this->pending;
         }
     }
 
     if (is_config) {
         // config packet
-        bool ok = stream->process_config_packet(packet);
+        bool ok = this->process_config_packet(packet);
         if (!ok) {
             return false;
         }
     } else {
         // data packet
-        bool ok = stream->parse(packet);
+        bool ok = this->parse(packet);
 
-        if (stream->has_pending) {
+        if (this->has_pending) {
             // the pending packet must be discarded (consumed or error)
-            stream->has_pending = false;
-            av_packet_unref(&stream->pending);
+            this->has_pending = false;
+            av_packet_unref(&this->pending);
         }
 
         if (!ok) {
@@ -178,8 +167,7 @@ VideoStream::push_packet(AVPacket *packet) {
     return true;
 }
 
-static int
-run_stream(void *data) {
+int VideoStream::run_stream(void *data) {
     auto *stream = (struct VideoStream *) data;
 
     AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_H264);
@@ -264,38 +252,31 @@ run_stream(void *data) {
     return 0;
 }
 
-void
-VideoStream::init(socket_t socket,
-                  struct Decoder *decoder, struct Recorder *recorder) {
-    VideoStream *stream = this;
-    stream->socket = socket;
-    stream->decoder = decoder,
-            stream->recorder = recorder;
-    stream->has_pending = false;
+void VideoStream::init(socket_t socket,
+                       struct Decoder *decoder, struct Recorder *recorder) {
+    this->socket = socket;
+    this->decoder = decoder,
+            this->recorder = recorder;
+    this->has_pending = false;
 }
 
-bool
-VideoStream::start() {
+bool VideoStream::start() {
     LOGD("Starting stream thread");
-    VideoStream *stream = this;
-    stream->thread = SDL_CreateThread(run_stream, "stream", stream);
-    if (!stream->thread) {
+    this->thread = SDL_CreateThread(run_stream, "stream", this);
+    if (!this->thread) {
         LOGC("Could not start stream thread");
         return false;
     }
     return true;
 }
 
-void
-VideoStream::stop() {
-    VideoStream *stream = this;
-    if (stream->decoder) {
-        stream->decoder->interrupt();
+void VideoStream::stop() {
+    if (this->decoder) {
+        this->decoder->interrupt();
     }
 }
 
-void
-VideoStream::join() {
-    VideoStream *stream = this;
-    SDL_WaitThread(stream->thread, nullptr);
+void VideoStream::join() {
+
+    SDL_WaitThread(this->thread, nullptr);
 }

@@ -9,9 +9,8 @@
 
 #include "util/lock.hpp"
 
-bool
-VideoBuffer::init(struct FpsCounter *fps_counter,
-                  bool render_expired_frames) {
+bool VideoBuffer::init(struct FpsCounter *fps_counter,
+                       bool render_expired_frames) {
     VideoBuffer *vb = this;
     vb->fps_counter = fps_counter;
 
@@ -52,8 +51,7 @@ VideoBuffer::init(struct FpsCounter *fps_counter,
     return false;
 }
 
-void
-VideoBuffer::destroy() {
+void VideoBuffer::destroy() {
     VideoBuffer *vb = this;
     if (vb->render_expired_frames) {
         SDL_DestroyCond(vb->rendering_frame_consumed_cond);
@@ -63,16 +61,14 @@ VideoBuffer::destroy() {
     av_frame_free(&vb->decoding_frame);
 }
 
-void
-VideoBuffer::swap_frames() {
+void VideoBuffer::swap_frames() {
     VideoBuffer *vb = this;
     AVFrame *tmp = vb->decoding_frame;
     vb->decoding_frame = vb->rendering_frame;
     vb->rendering_frame = tmp;
 }
 
-void
-VideoBuffer::offer_decoded_frame(
+void VideoBuffer::offer_decoded_frame(
         bool *previous_frame_skipped) {
     VideoBuffer *vb = this;
     mutex_lock(vb->mutex);
@@ -93,8 +89,7 @@ VideoBuffer::offer_decoded_frame(
     mutex_unlock(vb->mutex);
 }
 
-const AVFrame *
-VideoBuffer::consume_rendered_frame() {
+const AVFrame *VideoBuffer::consume_rendered_frame() {
     VideoBuffer *vb = this;
     assert(!vb->rendering_frame_consumed);
     vb->rendering_frame_consumed = true;
@@ -106,8 +101,7 @@ VideoBuffer::consume_rendered_frame() {
     return vb->rendering_frame;
 }
 
-void
-VideoBuffer::interrupt() {
+void VideoBuffer::interrupt() {
     VideoBuffer *vb = this;
     if (vb->render_expired_frames) {
         mutex_lock(vb->mutex);

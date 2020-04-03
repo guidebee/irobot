@@ -77,6 +77,65 @@ public:
 
     bool write(AVPacket *packet);
 
+    static inline const AVOutputFormat *find_muxer(const char *name) {
+#ifdef SCRCPY_LAVF_HAS_NEW_MUXER_ITERATOR_API
+        void *opaque = nullptr;
+#endif
+        const AVOutputFormat *oformat = nullptr;
+        do {
+#ifdef SCRCPY_LAVF_HAS_NEW_MUXER_ITERATOR_API
+            oformat = av_muxer_iterate(&opaque);
+#else
+            oformat = av_oformat_next(oformat);
+#endif
+            // until null or with name "mp4"
+        } while (oformat && strcmp(oformat->name, name));
+        return oformat;
+    }
+
+    static inline struct RecordPacket *record_packet_new(const AVPacket *packet) {
+        auto rec = (struct RecordPacket *) SDL_malloc(sizeof(struct RecordPacket));
+        if (!rec) {
+            return nullptr;
+        }
+
+        // av_packet_ref() does not initialize all fields in old FFmpeg versions
+        // See <https://github.com/Genymobile/scrcpy/issues/707>
+        av_init_packet(&rec->packet);
+
+        if (av_packet_ref(&rec->packet, packet)) {
+            SDL_free(rec);
+            return nullptr;
+        }
+        return rec;
+    }
+
+    static inline void record_packet_delete(struct RecordPacket *rec) {
+        av_packet_unref(&rec->packet);
+        SDL_free(rec);
+    }
+
+    static inline void recorder_queue_clear(struct RecordQueue *queue) {
+        while (!queue_is_empty(queue)) {
+            struct RecordPacket *rec;
+            queue_take(queue, next, &rec);
+            record_packet_delete(rec);
+        }
+    }
+
+    static const char *recorder_get_format_name(enum RecordFormat format) {
+        switch (format) {
+            case RECORDER_FORMAT_MP4:
+                return "mp4";
+            case RECORDER_FORMAT_MKV:
+                return "matroska";
+            default:
+                return nullptr;
+        }
+    }
+
+    static int run_recorder(void *data);
+
 private:
 
     bool write_header(const AVPacket *packet);

@@ -63,6 +63,8 @@ public:
 
     void check_interval_expired(uint32_t now);
 
+    static int run_fps_counter(void *data);
+
 private:
     void display_fps();
 

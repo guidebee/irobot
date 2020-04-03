@@ -12,67 +12,58 @@
 
 #define FPS_COUNTER_INTERVAL_MS 1000
 
-bool
-FpsCounter::init() {
-    FpsCounter *counter=this;
-    counter->mutex = SDL_CreateMutex();
-    if (!counter->mutex) {
+bool FpsCounter::init() {
+    this->mutex = SDL_CreateMutex();
+    if (!this->mutex) {
         return false;
     }
 
-    counter->state_cond = SDL_CreateCond();
-    if (!counter->state_cond) {
-        SDL_DestroyMutex(counter->mutex);
+    this->state_cond = SDL_CreateCond();
+    if (!this->state_cond) {
+        SDL_DestroyMutex(this->mutex);
         return false;
     }
 
-    counter->thread = nullptr;
-    SDL_AtomicSet(&counter->started, 0);
+    this->thread = nullptr;
+    SDL_AtomicSet(&this->started, 0);
     // no need to initialize the other fields, they are unused until started
 
     return true;
 }
 
-void
-FpsCounter::destroy() {
-    FpsCounter *counter=this;
-    SDL_DestroyCond(counter->state_cond);
-    SDL_DestroyMutex(counter->mutex);
+void FpsCounter::destroy() {
+    SDL_DestroyCond(this->state_cond);
+    SDL_DestroyMutex(this->mutex);
 }
 
 // must be called with mutex locked
-void
-FpsCounter::display_fps() {
-    FpsCounter *counter=this;
+void FpsCounter::display_fps() {
     unsigned rendered_per_second =
-            counter->nr_rendered * 1000 / FPS_COUNTER_INTERVAL_MS;
-    if (counter->nr_skipped) {
+            this->nr_rendered * 1000 / FPS_COUNTER_INTERVAL_MS;
+    if (this->nr_skipped) {
         LOGI("%u fps (+%u frames skipped)", rendered_per_second,
-             counter->nr_skipped);
+             this->nr_skipped);
     } else {
         LOGI("%u fps", rendered_per_second);
     }
 }
 
 // must be called with mutex locked
-void
-FpsCounter::check_interval_expired( uint32_t now) {
-    FpsCounter *counter = this;
-    if (now < counter->next_timestamp) {
+void FpsCounter::check_interval_expired(uint32_t now) {
+    if (now < this->next_timestamp) {
         return;
     }
 
-    counter->display_fps();
-    counter->nr_rendered = 0;
-    counter->nr_skipped = 0;
+    this->display_fps();
+    this->nr_rendered = 0;
+    this->nr_skipped = 0;
     // add a multiple of the interval
     uint32_t elapsed_slices =
-            (now - counter->next_timestamp) / FPS_COUNTER_INTERVAL_MS + 1;
-    counter->next_timestamp += FPS_COUNTER_INTERVAL_MS * elapsed_slices;
+            (now - this->next_timestamp) / FPS_COUNTER_INTERVAL_MS + 1;
+    this->next_timestamp += FPS_COUNTER_INTERVAL_MS * elapsed_slices;
 }
 
-static int
-run_fps_counter(void *data) {
+int FpsCounter::run_fps_counter(void *data) {
     auto *counter = (struct FpsCounter *) data;
 
     mutex_lock(counter->mutex);
@@ -82,7 +73,7 @@ run_fps_counter(void *data) {
         }
         while (!counter->interrupted && SDL_AtomicGet(&counter->started)) {
             uint32_t now = SDL_GetTicks();
-            counter->check_interval_expired( now);
+            counter->check_interval_expired(now);
 
             assert(counter->next_timestamp > now);
             uint32_t remaining = counter->next_timestamp - now;
@@ -95,23 +86,20 @@ run_fps_counter(void *data) {
     return 0;
 }
 
-bool
-FpsCounter::start() {
-    FpsCounter *counter=this;
-    mutex_lock(counter->mutex);
-    counter->next_timestamp = SDL_GetTicks() + FPS_COUNTER_INTERVAL_MS;
-    counter->nr_rendered = 0;
-    counter->nr_skipped = 0;
-    mutex_unlock(counter->mutex);
+bool FpsCounter::start() {
+    mutex_lock(this->mutex);
+    this->next_timestamp = SDL_GetTicks() + FPS_COUNTER_INTERVAL_MS;
+    this->nr_rendered = 0;
+    this->nr_skipped = 0;
+    mutex_unlock(this->mutex);
+    SDL_AtomicSet(&this->started, 1);
+    cond_signal(this->state_cond);
 
-    SDL_AtomicSet(&counter->started, 1);
-    cond_signal(counter->state_cond);
-
-    // counter->thread is always accessed from the same thread, no need to lock
-    if (!counter->thread) {
-        counter->thread =
-                SDL_CreateThread(run_fps_counter, "fps counter", counter);
-        if (!counter->thread) {
+    // this->thread is always accessed from the same thread, no need to lock
+    if (!this->thread) {
+        this->thread =
+                SDL_CreateThread(run_fps_counter, "fps counter", this);
+        if (!this->thread) {
             LOGE("Could not start FPS counter thread");
             return false;
         }
@@ -120,65 +108,52 @@ FpsCounter::start() {
     return true;
 }
 
-void
-FpsCounter::stop() {
-    FpsCounter *counter=this;
-    SDL_AtomicSet(&counter->started, 0);
-    cond_signal(counter->state_cond);
+void FpsCounter::stop() {
+    SDL_AtomicSet(&this->started, 0);
+    cond_signal(this->state_cond);
 }
 
-bool
-FpsCounter::is_started() {
-     FpsCounter *counter=this;
-     return SDL_AtomicGet(&counter->started)==1;
+bool FpsCounter::is_started() {
+    return SDL_AtomicGet(&this->started) == 1;
 }
 
-void
-FpsCounter::interrupt() {
-    FpsCounter *counter=this;
-    if (!counter->thread) {
+void FpsCounter::interrupt() {
+    if (!this->thread) {
         return;
     }
 
-    mutex_lock(counter->mutex);
-    counter->interrupted = true;
-    mutex_unlock(counter->mutex);
+    mutex_lock(this->mutex);
+    this->interrupted = true;
+    mutex_unlock(this->mutex);
     // wake up blocking wait
-    cond_signal(counter->state_cond);
+    cond_signal(this->state_cond);
 }
 
-void
-FpsCounter::join() {
-    FpsCounter *counter=this;
-    if (counter->thread) {
-        SDL_WaitThread(counter->thread, nullptr);
+void FpsCounter::join() {
+    if (this->thread) {
+        SDL_WaitThread(this->thread, nullptr);
     }
 }
 
-void
-FpsCounter::add_rendered_frame() {
-    FpsCounter *counter=this;
-    if (!SDL_AtomicGet(&counter->started)) {
+void FpsCounter::add_rendered_frame() {
+    if (!SDL_AtomicGet(&this->started)) {
         return;
     }
 
-    mutex_lock(counter->mutex);
+    mutex_lock(this->mutex);
     uint32_t now = SDL_GetTicks();
-    counter->check_interval_expired(now);
-    ++counter->nr_rendered;
-    mutex_unlock(counter->mutex);
+    this->check_interval_expired(now);
+    ++this->nr_rendered;
+    mutex_unlock(this->mutex);
 }
 
-void
-FpsCounter::add_skipped_frame() {
-    FpsCounter *counter=this;
-    if (!SDL_AtomicGet(&counter->started)) {
+void FpsCounter::add_skipped_frame() {
+    if (!SDL_AtomicGet(&this->started)) {
         return;
     }
-
-    mutex_lock(counter->mutex);
+    mutex_lock(this->mutex);
     uint32_t now = SDL_GetTicks();
-    counter->check_interval_expired( now);
-    ++counter->nr_skipped;
-    mutex_unlock(counter->mutex);
+    this->check_interval_expired(now);
+    ++this->nr_skipped;
+    mutex_unlock(this->mutex);
 }
