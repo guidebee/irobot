@@ -257,25 +257,6 @@ bool Server::start(const char *serial,
         }
     }
 
-    this->agent_control_server_socket = listen_on_port(params->local_port + 1);
-    if (this->agent_control_server_socket == INVALID_SOCKET) {
-        LOGE("Could not listen on agent control port %"
-                     PRIu16, static_cast<unsigned short>(params->local_port + 1));
-        disable_tunnel();
-        SDL_free(this->serial);
-        return false;
-    }
-
-    this->agent_control_client_socket = INVALID_SOCKET;
-
-    this->agent_data_server_socket = listen_on_port(params->local_port + 2);
-    if (this->agent_data_server_socket == INVALID_SOCKET) {
-        LOGE("Could not listen on agent data port %"
-                     PRIu16, static_cast<unsigned short>(params->local_port + 2));
-        disable_tunnel();
-        SDL_free(this->serial);
-        return false;
-    }
 
     // server will connect to our server socket
     this->process = execute_server(params);
@@ -345,12 +326,6 @@ void Server::stop() {
     }
     if (this->control_socket != INVALID_SOCKET) {
         close_socket(&this->control_socket);
-    }
-    if (this->agent_control_server_socket != INVALID_SOCKET) {
-        close_socket(&this->agent_control_server_socket);
-    }
-    if (this->agent_control_client_socket != INVALID_SOCKET) {
-        close_socket(&this->agent_control_client_socket);
     }
 
     assert(this->process != PROCESS_NONE);

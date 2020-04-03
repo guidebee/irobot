@@ -3,7 +3,7 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
+
 #ifndef ANDROID_IROBOT_SERVER_HPP
 #define ANDROID_IROBOT_SERVER_HPP
 
@@ -41,9 +41,6 @@ public:
     socket_t server_socket; // only used if !tunnel_forward
     socket_t video_socket;
     socket_t control_socket;
-    socket_t agent_control_server_socket; // agent control server listen socket
-    socket_t agent_control_client_socket;// agent control comm socket
-    socket_t agent_data_server_socket;  // agent data server listen socket
     uint16_t local_port;
     bool tunnel_enabled;
     bool tunnel_forward; // use "adb forward" instead of "adb reverse"
