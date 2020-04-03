@@ -37,7 +37,7 @@ struct FileHandler file_handler;
 
 static struct decoder decoder;
 extern struct InputManager input_manager;
-extern struct screen screen;
+extern struct Screen screen;
 
 static process_t
 set_show_touches_enabled(const char *serial, bool enabled) {
@@ -236,7 +236,7 @@ IRobotOptions::init() {
         const char *_window_title =
                 options->window_title ? options->window_title : device_name;
 
-        if (!cannot_cont & !screen_init_rendering(&screen, _window_title, frame_size,
+        if (!cannot_cont & !screen.init_rendering( _window_title, frame_size,
                                                   options->always_on_top, options->window_x,
                                                   options->window_y, options->window_width,
                                                   options->window_height, options->screen_width,
@@ -256,7 +256,7 @@ IRobotOptions::init() {
         }
 
         if (options->fullscreen) {
-            screen_switch_fullscreen(&screen);
+            screen.switch_fullscreen();
         }
     }
 
@@ -270,7 +270,7 @@ IRobotOptions::init() {
     bool ret = event_loop(options->display, options->control);
     LOGD("quit...");
 
-    screen_destroy(&screen);
+    screen.destroy();
 
 
     // stop stream and controller so that they don't continue once their socket

@@ -28,7 +28,7 @@ convert_to_renderer_coordinates(SDL_Renderer *renderer, int *x, int *y) {
 }
 
 static struct point
-get_mouse_point(struct screen *screen) {
+get_mouse_point(struct Screen *screen) {
     int x;
     int y;
     SDL_GetMouseState(&x, &y);
@@ -375,17 +375,17 @@ InputManager::process_key(
                 return;
             case SDLK_f:
                 if (!shift && cmd && !repeat && down) {
-                    screen_switch_fullscreen(im->screen);
+                    im->screen->switch_fullscreen();
                 }
                 return;
             case SDLK_x:
                 if (!shift && cmd && !repeat && down) {
-                    screen_resize_to_fit(im->screen);
+                    im->screen->resize_to_fit();
                 }
                 return;
             case SDLK_g:
                 if (!shift && cmd && !repeat && down) {
-                    screen_resize_to_pixel_perfect(im->screen);
+                    im->screen->resize_to_pixel_perfect();
                 }
                 return;
             case SDLK_i:
@@ -429,7 +429,7 @@ InputManager::process_key(
 }
 
 static bool
-convert_mouse_motion(const SDL_MouseMotionEvent *from, struct screen *screen,
+convert_mouse_motion(const SDL_MouseMotionEvent *from, struct Screen *screen,
                      struct ControlMessage *to) {
     to->type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT;
     to->inject_touch_event.action = AMOTION_EVENT_ACTION_MOVE;
@@ -464,7 +464,7 @@ InputManager::process_mouse_motion(
 }
 
 static bool
-convert_touch(const SDL_TouchFingerEvent *from, struct screen *screen,
+convert_touch(const SDL_TouchFingerEvent *from, struct Screen *screen,
               struct ControlMessage *to) {
     to->type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT;
 
@@ -503,7 +503,7 @@ is_outside_device_screen(InputManager *im, int x, int y) {
 }
 
 static bool
-convert_mouse_button(const SDL_MouseButtonEvent *from, struct screen *screen,
+convert_mouse_button(const SDL_MouseButtonEvent *from, struct Screen *screen,
                      struct ControlMessage *to) {
     to->type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT;
 
@@ -545,7 +545,7 @@ InputManager::process_mouse_button(
             bool outside =
                     is_outside_device_screen(im, event->x, event->y);
             if (outside) {
-                screen_resize_to_fit(im->screen);
+                im->screen->resize_to_fit();
                 return;
             }
         }
@@ -565,7 +565,7 @@ InputManager::process_mouse_button(
 }
 
 static bool
-convert_mouse_wheel(const SDL_MouseWheelEvent *from, struct screen *screen,
+convert_mouse_wheel(const SDL_MouseWheelEvent *from, struct Screen *screen,
                     struct ControlMessage *to) {
     struct position position = {
             .screen_size = screen->frame_size,

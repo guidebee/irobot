@@ -21,7 +21,7 @@ public:
     class Controller *controller;
 
     struct video_buffer *video_buffer;
-    struct screen *screen;
+    struct Screen *screen;
     bool prefer_text;
 
     void process_text_input(

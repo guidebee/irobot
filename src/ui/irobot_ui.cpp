@@ -10,7 +10,7 @@
 #include "ui/input_manager.hpp"
 #include "android/file_handler.hpp"
 
-struct screen screen = SCREEN_INITIALIZER;
+Screen screen{};
 
 extern struct video_buffer video_buffer;
 extern class Controller controller;
@@ -87,7 +87,7 @@ event_watcher(void *data, SDL_Event *event) {
     if (event->type == SDL_WINDOWEVENT
         && event->window.event == SDL_WINDOWEVENT_RESIZED) {
         // called from another thread, not very safe, but it's a workaround!
-        screen_render(&screen);
+        screen.render();
     }
     return 0;
 }
@@ -113,14 +113,14 @@ handle_event(SDL_Event *event, bool control) {
             if (!screen.has_frame) {
                 screen.has_frame = true;
                 // this is the very first frame, show the window
-                screen_show_window(&screen);
+                screen.show_window();
             }
-            if (!screen_update_frame(&screen, &video_buffer)) {
+            if (!screen.update_frame( &video_buffer)) {
                 return EVENT_RESULT_CONTINUE;
             }
             break;
         case SDL_WINDOWEVENT:
-            screen_handle_window_event(&screen, &event->window);
+            screen.handle_window_event( &event->window);
             break;
         case SDL_TEXTINPUT:
             if (!control) {
