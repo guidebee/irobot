@@ -13,36 +13,8 @@
 #include "util/str_util.hpp"
 
 
-static void
-write_position(uint8_t *buf, const struct position *position) {
-    buffer_write32be(&buf[0], position->point.x);
-    buffer_write32be(&buf[4], position->point.y);
-    buffer_write16be(&buf[8], position->screen_size.width);
-    buffer_write16be(&buf[10], position->screen_size.height);
-}
-
-// write length (2 bytes) + string (non nul-terminated)
-static size_t
-write_string(const char *utf8, size_t max_len, unsigned char *buf) {
-    size_t len = utf8_truncation_index(utf8, max_len);
-    buffer_write16be(buf, (uint16_t) len);
-    memcpy(&buf[2], utf8, len);
-    return 2 + len;
-}
-
-static uint16_t
-to_fixed_point_16(float f) {
-    assert(f >= 0.0f && f <= 1.0f);
-    uint32_t u = f * 0x1p16f; // 2^16
-    if (u >= 0xffff) {
-        u = 0xffff;
-    }
-    return (uint16_t) u;
-}
-
-size_t
-ControlMessage::serialize( unsigned char *buf) {
-    struct ControlMessage *msg= this;
+size_t ControlMessage::serialize(unsigned char *buf) {
+    struct ControlMessage *msg = this;
     buf[0] = msg->type;
     switch (msg->type) {
         case CONTROL_MSG_TYPE_INJECT_KEYCODE:
@@ -95,8 +67,7 @@ ControlMessage::serialize( unsigned char *buf) {
 }
 
 
-void
-ControlMessage::destroy() {
+void ControlMessage::destroy() {
     struct ControlMessage *msg = this;
     switch (msg->type) {
         case CONTROL_MSG_TYPE_INJECT_TEXT:
@@ -112,4 +83,26 @@ ControlMessage::destroy() {
 }
 
 
+void ControlMessage::write_position(uint8_t *buf, const struct position *position) {
+    buffer_write32be(&buf[0], position->point.x);
+    buffer_write32be(&buf[4], position->point.y);
+    buffer_write16be(&buf[8], position->screen_size.width);
+    buffer_write16be(&buf[10], position->screen_size.height);
+}
 
+// write length (2 bytes) + string (non nul-terminated)
+size_t ControlMessage::write_string(const char *utf8, size_t max_len, unsigned char *buf) {
+    size_t len = utf8_truncation_index(utf8, max_len);
+    buffer_write16be(buf, (uint16_t) len);
+    memcpy(&buf[2], utf8, len);
+    return 2 + len;
+}
+
+uint16_t ControlMessage::to_fixed_point_16(float f) {
+    assert(f >= 0.0f && f <= 1.0f);
+    uint32_t u = f * 0x1p16f; // 2^16
+    if (u >= 0xffff) {
+        u = 0xffff;
+    }
+    return (uint16_t) u;
+}

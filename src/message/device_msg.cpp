@@ -8,9 +8,8 @@
 #include "util/buffer_util.hpp"
 #include "util/log.hpp"
 
-ssize_t
-DeviceMessage::deserialize(const unsigned char *buf, size_t len
-                       ) {
+ssize_t DeviceMessage::deserialize(const unsigned char *buf, size_t len
+) {
 
     struct DeviceMessage *msg = this;
     if (len < 3) {
@@ -44,8 +43,7 @@ DeviceMessage::deserialize(const unsigned char *buf, size_t len
     }
 }
 
-void
-DeviceMessage::destroy() {
+void DeviceMessage::destroy() {
     struct DeviceMessage *msg = this;
     if (msg->type == DEVICE_MSG_TYPE_CLIPBOARD) {
         SDL_free(msg->clipboard.text);

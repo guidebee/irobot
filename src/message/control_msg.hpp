@@ -6,6 +6,13 @@
 #ifndef ANDROID_IROBOT_CONTROL_MSG_HPP
 #define ANDROID_IROBOT_CONTROL_MSG_HPP
 
+#define CONTROL_MSG_TEXT_MAX_LENGTH 300
+#define CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH 4093
+#define CONTROL_MSG_SERIALIZED_MAX_SIZE \
+    (3 + CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH)
+
+#define POINTER_ID_MOUSE UINT64_C(-1)
+
 #include <cstddef>
 #include <cstdint>
 
@@ -16,12 +23,6 @@
 #include "android/keycodes.hpp"
 
 
-#define CONTROL_MSG_TEXT_MAX_LENGTH 300
-#define CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH 4093
-#define CONTROL_MSG_SERIALIZED_MAX_SIZE \
-    (3 + CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH)
-
-#define POINTER_ID_MOUSE UINT64_C(-1)
 
 enum ControlMessageType {
     CONTROL_MSG_TYPE_INJECT_KEYCODE,
@@ -75,17 +76,18 @@ struct ControlMessage {
         } set_screen_power_mode;
     };
 
-    size_t
-    serialize(unsigned char *buf);
+    // buf size must be at least CONTROL_MSG_SERIALIZED_MAX_SIZE
+    // return the number of bytes written
+    size_t serialize(unsigned char *buf);
 
-    void
-    destroy();
+    void destroy();
+
+    static void write_position(uint8_t *buf, const struct position *position);
+
+    // write length (2 bytes) + string (non nul-terminated)
+    static size_t write_string(const char *utf8, size_t max_len, unsigned char *buf);
+
+    static uint16_t to_fixed_point_16(float f);
 };
-
-// buf size must be at least CONTROL_MSG_SERIALIZED_MAX_SIZE
-// return the number of bytes written
-
-
-
 
 #endif //ANDROID_IROBOT_CONTROL_MSG_HPP

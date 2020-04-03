@@ -36,13 +36,10 @@ struct DeviceMessage {
         } clipboard;
     };
 
-    ssize_t
-    deserialize(const unsigned char *buf, size_t len);
+    ssize_t deserialize(const unsigned char *buf, size_t len);
 
-    void
-    destroy();
+    void destroy();
 };
-
 
 
 #endif //ANDROID_IROBOT_DEVICE_MSG_HPP
