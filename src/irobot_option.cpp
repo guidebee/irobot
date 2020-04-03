@@ -29,7 +29,7 @@ static struct FpsCounter fps_counter;
 struct VideoBuffer video_buffer;
 static struct stream stream;
 
-static struct recorder recorder;
+static struct Recorder recorder;
 
 class Controller controller{};
 
@@ -196,9 +196,9 @@ IRobotOptions::init() {
         dec = &decoder;
     }
 
-    struct recorder *rec = nullptr;
+    struct Recorder *rec = nullptr;
     if (!cannot_cont & record) {
-        if (!recorder_init(&recorder,
+        if (!recorder.init(
                            options->record_filename,
                            options->record_format,
                            frame_size)) {
@@ -303,7 +303,7 @@ IRobotOptions::init() {
     }
 
     if (recorder_initialized) {
-        recorder_destroy(&recorder);
+        recorder.destroy();
     }
 
     if (file_handler_initialized) {
@@ -638,7 +638,7 @@ parse_port(const char *s, uint16_t *port) {
 }
 
 static bool
-parse_record_format(const char *opt_arg, enum recorder_format *format) {
+parse_record_format(const char *opt_arg, enum RecordFormat *format) {
     if (!strcmp(opt_arg, "mp4")) {
         *format = RECORDER_FORMAT_MP4;
         return true;
@@ -651,11 +651,11 @@ parse_record_format(const char *opt_arg, enum recorder_format *format) {
     return false;
 }
 
-static enum recorder_format
+static enum RecordFormat
 guess_record_format(const char *filename) {
     size_t len = strlen(filename);
     if (len < 4) {
-        return static_cast<recorder_format>(0);
+        return static_cast<RecordFormat>(0);
     }
     const char *ext = &filename[len - 4];
     if (!strcmp(ext, ".mp4")) {
@@ -664,7 +664,7 @@ guess_record_format(const char *filename) {
     if (!strcmp(ext, ".mkv")) {
         return RECORDER_FORMAT_MKV;
     }
-    return static_cast<recorder_format>(0);
+    return static_cast<RecordFormat>(0);
 }
 
 #define OPT_RENDER_EXPIRED_FRAMES 1000

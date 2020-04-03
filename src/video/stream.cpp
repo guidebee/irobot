@@ -63,7 +63,7 @@ notify_stopped() {
 
 static bool
 process_config_packet(struct stream *stream, AVPacket *packet) {
-    if (stream->recorder && !recorder_push(stream->recorder, packet)) {
+    if (stream->recorder && !stream->recorder->push( packet)) {
         LOGE("Could not send config packet to recorder");
         return false;
     }
@@ -79,7 +79,7 @@ process_frame(struct stream *stream, AVPacket *packet) {
     if (stream->recorder) {
         packet->dts = packet->pts;
 
-        if (!recorder_push(stream->recorder, packet)) {
+        if (!stream->recorder->push( packet)) {
             LOGE("Could not send packet to recorder");
             return false;
         }
@@ -194,12 +194,12 @@ run_stream(void *data) {
     }
 
     if (stream->recorder) {
-        if (!recorder_open(stream->recorder, codec)) {
+        if (!stream->recorder->open(codec)) {
             LOGE("Could not open recorder");
             goto finally_close_decoder;
         }
 
-        if (!recorder_start(stream->recorder)) {
+        if (!stream->recorder->start()) {
             LOGE("Could not start recorder");
             goto finally_close_recorder;
         }
@@ -240,13 +240,13 @@ run_stream(void *data) {
     av_parser_close(stream->parser);
     finally_stop_and_join_recorder:
     if (stream->recorder) {
-        recorder_stop(stream->recorder);
+        stream->recorder->stop();
         LOGI("Finishing recording...");
-        recorder_join(stream->recorder);
+        stream->recorder->join();
     }
     finally_close_recorder:
     if (stream->recorder) {
-        recorder_close(stream->recorder);
+        stream->recorder->close();
     }
     finally_close_decoder:
     if (stream->decoder) {
@@ -261,7 +261,7 @@ run_stream(void *data) {
 
 void
 stream_init(struct stream *stream, socket_t socket,
-            struct Decoder *decoder, struct recorder *recorder) {
+            struct Decoder *decoder, struct Recorder *recorder) {
     stream->socket = socket;
     stream->decoder = decoder,
             stream->recorder = recorder;

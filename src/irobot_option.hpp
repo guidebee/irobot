@@ -29,7 +29,7 @@ struct IRobotOptions {
     const char *record_filename;
     const char *window_title;
     const char *push_target;
-    enum recorder_format record_format;
+    enum RecordFormat record_format;
     uint16_t port;
     uint16_t max_size;
     uint32_t bit_rate;

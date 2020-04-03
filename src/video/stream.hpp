@@ -34,7 +34,7 @@ struct stream {
     socket_t socket;
     SDL_Thread *thread;
     struct Decoder *decoder;
-    struct recorder *recorder;
+    struct Recorder *recorder;
     AVCodecContext *codec_ctx;
     AVCodecParserContext *parser;
     // successive packets may need to be concatenated, until a non-config
@@ -45,7 +45,7 @@ struct stream {
 
 void
 stream_init(struct stream *stream, socket_t socket,
-            struct Decoder *decoder, struct recorder *recorder);
+            struct Decoder *decoder, Recorder *recorder);
 
 bool
 stream_start(struct stream *stream);

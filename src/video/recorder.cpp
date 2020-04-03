@@ -30,9 +30,9 @@ find_muxer(const char *name) {
     return oformat;
 }
 
-static struct record_packet *
+static struct RecordPacket *
 record_packet_new(const AVPacket *packet) {
-    auto rec = (struct record_packet *) SDL_malloc(sizeof(struct record_packet));
+    auto rec = (struct RecordPacket *) SDL_malloc(sizeof(struct RecordPacket));
     if (!rec) {
         return nullptr;
     }
@@ -49,25 +49,26 @@ record_packet_new(const AVPacket *packet) {
 }
 
 static void
-record_packet_delete(struct record_packet *rec) {
+record_packet_delete(struct RecordPacket *rec) {
     av_packet_unref(&rec->packet);
     SDL_free(rec);
 }
 
 static void
-recorder_queue_clear(struct recorder_queue *queue) {
+recorder_queue_clear(struct RecordQueue *queue) {
     while (!queue_is_empty(queue)) {
-        struct record_packet *rec;
+        struct RecordPacket *rec;
         queue_take(queue, next, &rec);
         record_packet_delete(rec);
     }
 }
 
 bool
-recorder_init(struct recorder *recorder,
-              const char *filename,
-              enum recorder_format format,
-              struct size declared_frame_size) {
+Recorder::init(
+        const char *filename,
+        enum RecordFormat format,
+        struct size declared_frame_size) {
+    Recorder *recorder = this;
     recorder->filename = SDL_strdup(filename);
     if (!recorder->filename) {
         LOGE("Could not strdup filename");
@@ -101,14 +102,15 @@ recorder_init(struct recorder *recorder,
 }
 
 void
-recorder_destroy(struct recorder *recorder) {
+Recorder::destroy() {
+    Recorder *recorder = this;
     SDL_DestroyCond(recorder->queue_cond);
     SDL_DestroyMutex(recorder->mutex);
     SDL_free(recorder->filename);
 }
 
 static const char *
-recorder_get_format_name(enum recorder_format format) {
+recorder_get_format_name(enum RecordFormat format) {
     switch (format) {
         case RECORDER_FORMAT_MP4:
             return "mp4";
@@ -120,7 +122,8 @@ recorder_get_format_name(enum recorder_format format) {
 }
 
 bool
-recorder_open(struct recorder *recorder, const AVCodec *input_codec) {
+Recorder::open(const AVCodec *input_codec) {
+    Recorder *recorder = this;
     const char *format_name = recorder_get_format_name(recorder->format);
     assert(format_name);
     const AVOutputFormat *format = find_muxer(format_name);
@@ -174,7 +177,8 @@ recorder_open(struct recorder *recorder, const AVCodec *input_codec) {
 }
 
 void
-recorder_close(struct recorder *recorder) {
+Recorder::close() {
+    Recorder *recorder = this;
     if (recorder->header_written) {
         int ret = av_write_trailer(recorder->ctx);
         if (ret < 0) {
@@ -196,8 +200,9 @@ recorder_close(struct recorder *recorder) {
     }
 }
 
-static bool
-recorder_write_header(struct recorder *recorder, const AVPacket *packet) {
+bool
+Recorder::write_header(const AVPacket *packet) {
+    Recorder *recorder = this;
     AVStream *ostream = recorder->ctx->streams[0];
 
     auto *extradata = static_cast<uint8_t *>(av_malloc(packet->size * sizeof(uint8_t)));
@@ -222,20 +227,22 @@ recorder_write_header(struct recorder *recorder, const AVPacket *packet) {
     return true;
 }
 
-static void
-recorder_rescale_packet(struct recorder *recorder, AVPacket *packet) {
+void
+Recorder::rescale_packet(AVPacket *packet) {
+    Recorder *recorder = this;
     AVStream *ostream = recorder->ctx->streams[0];
     av_packet_rescale_ts(packet, SCRCPY_TIME_BASE, ostream->time_base);
 }
 
 bool
-recorder_write(struct recorder *recorder, AVPacket *packet) {
+Recorder::write(AVPacket *packet) {
+    Recorder *recorder = this;
     if (!recorder->header_written) {
         if (packet->pts != AV_NOPTS_VALUE) {
             LOGE("The first packet is not a config packet");
             return false;
         }
-        bool ok = recorder_write_header(recorder, packet);
+        bool ok = recorder->write_header(packet);
         if (!ok) {
             return false;
         }
@@ -248,13 +255,13 @@ recorder_write(struct recorder *recorder, AVPacket *packet) {
         return true;
     }
 
-    recorder_rescale_packet(recorder, packet);
+    recorder->rescale_packet(packet);
     return av_write_frame(recorder->ctx, packet) >= 0;
 }
 
 static int
 run_recorder(void *data) {
-    auto *recorder = static_cast<struct recorder *>(data);
+    auto *recorder = static_cast<struct Recorder *>(data);
 
     for (;;) {
         mutex_lock(recorder->mutex);
@@ -268,11 +275,11 @@ run_recorder(void *data) {
 
         if (recorder->stopped && queue_is_empty(&recorder->queue)) {
             mutex_unlock(recorder->mutex);
-            struct record_packet *last = recorder->previous;
+            struct RecordPacket *last = recorder->previous;
             if (last) {
                 // assign an arbitrary duration to the last packet
                 last->packet.duration = 100000;
-                bool ok = recorder_write(recorder, &last->packet);
+                bool ok = recorder->write(&last->packet);
                 if (!ok) {
                     // failing to write the last frame is not very serious, no
                     // future frame may depend on it, so the resulting file
@@ -284,13 +291,13 @@ run_recorder(void *data) {
             break;
         }
 
-        struct record_packet *rec;
+        struct RecordPacket *rec;
         queue_take(&recorder->queue, next, &rec);
 
         mutex_unlock(recorder->mutex);
 
         // recorder->previous is only written from this thread, no need to lock
-        struct record_packet *previous = recorder->previous;
+        struct RecordPacket *previous = recorder->previous;
         recorder->previous = rec;
 
         if (!previous) {
@@ -305,7 +312,7 @@ run_recorder(void *data) {
             previous->packet.duration = rec->packet.pts - previous->packet.pts;
         }
 
-        bool ok = recorder_write(recorder, &previous->packet);
+        bool ok = recorder->write(&previous->packet);
         record_packet_delete(previous);
         if (!ok) {
             LOGE("Could not record packet");
@@ -326,9 +333,9 @@ run_recorder(void *data) {
 }
 
 bool
-recorder_start(struct recorder *recorder) {
+Recorder::start() {
     LOGD("Starting recorder thread");
-
+    Recorder *recorder = this;
     recorder->thread = SDL_CreateThread(run_recorder, "recorder", recorder);
     if (!recorder->thread) {
         LOGC("Could not start recorder thread");
@@ -339,7 +346,8 @@ recorder_start(struct recorder *recorder) {
 }
 
 void
-recorder_stop(struct recorder *recorder) {
+Recorder::stop() {
+    Recorder *recorder = this;
     mutex_lock(recorder->mutex);
     recorder->stopped = true;
     cond_signal(recorder->queue_cond);
@@ -347,12 +355,14 @@ recorder_stop(struct recorder *recorder) {
 }
 
 void
-recorder_join(struct recorder *recorder) {
+Recorder::join() {
+    Recorder *recorder = this;
     SDL_WaitThread(recorder->thread, nullptr);
 }
 
 bool
-recorder_push(struct recorder *recorder, const AVPacket *packet) {
+Recorder::push(const AVPacket *packet) {
+    Recorder *recorder = this;
     mutex_lock(recorder->mutex);
     assert(!recorder->stopped);
 
@@ -361,7 +371,7 @@ recorder_push(struct recorder *recorder, const AVPacket *packet) {
         return false;
     }
 
-    struct record_packet *rec = record_packet_new(packet);
+    struct RecordPacket *rec = record_packet_new(packet);
     if (!rec) {
         LOGC("Could not allocate record packet");
         return false;

@@ -23,22 +23,24 @@ extern "C" {
 
 #include "util/queue.hpp"
 
-enum recorder_format {
+enum RecordFormat {
     RECORDER_FORMAT_AUTO,
     RECORDER_FORMAT_MP4,
     RECORDER_FORMAT_MKV,
 };
 
-struct record_packet {
+struct RecordPacket {
     AVPacket packet;
-    struct record_packet *next;
+    struct RecordPacket *next;
 };
 
-struct recorder_queue QUEUE(struct record_packet);
+struct RecordQueue QUEUE(struct RecordPacket);
 
-struct recorder {
+class Recorder {
+public:
+
     char *filename;
-    enum recorder_format format;
+    enum RecordFormat format;
     AVFormatContext *ctx;
     struct size declared_frame_size;
     bool header_written;
@@ -48,38 +50,40 @@ struct recorder {
     SDL_cond *queue_cond;
     bool stopped; // set on recorder_stop() by the stream reader
     bool failed; // set on packet write failure
-    struct recorder_queue queue;
+    struct RecordQueue queue;
 
     // we can write a packet only once we received the next one so that we can
     // set its duration (next_pts - current_pts)
     // "previous" is only accessed from the recorder thread, so it does not
     // need to be protected by the mutex
-    struct record_packet *previous;
+    struct RecordPacket *previous;
+
+    bool init(const char *filename,
+              enum RecordFormat format, struct size declared_frame_size);
+
+    void destroy();
+
+    bool open(const AVCodec *input_codec);
+
+    void close();
+
+    bool start();
+
+    void stop();
+
+    void join();
+
+    bool push(const AVPacket *packet);
+
+    bool write(AVPacket *packet);
+
+private:
+
+    bool write_header(const AVPacket *packet);
+
+    void rescale_packet(AVPacket *packet);
+
 };
 
-bool
-recorder_init(struct recorder *recorder, const char *filename,
-              enum recorder_format format, struct size declared_frame_size);
-
-void
-recorder_destroy(struct recorder *recorder);
-
-bool
-recorder_open(struct recorder *recorder, const AVCodec *input_codec);
-
-void
-recorder_close(struct recorder *recorder);
-
-bool
-recorder_start(struct recorder *recorder);
-
-void
-recorder_stop(struct recorder *recorder);
-
-void
-recorder_join(struct recorder *recorder);
-
-bool
-recorder_push(struct recorder *recorder, const AVPacket *packet);
 
 #endif //ANDROID_IROBOT_RECORDER_HPP
