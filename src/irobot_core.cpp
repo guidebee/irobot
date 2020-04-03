@@ -16,7 +16,7 @@
 #include "android/device.hpp"
 #include "android/file_handler.hpp"
 #include "ui/screen.hpp"
-#include "ui/irobot_ui.hpp"
+
 #include "video/decoder.hpp"
 #include "video/fps_counter.hpp"
 #include "video/recorder.hpp"
@@ -169,10 +169,12 @@ bool IRobotCore::init() {
     bool controller_started = false;
 
     bool cannot_cont = false;
-    if (!sdl_init_and_configure(options->display)) {
+
+#ifdef UI_SCREEN
+    if (!Screen::sdl_init_and_configure(options->display)) {
         cannot_cont = true;
     }
-
+#endif
     if (!cannot_cont & !server.connect_to()) {
         cannot_cont = true;
     }
@@ -285,7 +287,7 @@ bool IRobotCore::init() {
     }
     bool ret;
 #ifdef UI_SCREEN
-    ret = event_loop(options->display, options->control);
+    ret = Screen::event_loop(options->display, options->control);
     LOGD("quit...");
     screen.destroy();
 #else

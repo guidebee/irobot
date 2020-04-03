@@ -24,6 +24,12 @@ extern "C" {
 #include "video/stream.hpp"
 
 class VideoBuffer;
+enum EventResult {
+    EVENT_RESULT_CONTINUE,
+    EVENT_RESULT_STOPPED_BY_USER,
+    EVENT_RESULT_STOPPED_BY_EOS,
+};
+
 
 class Screen {
 public:
@@ -93,6 +99,14 @@ public:
                                  SDL_TEXTUREACCESS_STREAMING,
                                  frame_size.width, frame_size.height);
     }
+
+    static bool sdl_init_and_configure(bool display);
+
+    static int event_watcher(void *data, SDL_Event *event);
+
+    static bool event_loop(bool display, bool control);
+
+    static enum EventResult handle_event(SDL_Event *event, bool control);
 
 private:
     struct Size get_windowed_window_size();

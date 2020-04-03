@@ -44,7 +44,6 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/ui/events.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/input_manager.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/event_converter.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/ui/irobot_ui.hpp
         ${CMAKE_HOME_DIRECTORY}/src/common.hpp
         ${CMAKE_HOME_DIRECTORY}/src/controller.hpp
         ${CMAKE_HOME_DIRECTORY}/src/command.hpp
@@ -62,7 +61,6 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/ui/event_converter.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/screen.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/input_manager.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/ui/irobot_ui.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/net.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/utils.cpp

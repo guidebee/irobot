@@ -11,7 +11,18 @@
 
 #include "video/video_buffer.hpp"
 #include "util/lock.hpp"
+
 #include "util/log.hpp"
+
+#include "ui/events.hpp"
+#include "ui/input_manager.hpp"
+#include "android/file_handler.hpp"
+
+extern Screen screen;
+extern InputManager input_manager;
+extern VideoBuffer video_buffer;
+extern Controller controller;
+extern FileHandler file_handler;
 
 
 #define DISPLAY_MARGINS 96
@@ -405,4 +416,169 @@ void Screen::handle_window_event(
     }
 }
 
+
+static bool is_apk(const char *file) {
+    const char *ext = strrchr(file, '.');
+    return ext && !strcmp(ext, ".apk");
+}
+
+// init SDL and set appropriate hints
+bool Screen::sdl_init_and_configure(bool display) {
+    uint32_t flags = display ? SDL_INIT_VIDEO : SDL_INIT_EVENTS;
+    if (SDL_Init(flags)) {
+        LOGC("Could not initialize SDL: %s", SDL_GetError());
+        return false;
+    }
+
+    atexit(SDL_Quit);
+
+    if (!display) {
+        return true;
+    }
+
+    // Use the best available scale quality
+    if (!SDL_SetHint(SDL_HINT_RENDER_SCALE_QUALITY, "2")) {
+        LOGW("Could not enable bilinear filtering");
+    }
+
+    // Handle a click to gain focus as any other click
+    if (!SDL_SetHint(SDL_HINT_MOUSE_FOCUS_CLICKTHROUGH, "1")) {
+        LOGW("Could not enable mouse focus clickthrough");
+    }
+
+    // Disable compositor bypassing on X11
+    if (!SDL_SetHint(SDL_HINT_VIDEO_X11_NET_WM_BYPASS_COMPOSITOR, "0")) {
+        LOGW("Could not disable X11 compositor bypass");
+    }
+
+    // Do not minimize on focus loss
+    if (!SDL_SetHint(SDL_HINT_VIDEO_MINIMIZE_ON_FOCUS_LOSS, "0")) {
+        LOGW("Could not disable minimize on focus loss");
+    }
+
+    // Do not disable the screensaver when scrcpy is running
+    SDL_EnableScreenSaver();
+    return true;
+}
+
+#if defined(__APPLE__) || defined(__WINDOWS__)
+# define CONTINUOUS_RESIZING_WORKAROUND
+#endif
+
+#ifdef CONTINUOUS_RESIZING_WORKAROUND
+
+// On Windows and MacOS, resizing blocks the event loop, so resizing events are
+// not triggered. As a workaround, handle them in an event handler.
+//
+// <https://bugzilla.libsdl.org/show_bug.cgi?id=2077>
+// <https://stackoverflow.com/a/40693139/1987178>
+int Screen::event_watcher(void *data, SDL_Event *event) {
+    (void) data;
+    if (event->type == SDL_WINDOWEVENT
+        && event->window.event == SDL_WINDOWEVENT_RESIZED) {
+        // called from another thread, not very safe, but it's a workaround!
+        screen.render();
+    }
+    return 0;
+}
+
+#endif
+
+
+enum EventResult Screen::handle_event(SDL_Event *event, bool control) {
+    switch (event->type) {
+        case EVENT_STREAM_STOPPED:
+            LOGD("Video stream stopped");
+            return EVENT_RESULT_STOPPED_BY_EOS;
+        case SDL_QUIT:
+            LOGD("User requested to quit");
+            return EVENT_RESULT_STOPPED_BY_USER;
+        case EVENT_NEW_FRAME:
+            if (!screen.has_frame) {
+                screen.has_frame = true;
+                // this is the very first frame, show the window
+                screen.show_window();
+            }
+            if (!screen.update_frame(&video_buffer)) {
+                return EVENT_RESULT_CONTINUE;
+            }
+            break;
+        case SDL_WINDOWEVENT:
+            screen.handle_window_event(&event->window);
+            break;
+        case SDL_TEXTINPUT:
+            if (!control) {
+                break;
+            }
+            input_manager.process_text_input(&event->text);
+            break;
+        case SDL_KEYDOWN:
+        case SDL_KEYUP:
+            // some key events do not interact with the device, so process the
+            // event even if control is disabled
+            input_manager.process_key(&event->key, control);
+            break;
+        case SDL_MOUSEMOTION:
+            if (!control) {
+                break;
+            }
+            input_manager.process_mouse_motion(&event->motion);
+            break;
+        case SDL_MOUSEWHEEL:
+            if (!control) {
+                break;
+            }
+            input_manager.process_mouse_wheel(&event->wheel);
+            break;
+        case SDL_MOUSEBUTTONDOWN:
+        case SDL_MOUSEBUTTONUP:
+            // some mouse events do not interact with the device, so process
+            // the event even if control is disabled
+            input_manager.process_mouse_button(&event->button,
+                                               control);
+            break;
+        case SDL_FINGERMOTION:
+        case SDL_FINGERDOWN:
+        case SDL_FINGERUP:
+            input_manager.process_touch(&event->tfinger);
+            break;
+        case SDL_DROPFILE: {
+            if (!control) {
+                break;
+            }
+            FileHandlerActionType action;
+            if (is_apk(event->drop.file)) {
+                action = ACTION_INSTALL_APK;
+            } else {
+                action = ACTION_PUSH_FILE;
+            }
+            file_handler.request(action, event->drop.file);
+            break;
+        }
+    }
+    return EVENT_RESULT_CONTINUE;
+}
+
+bool Screen::event_loop(bool display, bool control) {
+    (void) display;
+#ifdef CONTINUOUS_RESIZING_WORKAROUND
+    if (display) {
+        SDL_AddEventWatch(event_watcher, nullptr);
+    }
+#endif
+    SDL_Event event;
+    while (SDL_WaitEvent(&event)) {
+        enum EventResult result = handle_event(&event, control);
+        switch (result) {
+            case EVENT_RESULT_STOPPED_BY_USER:
+                return true;
+            case EVENT_RESULT_STOPPED_BY_EOS:
+                LOGW("Device disconnected");
+                return false;
+            case EVENT_RESULT_CONTINUE:
+                break;
+        }
+    }
+    return false;
+}
 
