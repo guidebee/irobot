@@ -35,6 +35,7 @@ public:
     SDL_cond *msg_cond;
     bool stopped;
     struct control_msg_queue queue;
+
     class Receiver receiver;
 
     bool init(socket_t control_socket);
@@ -47,8 +48,12 @@ public:
 
     void join();
 
-    bool push_msg(
-            const struct ControlMessage *msg);
+    bool push_msg(const struct ControlMessage *msg);
+
+    static int run_controller(void *data);
+
+private:
+    bool process_msg(struct ControlMessage *msg);
 
 };
 

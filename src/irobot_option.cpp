@@ -7,6 +7,7 @@
 
 #include <cstring>
 
+#include "config.hpp"
 #include "command.hpp"
 #include "common.hpp"
 #include "controller.hpp"
@@ -23,24 +24,40 @@
 #include "video/video_buffer.hpp"
 #include "util/log.hpp"
 #include "util/net.hpp"
+#include "util/str_util.hpp"
 
-static Server server{};
-static struct FpsCounter fps_counter;
-struct VideoBuffer video_buffer;
-static struct VideoStream stream;
+#define OPT_RENDER_EXPIRED_FRAMES 1000
+#define OPT_WINDOW_TITLE          1001
+#define OPT_PUSH_TARGET           1002
+#define OPT_ALWAYS_ON_TOP         1003
+#define OPT_CROP                  1004
+#define OPT_RECORD_FORMAT         1005
+#define OPT_PREFER_TEXT           1006
+#define OPT_WINDOW_X              1007
+#define OPT_WINDOW_Y              1008
+#define OPT_WINDOW_WIDTH          1009
+#define OPT_WINDOW_HEIGHT         1010
+#define OPT_WINDOW_BORDERLESS     1011
+#define OPT_MAX_FPS               1012
+#define OPT_SCREEN_WIDTH          1013
+#define OPT_SCREEN_HEIGHT         1014
 
-static struct Recorder recorder;
+static Server server;
+static FpsCounter fps_counter;
+VideoBuffer video_buffer;
+static VideoStream stream;
 
-class Controller controller{};
+static Recorder recorder;
 
-struct FileHandler file_handler;
+class Controller controller;
 
-static struct Decoder decoder;
-extern struct InputManager input_manager;
-extern struct Screen screen;
+FileHandler file_handler;
 
-static process_t
-set_show_touches_enabled(const char *serial, bool enabled) {
+static Decoder decoder;
+extern InputManager input_manager;
+extern Screen screen;
+
+static ProcessType set_show_touches_enabled(const char *serial, bool enabled) {
     const char *value = enabled ? "1" : "0";
     const char *const adb_cmd[] = {
             "shell", "settings", "put", "system", "show_touches", value
@@ -48,14 +65,12 @@ set_show_touches_enabled(const char *serial, bool enabled) {
     return adb_execute(serial, adb_cmd, ARRAY_LEN(adb_cmd));
 }
 
-static void
-wait_show_touches(process_t process) {
+static void wait_show_touches(ProcessType process) {
     // reap the process, ignore the result
     process_check_success(process, "show_touches");
 }
 
-static SDL_LogPriority
-sdl_priority_from_av_level(int level) {
+static SDL_LogPriority sdl_priority_from_av_level(int level) {
     switch (level) {
         case AV_LOG_PANIC:
         case AV_LOG_FATAL:
@@ -71,8 +86,7 @@ sdl_priority_from_av_level(int level) {
     }
 }
 
-static void
-av_log_callback(void *avcl, int level, const char *fmt, va_list vl) {
+static void av_log_callback(void *avcl, int level, const char *fmt, va_list vl) {
     (void) avcl;
     SDL_LogPriority priority = sdl_priority_from_av_level(level);
     if (priority == 0) {
@@ -121,8 +135,7 @@ IRobotOptions::IRobotOptions() {
 
 }
 
-bool
-IRobotOptions::init() {
+bool IRobotOptions::init() {
     const struct IRobotOptions *options = this;
     bool record = options->record_filename != nullptr;
     struct ServerParameters params = {
@@ -137,7 +150,7 @@ IRobotOptions::init() {
         return false;
     }
 
-    process_t proc_show_touches = PROCESS_NONE;
+    ProcessType proc_show_touches = PROCESS_NONE;
     bool show_touches_waited = false;
     if (options->show_touches) {
         LOGI("Enable show_touches");
@@ -162,7 +175,7 @@ IRobotOptions::init() {
     }
 
     char device_name[DEVICE_NAME_FIELD_LENGTH];
-    struct size frame_size{};
+    struct Size frame_size{};
 
     // screenrecord does not send frames when the screen content does not
     // change therefore, we transmit the screen size before the video stream,
@@ -336,13 +349,7 @@ IRobotOptions::init() {
 }
 
 
-#include "config.hpp"
-#include "util/log.hpp"
-#include "util/str_util.hpp"
-#include "video/recorder.hpp"
-
-void
-scrcpy_print_usage(const char *arg0) {
+void scrcpy_print_usage(const char *arg0) {
 #ifdef __APPLE__
 # define CTRL_OR_CMD "Cmd"
 #else
@@ -536,8 +543,7 @@ scrcpy_print_usage(const char *arg0) {
             DEFAULT_LOCAL_PORT);
 }
 
-static bool
-parse_integer_arg(const char *s, long *out, bool accept_suffix, long min,
+static bool parse_integer_arg(const char *s, long *out, bool accept_suffix, long min,
                   long max, const char *name) {
     long value;
     bool ok;
@@ -561,8 +567,7 @@ parse_integer_arg(const char *s, long *out, bool accept_suffix, long min,
     return true;
 }
 
-static bool
-parse_bit_rate(const char *s, uint32_t *bit_rate) {
+static bool parse_bit_rate(const char *s, uint32_t *bit_rate) {
     long value;
     // long may be 32 bits (it is the case on mingw), so do not use more than
     // 31 bits (long is signed)
@@ -575,8 +580,7 @@ parse_bit_rate(const char *s, uint32_t *bit_rate) {
     return true;
 }
 
-static bool
-parse_max_size(const char *s, uint16_t *max_size) {
+static bool parse_max_size(const char *s, uint16_t *max_size) {
     long value;
     bool ok = parse_integer_arg(s, &value, false, 0, 0xFFFF, "max size");
     if (!ok) {
@@ -587,8 +591,7 @@ parse_max_size(const char *s, uint16_t *max_size) {
     return true;
 }
 
-static bool
-parse_max_fps(const char *s, uint16_t *max_fps) {
+static bool parse_max_fps(const char *s, uint16_t *max_fps) {
     long value;
     bool ok = parse_integer_arg(s, &value, false, 0, 1000, "max fps");
     if (!ok) {
@@ -599,8 +602,7 @@ parse_max_fps(const char *s, uint16_t *max_fps) {
     return true;
 }
 
-static bool
-parse_window_position(const char *s, int16_t *position) {
+static bool parse_window_position(const char *s, int16_t *position) {
     long value;
     bool ok = parse_integer_arg(s, &value, false, -1, 0x7FFF,
                                 "window position");
@@ -612,8 +614,7 @@ parse_window_position(const char *s, int16_t *position) {
     return true;
 }
 
-static bool
-parse_window_dimension(const char *s, uint16_t *dimension) {
+static bool parse_window_dimension(const char *s, uint16_t *dimension) {
     long value;
     bool ok = parse_integer_arg(s, &value, false, 0, 0xFFFF,
                                 "window dimension");
@@ -625,8 +626,7 @@ parse_window_dimension(const char *s, uint16_t *dimension) {
     return true;
 }
 
-static bool
-parse_port(const char *s, uint16_t *port) {
+static bool parse_port(const char *s, uint16_t *port) {
     long value;
     bool ok = parse_integer_arg(s, &value, false, 0, 0xFFFF, "port");
     if (!ok) {
@@ -637,8 +637,7 @@ parse_port(const char *s, uint16_t *port) {
     return true;
 }
 
-static bool
-parse_record_format(const char *opt_arg, enum RecordFormat *format) {
+static bool parse_record_format(const char *opt_arg, enum RecordFormat *format) {
     if (!strcmp(opt_arg, "mp4")) {
         *format = RECORDER_FORMAT_MP4;
         return true;
@@ -651,8 +650,7 @@ parse_record_format(const char *opt_arg, enum RecordFormat *format) {
     return false;
 }
 
-static enum RecordFormat
-guess_record_format(const char *filename) {
+static enum RecordFormat guess_record_format(const char *filename) {
     size_t len = strlen(filename);
     if (len < 4) {
         return static_cast<RecordFormat>(0);
@@ -667,24 +665,8 @@ guess_record_format(const char *filename) {
     return static_cast<RecordFormat>(0);
 }
 
-#define OPT_RENDER_EXPIRED_FRAMES 1000
-#define OPT_WINDOW_TITLE          1001
-#define OPT_PUSH_TARGET           1002
-#define OPT_ALWAYS_ON_TOP         1003
-#define OPT_CROP                  1004
-#define OPT_RECORD_FORMAT         1005
-#define OPT_PREFER_TEXT           1006
-#define OPT_WINDOW_X              1007
-#define OPT_WINDOW_Y              1008
-#define OPT_WINDOW_WIDTH          1009
-#define OPT_WINDOW_HEIGHT         1010
-#define OPT_WINDOW_BORDERLESS     1011
-#define OPT_MAX_FPS               1012
-#define OPT_SCREEN_WIDTH          1013
-#define OPT_SCREEN_HEIGHT         1014
 
-bool
-IRobotOptions::parse_args(int argc, char *argv[]) {
+bool IRobotOptions::parse_args(int argc, char *argv[]) {
     struct IRobotOptions *args = this;
     static const struct option long_options[] = {
             {"always-on-top",         no_argument,       nullptr, OPT_ALWAYS_ON_TOP},

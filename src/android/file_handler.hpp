@@ -49,7 +49,7 @@ public:
     SDL_cond *event_cond;
     bool stopped;
     bool initialized;
-    process_t current_process;
+    ProcessType current_process;
     struct FileHandlerRequestQueue queue;
 
     bool init(const char *serial, const char *push_target);
@@ -67,12 +67,12 @@ public:
 
     static int run_file_handler(void *data);
 
-    static process_t
+    static ProcessType
     install_apk(const char *serial, const char *file) {
         return adb_install(serial, file);
     }
 
-    static process_t
+    static ProcessType
     push_file(const char *serial, const char *file, const char *push_target) {
         return adb_push(serial, file, push_target);
     }

@@ -23,7 +23,7 @@ extern "C" {
 
 #include "util/log.hpp"
 
-enum process_result cmd_execute(const char *const argv[], pid_t *pid) {
+enum ProcessResult cmd_execute(const char *const argv[], pid_t *pid) {
     int fd[2];
 
     if (pipe(fd) == -1) {
@@ -31,7 +31,7 @@ enum process_result cmd_execute(const char *const argv[], pid_t *pid) {
         return PROCESS_ERROR_GENERIC;
     }
 
-    enum process_result ret = PROCESS_SUCCESS;
+    enum ProcessResult ret = PROCESS_SUCCESS;
 
     *pid = fork();
     if (*pid == -1) {

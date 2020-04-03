@@ -17,19 +17,19 @@
 #define DISPLAY_MARGINS 96
 
 // get the window size in a struct size
-struct size Screen::get_window_size(SDL_Window *window) {
+struct Size Screen::get_window_size(SDL_Window *window) {
     int width;
     int height;
     SDL_GetWindowSize(window, &width, &height);
 
-    struct size size{};
+    struct Size size{};
     size.width = width;
     size.height = height;
     return size;
 }
 
 // get the windowed window size
-struct size Screen::get_windowed_window_size() {
+struct Size Screen::get_windowed_window_size() {
     if (this->fullscreen || this->maximized) {
         return this->windowed_window_size;
     }
@@ -45,7 +45,7 @@ void Screen::apply_windowed_size() {
 }
 
 // set the window size to be applied when fullscreen is disabled
-void Screen::set_window_size(struct size new_size) {
+void Screen::set_window_size(struct Size new_size) {
     // setting the window size during fullscreen is implementation defined,
     // so apply the resize only after fullscreen is disabled
     this->windowed_window_size = new_size;
@@ -53,7 +53,7 @@ void Screen::set_window_size(struct size new_size) {
 }
 
 // get the preferred display bounds (i.e. the screen bounds with some margins)
-bool Screen::get_preferred_display_bounds(struct size *bounds) {
+bool Screen::get_preferred_display_bounds(struct Size *bounds) {
     SDL_Rect rect;
 # define GET_DISPLAY_BOUNDS(i, r) SDL_GetDisplayUsableBounds((i), (r))
     if (GET_DISPLAY_BOUNDS(0, &rect)) {
@@ -71,14 +71,14 @@ bool Screen::get_preferred_display_bounds(struct size *bounds) {
 //    crops the black borders)
 //  - it keeps the aspect ratio
 //  - it scales down to make it fit in the display_size
-struct size Screen::get_optimal_size(struct size current_size,
-                                     struct size frame_size) {
+struct Size Screen::get_optimal_size(struct Size current_size,
+                                     struct Size frame_size) {
     if (frame_size.width == 0 || frame_size.height == 0) {
         // avoid division by 0
         return current_size;
     }
 
-    struct size display_size{};
+    struct Size display_size{};
     // 32 bits because we need to multiply two 16 bits values
     uint32_t w;
     uint32_t h;
@@ -104,20 +104,20 @@ struct size Screen::get_optimal_size(struct size current_size,
 
     // w and h must fit into 16 bits
     assert(w < 0x10000 && h < 0x10000);
-    return (struct size) {(uint16_t) w, (uint16_t) h};
+    return (struct Size) {(uint16_t) w, (uint16_t) h};
 }
 
 // same as get_optimal_size(), but read the current size from the window
-struct size Screen::get_optimal_window_size(struct size frame_size) {
-    struct size windowed_size = get_windowed_window_size();
+struct Size Screen::get_optimal_window_size(struct Size frame_size) {
+    struct Size windowed_size = get_windowed_window_size();
     return get_optimal_size(windowed_size, frame_size);
 }
 
 // initially, there is no current size, so use the frame size as current size
 // req_width and req_height, if not 0, are the sizes requested by the user
-struct size Screen::get_initial_optimal_size(struct size frame_size, uint16_t req_width,
+struct Size Screen::get_initial_optimal_size(struct Size frame_size, uint16_t req_width,
                                              uint16_t req_height) {
-    struct size window_size{};
+    struct Size window_size{};
     if (!req_width && !req_height) {
         window_size = get_optimal_size(frame_size, frame_size);
     } else {
@@ -164,7 +164,7 @@ void Screen::init() {
 
 
 bool Screen::init_rendering(const char *window_title,
-                            struct size frame_size, bool always_on_top,
+                            struct Size frame_size, bool always_on_top,
                             int16_t window_x, int16_t window_y, uint16_t window_width,
                             uint16_t window_height, uint16_t screen_width,
                             uint16_t screen_height, bool window_borderless) {
@@ -177,7 +177,7 @@ bool Screen::init_rendering(const char *window_title,
         this->device_screen_size = frame_size;
     }
 
-    struct size window_size =
+    struct Size window_size =
             get_initial_optimal_size(frame_size, window_width, window_height);
     uint32_t window_flags = SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE;
 
@@ -251,7 +251,7 @@ void Screen::destroy() {
 }
 
 // recreate the texture and resize the window if the frame size has changed
-bool Screen::prepare_for_frame(struct size new_frame_size) {
+bool Screen::prepare_for_frame(struct Size new_frame_size) {
     if (this->frame_size.width != new_frame_size.width
         || this->frame_size.height != new_frame_size.height) {
         if (SDL_RenderSetLogicalSize(this->renderer, new_frame_size.width,
@@ -263,8 +263,8 @@ bool Screen::prepare_for_frame(struct size new_frame_size) {
         // frame dimension changed, destroy texture
         SDL_DestroyTexture(this->texture);
 
-        struct size windowed_size = get_windowed_window_size();
-        struct size target_size = {
+        struct Size windowed_size = get_windowed_window_size();
+        struct Size target_size = {
                 (uint16_t) ((uint32_t) windowed_size.width * new_frame_size.width
                             / this->frame_size.width),
                 (uint16_t) ((uint32_t) windowed_size.height * new_frame_size.height
@@ -301,7 +301,7 @@ void Screen::update_texture(const AVFrame *frame) {
 bool Screen::update_frame(VideoBuffer *vb) {
     mutex_lock(vb->mutex);
     const AVFrame *frame = vb->consume_rendered_frame();
-    struct size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
+    struct Size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
     if (!prepare_for_frame(new_frame_size)) {
         mutex_unlock(vb->mutex);
         return false;
@@ -344,7 +344,7 @@ void Screen::resize_to_fit() {
         this->maximized = false;
     }
 
-    struct size optimal_size =
+    struct Size optimal_size =
             get_optimal_window_size(this->frame_size);
     SDL_SetWindowSize(this->window, optimal_size.width, optimal_size.height);
     LOGD("Resized to optimal size");

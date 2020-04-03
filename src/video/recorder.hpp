@@ -42,7 +42,7 @@ public:
     char *filename;
     enum RecordFormat format;
     AVFormatContext *ctx;
-    struct size declared_frame_size;
+    struct Size declared_frame_size;
     bool header_written;
 
     SDL_Thread *thread;
@@ -59,7 +59,7 @@ public:
     struct RecordPacket *previous;
 
     bool init(const char *filename,
-              enum RecordFormat format, struct size declared_frame_size);
+              enum RecordFormat format, struct Size declared_frame_size);
 
     void destroy();
 

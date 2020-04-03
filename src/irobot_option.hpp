@@ -55,12 +55,11 @@ struct IRobotOptions {
     IRobotOptions();
 
     bool init();
-    bool
-    parse_args(int argc, char *argv[]);
+
+    bool parse_args(int argc, char *argv[]);
 };
 
-void
-scrcpy_print_usage(const char *arg0);
+void scrcpy_print_usage(const char *arg0);
 
 
 #endif //ANDROID_IROBOT_SCRCPY_HPP

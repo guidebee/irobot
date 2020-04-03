@@ -46,7 +46,7 @@ public:
 
     static void convert_to_renderer_coordinates(SDL_Renderer *renderer, int *x, int *y);
 
-    static struct point get_mouse_point(Screen *screen);
+    static struct Point get_mouse_point(Screen *screen);
 
     static void send_keycode(Controller *controller,
                              enum android_keycode keycode,

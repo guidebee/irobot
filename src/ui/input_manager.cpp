@@ -30,12 +30,12 @@ void InputManager::convert_to_renderer_coordinates(SDL_Renderer *renderer,
     *y = (int) (static_cast<float>(*y) / scale_y) - viewport.y;
 }
 
-struct point InputManager::get_mouse_point(Screen *screen) {
+struct Point InputManager::get_mouse_point(Screen *screen) {
     int x;
     int y;
     SDL_GetMouseState(&x, &y);
     convert_to_renderer_coordinates(screen->renderer, &x, &y);
-    return (struct point) {
+    return (struct Point) {
             .x = x,
             .y = y,
     };
@@ -422,7 +422,7 @@ bool InputManager::convert_touch(const SDL_TouchFingerEvent *from, Screen *scree
         return false;
     }
 
-    struct size frame_size = screen->frame_size;
+    struct Size frame_size = screen->frame_size;
 
     to->inject_touch_event.pointer_id = from->fingerId;
     to->inject_touch_event.position.screen_size = frame_size;
@@ -513,7 +513,7 @@ void InputManager::process_mouse_button(
 bool InputManager::convert_mouse_wheel(const SDL_MouseWheelEvent *from,
                                        Screen *screen,
                                        struct ControlMessage *to) {
-    struct position position = {
+    struct Position position = {
             .screen_size = screen->frame_size,
             .point = get_mouse_point(screen),
     };

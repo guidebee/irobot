@@ -21,9 +21,9 @@
 
 #define DEFAULT_SERVER_PATH  "./server/" SERVER_FILENAME
 #define DEVICE_SERVER_PATH "/data/local/tmp/scrcpy-server.jar"
+#define IPV4_LOCALHOST 0x7F000001
 
-static const char *
-get_server_path() {
+const char *Server::get_server_path() {
     const char *server_path_env = getenv("SCRCPY_SERVER_PATH");
     if (server_path_env) {
         LOGD("Using SCRCPY_SERVER_PATH: %s", server_path_env);
@@ -70,62 +70,54 @@ get_server_path() {
 #endif
 }
 
-static bool
-push_server(const char *serial) {
+bool Server::push_server(const char *serial) {
     const char *server_path = get_server_path();
     if (!is_regular_file(server_path)) {
         LOGE("'%s' does not exist or is not a regular file\n", server_path);
         return false;
     }
-    process_t process = adb_push(serial, server_path, DEVICE_SERVER_PATH);
+    ProcessType process = adb_push(serial, server_path, DEVICE_SERVER_PATH);
     return process_check_success(process, "adb push");
 }
 
-static bool
-enable_tunnel_reverse(const char *serial, uint16_t local_port) {
-    process_t process = adb_reverse(serial, SOCKET_NAME, local_port);
+bool Server::enable_tunnel_reverse(const char *serial, uint16_t local_port) {
+    ProcessType process = adb_reverse(serial, SOCKET_NAME, local_port);
     return process_check_success(process, "adb reverse");
 }
 
-static bool
-disable_tunnel_reverse(const char *serial) {
-    process_t process = adb_reverse_remove(serial, SOCKET_NAME);
+bool Server::disable_tunnel_reverse(const char *serial) {
+    ProcessType process = adb_reverse_remove(serial, SOCKET_NAME);
     return process_check_success(process, "adb reverse --remove");
 }
 
-static bool
-enable_tunnel_forward(const char *serial, uint16_t local_port) {
-    process_t process = adb_forward(serial, local_port, SOCKET_NAME);
+bool Server::enable_tunnel_forward(const char *serial, uint16_t local_port) {
+    ProcessType process = adb_forward(serial, local_port, SOCKET_NAME);
     return process_check_success(process, "adb forward");
 }
 
-static bool
-disable_tunnel_forward(const char *serial, uint16_t local_port) {
-    process_t process = adb_forward_remove(serial, local_port);
+bool Server::disable_tunnel_forward(const char *serial, uint16_t local_port) {
+    ProcessType process = adb_forward_remove(serial, local_port);
     return process_check_success(process, "adb forward --remove");
 }
 
-static bool
-enable_tunnel(Server *server) {
-    if (enable_tunnel_reverse(server->serial, server->local_port)) {
+bool Server::enable_tunnel() {
+    if (enable_tunnel_reverse(this->serial, this->local_port)) {
         return true;
     }
 
     LOGW("'adb reverse' failed, fallback to 'adb forward'");
-    server->tunnel_forward = true;
-    return enable_tunnel_forward(server->serial, server->local_port);
+    this->tunnel_forward = true;
+    return enable_tunnel_forward(this->serial, this->local_port);
 }
 
-static bool
-disable_tunnel(Server *server) {
-    if (server->tunnel_forward) {
-        return disable_tunnel_forward(server->serial, server->local_port);
+bool Server::disable_tunnel() {
+    if (this->tunnel_forward) {
+        return disable_tunnel_forward(this->serial, this->local_port);
     }
-    return disable_tunnel_reverse(server->serial);
+    return disable_tunnel_reverse(this->serial);
 }
 
-static process_t
-execute_server(Server *server, const struct ServerParameters *params) {
+ProcessType Server::execute_server(const struct ServerParameters *params) {
     char max_size_string[6];
     char bit_rate_string[11];
     char max_fps_string[6];
@@ -147,7 +139,7 @@ execute_server(Server *server, const struct ServerParameters *params) {
             max_size_string,
             bit_rate_string,
             max_fps_string,
-            server->tunnel_forward ? "true" : "false",
+            this->tunnel_forward ? "true" : "false",
             params->crop ? params->crop : "-",
             "true", // always send frame meta (packet boundaries + timestamp)
             params->control ? "true" : "false",
@@ -163,18 +155,15 @@ execute_server(Server *server, const struct ServerParameters *params) {
     //     Port: 5005
     // Then click on "Debug"
 #endif
-    return adb_execute(server->serial, cmd, sizeof(cmd) / sizeof(cmd[0]));
+    return adb_execute(this->serial, cmd, sizeof(cmd) / sizeof(cmd[0]));
 }
 
-#define IPV4_LOCALHOST 0x7F000001
 
-static socket_t
-listen_on_port(uint16_t port) {
+socket_t Server::listen_on_port(uint16_t port) {
     return net_listen(IPV4_LOCALHOST, port, 1);
 }
 
-static socket_t
-connect_and_read_byte(uint16_t port) {
+socket_t Server::connect_and_read_byte(uint16_t port) {
     socket_t socket = net_connect(IPV4_LOCALHOST, port);
     if (socket == INVALID_SOCKET) {
         return INVALID_SOCKET;
@@ -191,8 +180,7 @@ connect_and_read_byte(uint16_t port) {
     return socket;
 }
 
-static socket_t
-connect_to_server(uint16_t port, uint32_t attempts, uint32_t delay) {
+socket_t Server::connect_to_server(uint16_t port, uint32_t attempts, uint32_t delay) {
     do {
         LOGD("Remaining connection attempts: %d", (int) attempts);
         socket_t socket = connect_and_read_byte(port);
@@ -207,8 +195,7 @@ connect_to_server(uint16_t port, uint32_t attempts, uint32_t delay) {
     return INVALID_SOCKET;
 }
 
-static void
-close_socket(socket_t *socket) {
+void Server::close_socket(socket_t *socket) {
     assert(*socket != INVALID_SOCKET);
     net_shutdown(*socket, SHUT_RDWR);
     if (!net_close(*socket)) {
@@ -229,32 +216,30 @@ void Server::init() {
     this->tunnel_forward = false;
 }
 
-bool
-Server::start(const char *serial,
-              const struct ServerParameters *params) {
-    Server *server = this;
-    server->local_port = params->local_port;
+bool Server::start(const char *serial,
+                   const struct ServerParameters *params) {
+    this->local_port = params->local_port;
 
     if (serial) {
-        server->serial = SDL_strdup(serial);
-        if (!server->serial) {
+        this->serial = SDL_strdup(serial);
+        if (!this->serial) {
             return false;
         }
     }
 
     if (!push_server(serial)) {
-        SDL_free(server->serial);
+        SDL_free(this->serial);
         return false;
     }
 
-    if (!enable_tunnel(server)) {
-        SDL_free(server->serial);
+    if (!enable_tunnel()) {
+        SDL_free(this->serial);
         return false;
     }
 
     // if "adb reverse" does not work (e.g. over "adb connect"), it fallbacks to
     // "adb forward", so the app socket is the client
-    if (!server->tunnel_forward) {
+    if (!this->tunnel_forward) {
         // At the application level, the device part is "the server" because it
         // serves video stream and control. However, at the network level, the
         // client listens and the server connects to the client. That way, the
@@ -262,132 +247,128 @@ Server::start(const char *serial,
         // need to try to connect until the server socket is listening on the
         // device.
 
-        server->server_socket = listen_on_port(params->local_port);
-        if (server->server_socket == INVALID_SOCKET) {
+        this->server_socket = listen_on_port(params->local_port);
+        if (this->server_socket == INVALID_SOCKET) {
             LOGE("Could not listen on port %"
                          PRIu16, params->local_port);
-            disable_tunnel(server);
-            SDL_free(server->serial);
+            disable_tunnel();
+            SDL_free(this->serial);
             return false;
         }
     }
 
-    server->agent_control_server_socket = listen_on_port(params->local_port + 1);
-    if (server->agent_control_server_socket == INVALID_SOCKET) {
+    this->agent_control_server_socket = listen_on_port(params->local_port + 1);
+    if (this->agent_control_server_socket == INVALID_SOCKET) {
         LOGE("Could not listen on agent control port %"
                      PRIu16, static_cast<unsigned short>(params->local_port + 1));
-        disable_tunnel(server);
-        SDL_free(server->serial);
+        disable_tunnel();
+        SDL_free(this->serial);
         return false;
     }
 
-    server->agent_control_client_socket = INVALID_SOCKET;
+    this->agent_control_client_socket = INVALID_SOCKET;
 
-    server->agent_data_server_socket = listen_on_port(params->local_port + 2);
-    if (server->agent_data_server_socket == INVALID_SOCKET) {
+    this->agent_data_server_socket = listen_on_port(params->local_port + 2);
+    if (this->agent_data_server_socket == INVALID_SOCKET) {
         LOGE("Could not listen on agent data port %"
                      PRIu16, static_cast<unsigned short>(params->local_port + 2));
-        disable_tunnel(server);
-        SDL_free(server->serial);
+        disable_tunnel();
+        SDL_free(this->serial);
         return false;
     }
 
     // server will connect to our server socket
-    server->process = execute_server(server, params);
+    this->process = execute_server(params);
 
-    if (server->process == PROCESS_NONE) {
-        if (!server->tunnel_forward) {
-            close_socket(&server->server_socket);
+    if (this->process == PROCESS_NONE) {
+        if (!this->tunnel_forward) {
+            close_socket(&this->server_socket);
         }
-        disable_tunnel(server);
-        SDL_free(server->serial);
+        disable_tunnel();
+        SDL_free(this->serial);
         return false;
     }
 
-    server->tunnel_enabled = true;
+    this->tunnel_enabled = true;
 
     return true;
 }
 
 
-bool
-Server::connect_to() {
-    Server *server = this;
-    if (!server->tunnel_forward) {
-        server->video_socket = net_accept(server->server_socket);
-        if (server->video_socket == INVALID_SOCKET) {
+bool Server::connect_to() {
+
+    if (!this->tunnel_forward) {
+        this->video_socket = net_accept(this->server_socket);
+        if (this->video_socket == INVALID_SOCKET) {
             return false;
         }
 
-        server->control_socket = net_accept(server->server_socket);
-        if (server->control_socket == INVALID_SOCKET) {
+        this->control_socket = net_accept(this->server_socket);
+        if (this->control_socket == INVALID_SOCKET) {
             // the video_socket will be cleaned up on destroy
             return false;
         }
 
         // we don't need the server socket anymore
-        close_socket(&server->server_socket);
+        close_socket(&this->server_socket);
     } else {
         uint32_t attempts = 100;
         uint32_t delay = 100; // ms
-        server->video_socket =
-                connect_to_server(server->local_port, attempts, delay);
-        if (server->video_socket == INVALID_SOCKET) {
+        this->video_socket =
+                connect_to_server(this->local_port, attempts, delay);
+        if (this->video_socket == INVALID_SOCKET) {
             return false;
         }
 
         // we know that the device is listening, we don't need several attempts
-        server->control_socket =
-                net_connect(IPV4_LOCALHOST, server->local_port);
-        if (server->control_socket == INVALID_SOCKET) {
+        this->control_socket =
+                net_connect(IPV4_LOCALHOST, this->local_port);
+        if (this->control_socket == INVALID_SOCKET) {
             return false;
         }
     }
 
     // we don't need the adb tunnel anymore
-    disable_tunnel(server); // ignore failure
-    server->tunnel_enabled = false;
+    disable_tunnel(); // ignore failure
+    this->tunnel_enabled = false;
 
     return true;
 }
 
-void
-Server::stop() {
-    Server *server = this;
-    if (server->server_socket != INVALID_SOCKET) {
-        close_socket(&server->server_socket);
+void Server::stop() {
+
+    if (this->server_socket != INVALID_SOCKET) {
+        close_socket(&this->server_socket);
     }
-    if (server->video_socket != INVALID_SOCKET) {
-        close_socket(&server->video_socket);
+    if (this->video_socket != INVALID_SOCKET) {
+        close_socket(&this->video_socket);
     }
-    if (server->control_socket != INVALID_SOCKET) {
-        close_socket(&server->control_socket);
+    if (this->control_socket != INVALID_SOCKET) {
+        close_socket(&this->control_socket);
     }
-    if (server->agent_control_server_socket != INVALID_SOCKET) {
-        close_socket(&server->agent_control_server_socket);
+    if (this->agent_control_server_socket != INVALID_SOCKET) {
+        close_socket(&this->agent_control_server_socket);
     }
-    if (server->agent_control_client_socket != INVALID_SOCKET) {
-        close_socket(&server->agent_control_client_socket);
+    if (this->agent_control_client_socket != INVALID_SOCKET) {
+        close_socket(&this->agent_control_client_socket);
     }
 
-    assert(server->process != PROCESS_NONE);
+    assert(this->process != PROCESS_NONE);
 
-    if (!cmd_terminate(server->process)) {
+    if (!cmd_terminate(this->process)) {
         LOGW("Could not terminate server");
     }
 
-    cmd_simple_wait(server->process, nullptr); // ignore exit code
+    cmd_simple_wait(this->process, nullptr); // ignore exit code
     LOGD("Server terminated");
 
-    if (server->tunnel_enabled) {
+    if (this->tunnel_enabled) {
         // ignore failure
-        disable_tunnel(server);
+        disable_tunnel();
     }
 }
 
-void
-Server::destroy() {
-    Server *server = this;
-    SDL_free(server->serial);
+void Server::destroy() {
+    SDL_free(this->serial);
 }
 

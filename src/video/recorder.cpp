@@ -17,7 +17,7 @@ static const AVRational SCRCPY_TIME_BASE = {1, 1000000}; // timestamps in us
 bool Recorder::init(
         const char *filename,
         enum RecordFormat format,
-        struct size declared_frame_size) {
+        struct Size declared_frame_size) {
     Recorder *recorder = this;
     recorder->filename = SDL_strdup(filename);
     if (!recorder->filename) {

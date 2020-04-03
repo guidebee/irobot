@@ -137,7 +137,7 @@ int FileHandler::run_file_handler(void *data) {
         assert(non_empty);
         (void) non_empty;
 
-        process_t process;
+        ProcessType process;
         if (req.action == ACTION_INSTALL_APK) {
             LOGI("Installing %s...", req.file);
             process = install_apk(file_handler->serial, req.file);

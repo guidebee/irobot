@@ -12,102 +12,97 @@
 bool VideoBuffer::init(struct FpsCounter *fps_counter,
                        bool render_expired_frames) {
     VideoBuffer *vb = this;
-    vb->fps_counter = fps_counter;
+    this->fps_counter = fps_counter;
 
-    if (!(vb->decoding_frame = av_frame_alloc())) {
+    if (!(this->decoding_frame = av_frame_alloc())) {
         goto error_0;
     }
 
-    if (!(vb->rendering_frame = av_frame_alloc())) {
+    if (!(this->rendering_frame = av_frame_alloc())) {
         goto error_1;
     }
 
-    if (!(vb->mutex = SDL_CreateMutex())) {
+    if (!(this->mutex = SDL_CreateMutex())) {
         goto error_2;
     }
 
-    vb->render_expired_frames = render_expired_frames;
+    this->render_expired_frames = render_expired_frames;
     if (render_expired_frames) {
-        if (!(vb->rendering_frame_consumed_cond = SDL_CreateCond())) {
-            SDL_DestroyMutex(vb->mutex);
+        if (!(this->rendering_frame_consumed_cond = SDL_CreateCond())) {
+            SDL_DestroyMutex(this->mutex);
             goto error_2;
         }
         // interrupted is not used if expired frames are not rendered
         // since offering a frame will never block
-        vb->interrupted = false;
+        this->interrupted = false;
     }
 
     // there is initially no rendering frame, so consider it has already been
     // consumed
-    vb->rendering_frame_consumed = true;
+    this->rendering_frame_consumed = true;
 
     return true;
 
     error_2:
-    av_frame_free(&vb->rendering_frame);
+    av_frame_free(&this->rendering_frame);
     error_1:
-    av_frame_free(&vb->decoding_frame);
+    av_frame_free(&this->decoding_frame);
     error_0:
     return false;
 }
 
 void VideoBuffer::destroy() {
-    VideoBuffer *vb = this;
-    if (vb->render_expired_frames) {
-        SDL_DestroyCond(vb->rendering_frame_consumed_cond);
+    if (this->render_expired_frames) {
+        SDL_DestroyCond(this->rendering_frame_consumed_cond);
     }
-    SDL_DestroyMutex(vb->mutex);
-    av_frame_free(&vb->rendering_frame);
-    av_frame_free(&vb->decoding_frame);
+    SDL_DestroyMutex(this->mutex);
+    av_frame_free(&this->rendering_frame);
+    av_frame_free(&this->decoding_frame);
 }
 
 void VideoBuffer::swap_frames() {
-    VideoBuffer *vb = this;
-    AVFrame *tmp = vb->decoding_frame;
-    vb->decoding_frame = vb->rendering_frame;
-    vb->rendering_frame = tmp;
+    AVFrame *tmp = this->decoding_frame;
+    this->decoding_frame = this->rendering_frame;
+    this->rendering_frame = tmp;
 }
 
 void VideoBuffer::offer_decoded_frame(
         bool *previous_frame_skipped) {
-    VideoBuffer *vb = this;
-    mutex_lock(vb->mutex);
-    if (vb->render_expired_frames) {
+    mutex_lock(this->mutex);
+    if (this->render_expired_frames) {
         // wait for the current (expired) frame to be consumed
-        while (!vb->rendering_frame_consumed && !vb->interrupted) {
-            cond_wait(vb->rendering_frame_consumed_cond, vb->mutex);
+        while (!this->rendering_frame_consumed && !this->interrupted) {
+            cond_wait(this->rendering_frame_consumed_cond, this->mutex);
         }
-    } else if (!vb->rendering_frame_consumed) {
-        vb->fps_counter->add_skipped_frame();
+    } else if (!this->rendering_frame_consumed) {
+        this->fps_counter->add_skipped_frame();
     }
 
-    vb->swap_frames();
+    this->swap_frames();
 
-    *previous_frame_skipped = !vb->rendering_frame_consumed;
-    vb->rendering_frame_consumed = false;
+    *previous_frame_skipped = !this->rendering_frame_consumed;
+    this->rendering_frame_consumed = false;
 
-    mutex_unlock(vb->mutex);
+    mutex_unlock(this->mutex);
 }
 
 const AVFrame *VideoBuffer::consume_rendered_frame() {
-    VideoBuffer *vb = this;
-    assert(!vb->rendering_frame_consumed);
-    vb->rendering_frame_consumed = true;
-    vb->fps_counter->add_rendered_frame();
-    if (vb->render_expired_frames) {
+    assert(!this->rendering_frame_consumed);
+    this->rendering_frame_consumed = true;
+    this->fps_counter->add_rendered_frame();
+    if (this->render_expired_frames) {
         // unblock video_buffer_offer_decoded_frame()
-        cond_signal(vb->rendering_frame_consumed_cond);
+        cond_signal(this->rendering_frame_consumed_cond);
     }
-    return vb->rendering_frame;
+    return this->rendering_frame;
 }
 
 void VideoBuffer::interrupt() {
-    VideoBuffer *vb = this;
-    if (vb->render_expired_frames) {
-        mutex_lock(vb->mutex);
-        vb->interrupted = true;
-        mutex_unlock(vb->mutex);
+    if (this->render_expired_frames) {
+        mutex_lock(this->mutex);
+        this->interrupted = true;
+        mutex_unlock(this->mutex);
         // wake up blocking wait
-        cond_signal(vb->rendering_frame_consumed_cond);
+        cond_signal(this->rendering_frame_consumed_cond);
     }
 }

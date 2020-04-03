@@ -31,8 +31,7 @@ print_version() {
 }
 
 
-int
-main(int argc, char *argv[]) {
+int main(int argc, char *argv[]) {
 
 #ifdef __WINDOWS__
     // disable buffering, we want logs immediately

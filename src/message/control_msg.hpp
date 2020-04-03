@@ -60,11 +60,11 @@ struct ControlMessage {
             enum android_motionevent_action action;
             enum android_motionevent_buttons buttons;
             uint64_t pointer_id;
-            struct position position;
+            struct Position position;
             float pressure;
         } inject_touch_event;
         struct {
-            struct position position;
+            struct Position position;
             int32_t hscroll;
             int32_t vscroll;
         } inject_scroll_event;
@@ -82,7 +82,7 @@ struct ControlMessage {
 
     void destroy();
 
-    static void write_position(uint8_t *buf, const struct position *position);
+    static void write_position(uint8_t *buf, const struct Position *position);
 
     // write length (2 bytes) + string (non nul-terminated)
     static size_t write_string(const char *utf8, size_t max_len, unsigned char *buf);
