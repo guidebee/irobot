@@ -41,8 +41,8 @@ extern "C" {
 # endif
 # define PROCESS_NONE NULL
 # define NO_EXIT_CODE -1u // max value as unsigned
- typedef HANDLE process_t;
- typedef DWORD exit_code_t;
+ typedef HANDLE ProcessType;
+ typedef DWORD ExitCodeType;
 
 #else
 

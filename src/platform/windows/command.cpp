@@ -24,7 +24,7 @@ static int build_cmd(char *cmd, size_t len, const char *const argv[]) {
     return 0;
 }
 
-enum process_result cmd_execute(const char *const argv[], HANDLE *handle) {
+enum ProcessResult cmd_execute(const char *const argv[], HANDLE *handle) {
     STARTUPINFOW si;
     PROCESS_INFORMATION pi;
     memset(&si, 0, sizeof(si));
