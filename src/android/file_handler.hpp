@@ -28,6 +28,7 @@ typedef enum {
 } FileHandlerActionType;
 
 struct FileHandlerRequest {
+
     FileHandlerActionType action;
     char *file;
 
@@ -39,6 +40,7 @@ struct FileHandlerRequest {
 struct FileHandlerRequestQueue CBUF(struct FileHandlerRequest, 16);
 
 class FileHandler {
+
 public:
     char *serial;
     const char *push_target;
@@ -62,7 +64,19 @@ public:
 
     // take ownership of file, and will SDL_free() it
     bool request(FileHandlerActionType action, char *file);
-};
 
+    static int run_file_handler(void *data);
+
+    static process_t
+    install_apk(const char *serial, const char *file) {
+        return adb_install(serial, file);
+    }
+
+    static process_t
+    push_file(const char *serial, const char *file, const char *push_target) {
+        return adb_push(serial, file, push_target);
+    }
+
+};
 
 #endif //ANDROID_IROBOT_FILE_HANDLER_HPP

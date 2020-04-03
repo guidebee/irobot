@@ -14,78 +14,61 @@
 #define DEFAULT_PUSH_TARGET "/sdcard/"
 
 
-bool
-FileHandler::init(const char *serial,
-                  const char *push_target) {
+bool FileHandler::init(const char *serial,
+                       const char *push_target) {
 
-    FileHandler *file_handler = this;
-    cbuf_init(&file_handler->queue);
-
-    if (!(file_handler->mutex = SDL_CreateMutex())) {
+    cbuf_init(&this->queue);
+    if (!(this->mutex = SDL_CreateMutex())) {
         return false;
     }
 
-    if (!(file_handler->event_cond = SDL_CreateCond())) {
-        SDL_DestroyMutex(file_handler->mutex);
+    if (!(this->event_cond = SDL_CreateCond())) {
+        SDL_DestroyMutex(this->mutex);
         return false;
     }
 
     if (serial) {
-        file_handler->serial = SDL_strdup(serial);
-        if (!file_handler->serial) {
+        this->serial = SDL_strdup(serial);
+        if (!this->serial) {
             LOGW("Could not strdup serial");
-            SDL_DestroyCond(file_handler->event_cond);
-            SDL_DestroyMutex(file_handler->mutex);
+            SDL_DestroyCond(this->event_cond);
+            SDL_DestroyMutex(this->mutex);
             return false;
         }
     } else {
-        file_handler->serial = nullptr;
+        this->serial = nullptr;
     }
 
     // lazy initialization
-    file_handler->initialized = false;
+    this->initialized = false;
 
-    file_handler->stopped = false;
-    file_handler->current_process = PROCESS_NONE;
-
-    file_handler->push_target = push_target ? push_target : DEFAULT_PUSH_TARGET;
-
+    this->stopped = false;
+    this->current_process = PROCESS_NONE;
+    this->push_target = push_target ? push_target : DEFAULT_PUSH_TARGET;
     return true;
 }
 
-void
-FileHandler::destroy() {
-    FileHandler *file_handler = this;
-    SDL_DestroyCond(file_handler->event_cond);
-    SDL_DestroyMutex(file_handler->mutex);
-    SDL_free(file_handler->serial);
+void FileHandler::destroy() {
+    SDL_DestroyCond(this->event_cond);
+    SDL_DestroyMutex(this->mutex);
+    SDL_free(this->serial);
 
     struct FileHandlerRequest req{};
-    while (cbuf_take(&file_handler->queue, &req)) {
+    while (cbuf_take(&this->queue, &req)) {
         req.destroy();
     }
 }
 
-static process_t
-install_apk(const char *serial, const char *file) {
-    return adb_install(serial, file);
-}
 
-static process_t
-push_file(const char *serial, const char *file, const char *push_target) {
-    return adb_push(serial, file, push_target);
-}
-
-bool
-FileHandler::request(
+bool FileHandler::request(
         FileHandlerActionType action, char *file) {
-    FileHandler *file_handler = this;
+
     // start file_handler if it's used for the first time
-    if (!file_handler->initialized) {
-        if (!file_handler->start()) {
+    if (!this->initialized) {
+        if (!this->start()) {
             return false;
         }
-        file_handler->initialized = true;
+        this->initialized = true;
     }
 
     LOGI("Request to %s %s", action == ACTION_INSTALL_APK ? "install" : "push",
@@ -95,18 +78,47 @@ FileHandler::request(
             .file = file,
     };
 
-    mutex_lock(file_handler->mutex);
-    bool was_empty = cbuf_is_empty(&file_handler->queue);
-    bool res = cbuf_push(&file_handler->queue, req);
+    mutex_lock(this->mutex);
+    bool was_empty = cbuf_is_empty(&this->queue);
+    bool res = cbuf_push(&this->queue, req);
     if (was_empty) {
-        cond_signal(file_handler->event_cond);
+        cond_signal(this->event_cond);
     }
-    mutex_unlock(file_handler->mutex);
+    mutex_unlock(this->mutex);
     return res;
 }
 
-static int
-run_file_handler(void *data) {
+
+bool FileHandler::start() {
+    LOGD("Starting file_handler thread");
+    this->thread = SDL_CreateThread(FileHandler::run_file_handler, "file_handler",
+                                    this);
+    if (!this->thread) {
+        LOGC("Could not start file_handler thread");
+        return false;
+    }
+    return true;
+}
+
+void FileHandler::stop() {
+    mutex_lock(this->mutex);
+    this->stopped = true;
+    cond_signal(this->event_cond);
+    if (this->current_process != PROCESS_NONE) {
+        if (!cmd_terminate(this->current_process)) {
+            LOGW("Could not terminate install process");
+        }
+        cmd_simple_wait(this->current_process, nullptr);
+        this->current_process = PROCESS_NONE;
+    }
+    mutex_unlock(this->mutex);
+}
+
+void FileHandler::join() {
+    SDL_WaitThread(this->thread, nullptr);
+}
+
+int FileHandler::run_file_handler(void *data) {
     auto *file_handler = (FileHandler *) data;
 
     for (;;) {
@@ -158,39 +170,3 @@ run_file_handler(void *data) {
     return 0;
 }
 
-bool
-FileHandler::start() {
-    FileHandler *file_handler = this;
-    LOGD("Starting file_handler thread");
-
-    file_handler->thread = SDL_CreateThread(run_file_handler, "file_handler",
-                                            file_handler);
-    if (!file_handler->thread) {
-        LOGC("Could not start file_handler thread");
-        return false;
-    }
-
-    return true;
-}
-
-void
-FileHandler::stop() {
-    FileHandler *file_handler = this;
-    mutex_lock(file_handler->mutex);
-    file_handler->stopped = true;
-    cond_signal(file_handler->event_cond);
-    if (file_handler->current_process != PROCESS_NONE) {
-        if (!cmd_terminate(file_handler->current_process)) {
-            LOGW("Could not terminate install process");
-        }
-        cmd_simple_wait(file_handler->current_process, nullptr);
-        file_handler->current_process = PROCESS_NONE;
-    }
-    mutex_unlock(file_handler->mutex);
-}
-
-void
-FileHandler::join() {
-    FileHandler *file_handler = this;
-    SDL_WaitThread(file_handler->thread, nullptr);
-}

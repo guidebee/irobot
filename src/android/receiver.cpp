@@ -20,8 +20,7 @@ extern "C" {
 #include "util/lock.hpp"
 #include "util/log.hpp"
 
-bool
-Receiver::init(socket_t control_socket) {
+bool Receiver::init(socket_t control_socket) {
     Receiver *receiver = this;
     if (!(receiver->mutex = SDL_CreateMutex())) {
         return false;
@@ -30,14 +29,12 @@ Receiver::init(socket_t control_socket) {
     return true;
 }
 
-void
-Receiver::destroy() {
+void Receiver::destroy() {
     Receiver *receiver = this;
     SDL_DestroyMutex(receiver->mutex);
 }
 
-static void
-process_msg(struct DeviceMessage *msg) {
+void Receiver::process_msg(struct DeviceMessage *msg) {
     switch (msg->type) {
         case DEVICE_MSG_TYPE_CLIPBOARD:
             LOGI("Device clipboard copied");
@@ -46,8 +43,27 @@ process_msg(struct DeviceMessage *msg) {
     }
 }
 
-static ssize_t
-process_msgs(const unsigned char *buf, size_t len) {
+
+bool Receiver::start() {
+    Receiver *receiver = this;
+    LOGD("Starting receiver thread");
+
+    receiver->thread = SDL_CreateThread(Receiver::run_receiver, "receiver", receiver);
+    if (!receiver->thread) {
+        LOGC("Could not start receiver thread");
+        return false;
+    }
+
+    return true;
+}
+
+void Receiver::join() {
+    Receiver *receiver = this;
+    SDL_WaitThread(receiver->thread, nullptr);
+}
+
+
+ssize_t Receiver::process_msgs(const unsigned char *buf, size_t len) {
     size_t head = 0;
     for (;;) {
         struct DeviceMessage msg{};
@@ -70,8 +86,7 @@ process_msgs(const unsigned char *buf, size_t len) {
     }
 }
 
-static int
-run_receiver(void *data) {
+int Receiver::run_receiver(void *data) {
     auto *receiver = (Receiver *) data;
 
     unsigned char buf[DEVICE_MSG_SERIALIZED_MAX_SIZE];
@@ -100,24 +115,4 @@ run_receiver(void *data) {
     }
 
     return 0;
-}
-
-bool
-Receiver::start() {
-    Receiver *receiver = this;
-    LOGD("Starting receiver thread");
-
-    receiver->thread = SDL_CreateThread(run_receiver, "receiver", receiver);
-    if (!receiver->thread) {
-        LOGC("Could not start receiver thread");
-        return false;
-    }
-
-    return true;
-}
-
-void
-Receiver::join() {
-    Receiver *receiver = this;
-    SDL_WaitThread(receiver->thread, nullptr);
 }

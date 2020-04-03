@@ -18,12 +18,13 @@ extern "C" {
 #endif
 
 #include "config.hpp"
-#include "util/net.hpp"
 
+#include "util/net.hpp"
 
 // receive events from the device
 // managed by the controller
 class Receiver {
+
 public:
     socket_t control_socket;
     SDL_Thread *thread;
@@ -38,7 +39,12 @@ public:
     // no receiver_stop(), it will automatically stop on control_socket shutdown
 
     void join();
-};
 
+    static void process_msg(struct DeviceMessage *msg);
+
+    static ssize_t process_msgs(const unsigned char *buf, size_t len);
+
+    static int run_receiver(void *data);
+};
 
 #endif //ANDROID_IROBOT_RECEIVER_HPP
