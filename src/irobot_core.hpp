@@ -26,7 +26,9 @@ extern "C" {
 #include "ui/input_manager.hpp"
 #include "video/recorder.hpp"
 
-struct IRobotOptions {
+class IRobotCore {
+
+public:
     const char *serial;
     const char *crop;
     const char *record_filename;
@@ -55,22 +57,28 @@ struct IRobotOptions {
     bool help;
     bool version;
 
-    IRobotOptions();
 
     bool init();
 
-    bool parse_args(int argc, char *argv[]);
 
     static ProcessType set_show_touches_enabled(const char *serial, bool enabled);
+
     static void wait_show_touches(ProcessType process);
+
     static SDL_LogPriority sdl_priority_from_av_level(int level);
+
     static void av_log_callback(void *avcl, int level, const char *fmt, va_list vl);
+
+    IRobotCore();
+
+    bool parse_args(int argc, char *argv[]);
+
+    static void irobot_print_usage(const char *arg0);
+
+    static void print_version();
+
+    static int irobot_main(int argc, char *argv[]);
 };
 
-void irobot_print_usage(const char *arg0);
-
-void print_version();
-
-int irobot_main(int argc, char *argv[]);
 
 #endif //ANDROID_IROBOT_SCRCPY_HPP

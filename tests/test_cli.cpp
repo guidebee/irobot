@@ -8,7 +8,7 @@
 #include "common.hpp"
 
 TEST_CASE("flag version", "[ui][cli]") {
-    struct IRobotOptions args = {
+    struct IRobotCore args = {
 
     };
 
@@ -22,7 +22,7 @@ TEST_CASE("flag version", "[ui][cli]") {
 }
 
 TEST_CASE("flag help", "[ui][cli]") {
-    struct IRobotOptions args = {
+    struct IRobotCore args = {
 
     };
 
@@ -36,7 +36,7 @@ TEST_CASE("flag help", "[ui][cli]") {
 }
 
 TEST_CASE("options", "[ui][cli]") {
-    struct IRobotOptions args = {
+    struct IRobotCore args = {
 
     };
 
@@ -70,7 +70,7 @@ TEST_CASE("options", "[ui][cli]") {
     bool ok = args.parse_args(ARRAY_LEN(argv), argv);
     REQUIRE(ok);
 
-    const struct IRobotOptions *opts = &args;
+    const struct IRobotCore *opts = &args;
     REQUIRE(opts->always_on_top);
 //    fprintf(stderr, "%d\n", (int) opts->bit_rate);
     REQUIRE(opts->bit_rate == 5000000);
@@ -96,7 +96,7 @@ TEST_CASE("options", "[ui][cli]") {
 }
 
 TEST_CASE("options2", "[ui][cli]") {
-    struct IRobotOptions args = {
+    struct IRobotCore args = {
 
     };
 
@@ -111,7 +111,7 @@ TEST_CASE("options2", "[ui][cli]") {
     bool ok = args.parse_args(ARRAY_LEN(argv), argv);
     REQUIRE(ok);
 
-    const struct IRobotOptions *opts = &args;
+    const struct IRobotCore *opts = &args;
     REQUIRE(!opts->control);
     REQUIRE(!opts->display);
     REQUIRE(!strcmp(opts->record_filename, "file.mp4"));

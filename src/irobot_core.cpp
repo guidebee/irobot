@@ -61,7 +61,7 @@ InputManager input_manager = {
 
 
 
-ProcessType IRobotOptions::set_show_touches_enabled(const char *serial, bool enabled) {
+ProcessType IRobotCore::set_show_touches_enabled(const char *serial, bool enabled) {
     const char *value = enabled ? "1" : "0";
     const char *const adb_cmd[] = {
             "shell", "settings", "put", "system", "show_touches", value
@@ -69,12 +69,12 @@ ProcessType IRobotOptions::set_show_touches_enabled(const char *serial, bool ena
     return adb_execute(serial, adb_cmd, ARRAY_LEN(adb_cmd));
 }
 
-void IRobotOptions::wait_show_touches(ProcessType process) {
+void IRobotCore::wait_show_touches(ProcessType process) {
     // reap the process, ignore the result
     process_check_success(process, "show_touches");
 }
 
-SDL_LogPriority IRobotOptions::sdl_priority_from_av_level(int level) {
+SDL_LogPriority IRobotCore::sdl_priority_from_av_level(int level) {
     switch (level) {
         case AV_LOG_PANIC:
         case AV_LOG_FATAL:
@@ -90,7 +90,7 @@ SDL_LogPriority IRobotOptions::sdl_priority_from_av_level(int level) {
     }
 }
 
-void IRobotOptions::av_log_callback(void *avcl, int level, const char *fmt, va_list vl) {
+void IRobotCore::av_log_callback(void *avcl, int level, const char *fmt, va_list vl) {
     (void) avcl;
     SDL_LogPriority priority = sdl_priority_from_av_level(level);
     if (priority == 0) {
@@ -108,7 +108,7 @@ void IRobotOptions::av_log_callback(void *avcl, int level, const char *fmt, va_l
     SDL_free(local_fmt);
 }
 
-IRobotOptions::IRobotOptions() {
+IRobotCore::IRobotCore() {
     this->serial = nullptr;
     this->crop = nullptr;
     this->record_filename = nullptr;
@@ -139,8 +139,8 @@ IRobotOptions::IRobotOptions() {
 
 }
 
-bool IRobotOptions::init() {
-    const struct IRobotOptions *options = this;
+bool IRobotCore::init() {
+    const struct IRobotCore *options = this;
     bool record = options->record_filename != nullptr;
     struct ServerParameters params = {
             .crop = options->crop,
@@ -363,7 +363,7 @@ bool IRobotOptions::init() {
 }
 
 
-void irobot_print_usage(const char *arg0) {
+void IRobotCore::irobot_print_usage(const char *arg0) {
 #ifdef __APPLE__
 # define CTRL_OR_CMD "Cmd"
 #else
@@ -680,8 +680,8 @@ static enum RecordFormat guess_record_format(const char *filename) {
 }
 
 
-bool IRobotOptions::parse_args(int argc, char *argv[]) {
-    struct IRobotOptions *args = this;
+bool IRobotCore::parse_args(int argc, char *argv[]) {
+    struct IRobotCore *args = this;
     static const struct option long_options[] = {
             {"always-on-top",         no_argument,       nullptr, OPT_ALWAYS_ON_TOP},
             {"bit-rate",              required_argument, nullptr, 'b'},
@@ -715,7 +715,7 @@ bool IRobotOptions::parse_args(int argc, char *argv[]) {
             {nullptr, 0,                                 nullptr, 0},
     };
 
-    struct IRobotOptions *opts = args;
+    struct IRobotCore *opts = args;
 
     optind = 0; // reset to start from the first argument in tests
 
@@ -879,7 +879,7 @@ bool IRobotOptions::parse_args(int argc, char *argv[]) {
     return true;
 }
 
-void print_version() {
+void IRobotCore::print_version() {
     fprintf(stderr, "scrcpy %s\n\n", SCRCPY_VERSION);
 
     fprintf(stderr, "dependencies:\n");
@@ -896,7 +896,7 @@ void print_version() {
             LIBAVUTIL_VERSION_MICRO);
 }
 
-int irobot_main(int argc, char *argv[]) {
+int IRobotCore::irobot_main(int argc, char *argv[]) {
 
 #ifdef __WINDOWS__
     // disable buffering, we want logs immediately
@@ -909,7 +909,7 @@ int irobot_main(int argc, char *argv[]) {
     SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
 #endif
 
-    struct IRobotOptions args = {};
+    struct IRobotCore args = {};
 
     if (!args.parse_args(argc, argv)) {
         return 1;
