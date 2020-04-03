@@ -24,7 +24,7 @@ extern "C" {
 #include "fps_counter.hpp"
 
 namespace irobot::video {
-// forward declarations
+    // forward declarations
     typedef struct AVFrame AVFrame;
 
     class VideoBuffer {

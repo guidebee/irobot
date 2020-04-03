@@ -10,8 +10,6 @@
 
 namespace irobot::message {
 
-    using namespace irobot::util;
-
     ssize_t DeviceMessage::deserialize(const unsigned char *buf, size_t len
     ) {
 
@@ -24,7 +22,7 @@ namespace irobot::message {
         msg->type = (enum DeviceMessageType) buf[0];
         switch (msg->type) {
             case DEVICE_MSG_TYPE_CLIPBOARD: {
-                uint16_t clipboard_len = buffer_read16be(&buf[1]);
+                uint16_t clipboard_len = util::buffer_read16be(&buf[1]);
                 if (clipboard_len > len - 3) {
                     return 0; // not available
                 }

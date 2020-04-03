@@ -39,6 +39,7 @@ typedef struct in_addr IN_ADDR;
 #include <cstdio>
 
 namespace irobot::platform {
+
     socket_t net_connect(uint32_t addr, uint16_t port) {
         socket_t sock = socket(AF_INET, SOCK_STREAM, 0);
         if (sock == INVALID_SOCKET) {

@@ -71,12 +71,12 @@ namespace irobot {
         const char *const adb_cmd[] = {
                 "shell", "settings", "put", "system", "show_touches", value
         };
-        return adb_execute(serial, adb_cmd, ARRAY_LEN(adb_cmd));
+        return platform::adb_execute(serial, adb_cmd, ARRAY_LEN(adb_cmd));
     }
 
     void IRobotCore::wait_show_touches(ProcessType process) {
         // reap the process, ignore the result
-        process_check_success(process, "show_touches");
+        platform::process_check_success(process, "show_touches");
     }
 
     SDL_LogPriority IRobotCore::sdl_priority_from_av_level(int level) {
@@ -272,9 +272,9 @@ namespace irobot {
             }
 #endif
             if (!cannot_cont & options->turn_screen_off) {
-                struct ControlMessage msg{};
-                msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
-                msg.set_screen_power_mode.mode = SCREEN_POWER_MODE_OFF;
+                struct message::ControlMessage msg{};
+                msg.type = message::CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
+                msg.set_screen_power_mode.mode = message::SCREEN_POWER_MODE_OFF;
 
                 if (!controller.push_msg(&msg)) {
                     LOGW("Could not request 'set screen power mode'");

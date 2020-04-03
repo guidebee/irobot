@@ -20,8 +20,6 @@ extern "C" {
 
 namespace irobot::android {
 
-using namespace irobot::platform;
-
     bool Receiver::init(socket_t control_socket) {
         Receiver *receiver = this;
         if (!(receiver->mutex = SDL_CreateMutex())) {
@@ -36,21 +34,21 @@ using namespace irobot::platform;
         SDL_DestroyMutex(receiver->mutex);
     }
 
-    void Receiver::process_msg(struct DeviceMessage *msg) {
+    void Receiver::process_msg(struct message::DeviceMessage *msg) {
         switch (msg->type) {
-            case DEVICE_MSG_TYPE_CLIPBOARD:
+            case message::DEVICE_MSG_TYPE_CLIPBOARD:
                 LOGI("Device clipboard copied");
                 SDL_SetClipboardText(msg->clipboard.text);
                 break;
         }
     }
 
-
     bool Receiver::start() {
         Receiver *receiver = this;
         LOGD("Starting receiver thread");
 
-        receiver->thread = SDL_CreateThread(Receiver::run_receiver, "receiver", receiver);
+        receiver->thread = SDL_CreateThread(Receiver::run_receiver,
+                                            "receiver", receiver);
         if (!receiver->thread) {
             LOGC("Could not start receiver thread");
             return false;
@@ -68,7 +66,7 @@ using namespace irobot::platform;
     ssize_t Receiver::process_msgs(const unsigned char *buf, size_t len) {
         size_t head = 0;
         for (;;) {
-            struct DeviceMessage msg{};
+            struct message::DeviceMessage msg{};
             ssize_t r = msg.deserialize(&buf[head], len - head);
             if (r == -1) {
                 return -1;
@@ -96,8 +94,8 @@ using namespace irobot::platform;
 
         for (;;) {
             assert(head < DEVICE_MSG_SERIALIZED_MAX_SIZE);
-            ssize_t r = net_recv(receiver->control_socket, buf,
-                                 DEVICE_MSG_SERIALIZED_MAX_SIZE - head);
+            ssize_t r = platform::net_recv(receiver->control_socket, buf,
+                                           DEVICE_MSG_SERIALIZED_MAX_SIZE - head);
             if (r <= 0) {
                 LOGD("Receiver stopped");
                 break;

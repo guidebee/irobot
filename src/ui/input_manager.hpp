@@ -17,15 +17,15 @@
 
 namespace irobot::ui {
 
-    using namespace irobot::message;
-    using namespace irobot::android;
-    using namespace irobot::video;
+
+    using namespace android;
+    using namespace message;
 
     class InputManager {
     public:
         class Controller *controller;
 
-        struct VideoBuffer *video_buffer;
+        struct video::VideoBuffer *video_buffer;
         struct Screen *screen;
         bool prefer_text;
 
@@ -98,7 +98,7 @@ namespace irobot::ui {
         static void set_screen_power_mode(Controller *controller,
                                           enum ScreenPowerMode mode);
 
-        static void switch_fps_counter_state(FpsCounter *fps_counter);
+        static void switch_fps_counter_state(video::FpsCounter *fps_counter);
 
         static void clipboard_paste(Controller *controller);
 

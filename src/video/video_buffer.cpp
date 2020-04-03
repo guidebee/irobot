@@ -8,15 +8,10 @@
 #include <cassert>
 #include <util/lock.hpp>
 
-#include "util/lock.hpp"
-
 namespace irobot::video {
-
-    using namespace irobot::util;
 
     bool VideoBuffer::init(struct FpsCounter *fps_counter,
                            bool render_expired_frames) {
-        VideoBuffer *vb = this;
         this->fps_counter = fps_counter;
 
         if (!(this->decoding_frame = av_frame_alloc())) {
@@ -73,11 +68,11 @@ namespace irobot::video {
 
     void VideoBuffer::offer_decoded_frame(
             bool *previous_frame_skipped) {
-        mutex_lock(this->mutex);
+        util::mutex_lock(this->mutex);
         if (this->render_expired_frames) {
             // wait for the current (expired) frame to be consumed
             while (!this->rendering_frame_consumed && !this->interrupted) {
-                cond_wait(this->rendering_frame_consumed_cond, this->mutex);
+                util::cond_wait(this->rendering_frame_consumed_cond, this->mutex);
             }
         } else if (!this->rendering_frame_consumed) {
             this->fps_counter->add_skipped_frame();
@@ -88,7 +83,7 @@ namespace irobot::video {
         *previous_frame_skipped = !this->rendering_frame_consumed;
         this->rendering_frame_consumed = false;
 
-        mutex_unlock(this->mutex);
+        util::mutex_unlock(this->mutex);
     }
 
     const AVFrame *VideoBuffer::consume_rendered_frame() {
@@ -97,18 +92,18 @@ namespace irobot::video {
         this->fps_counter->add_rendered_frame();
         if (this->render_expired_frames) {
             // unblock video_buffer_offer_decoded_frame()
-            cond_signal(this->rendering_frame_consumed_cond);
+            util::cond_signal(this->rendering_frame_consumed_cond);
         }
         return this->rendering_frame;
     }
 
     void VideoBuffer::interrupt() {
         if (this->render_expired_frames) {
-            mutex_lock(this->mutex);
+            util::mutex_lock(this->mutex);
             this->interrupted = true;
-            mutex_unlock(this->mutex);
+            util::mutex_unlock(this->mutex);
             // wake up blocking wait
-            cond_signal(this->rendering_frame_consumed_cond);
+            util::cond_signal(this->rendering_frame_consumed_cond);
         }
     }
 

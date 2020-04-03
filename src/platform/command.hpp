@@ -67,6 +67,7 @@ typedef int ExitCodeType;
 #include "config.hpp"
 
 namespace irobot::platform {
+
     enum ProcessResult {
         PROCESS_SUCCESS,
         PROCESS_ERROR_GENERIC,

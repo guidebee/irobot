@@ -24,7 +24,6 @@ extern "C" {
 
 namespace irobot::android {
 
-    using namespace irobot::platform;
 
     typedef enum {
         ACTION_INSTALL_APK,
@@ -73,12 +72,12 @@ namespace irobot::android {
 
         static ProcessType
         install_apk(const char *serial, const char *file) {
-            return adb_install(serial, file);
+            return platform::adb_install(serial, file);
         }
 
         static ProcessType
         push_file(const char *serial, const char *file, const char *push_target) {
-            return adb_push(serial, file, push_target);
+            return platform::adb_push(serial, file, push_target);
         }
 
     };

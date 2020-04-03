@@ -23,8 +23,6 @@ extern "C" {
 
 namespace irobot::android {
 
-    using namespace irobot::message;
-
 // receive events from the device
 // managed by the controller
 class Receiver {
@@ -44,7 +42,7 @@ class Receiver {
 
         void join();
 
-        static void process_msg(struct DeviceMessage *msg);
+        static void process_msg(struct message::DeviceMessage *msg);
 
         static ssize_t process_msgs(const unsigned char *buf, size_t len);
 

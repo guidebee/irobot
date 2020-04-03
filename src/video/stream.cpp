@@ -15,8 +15,7 @@
 
 namespace irobot::video {
 
-    using namespace irobot::platform;
-    using namespace irobot::util;
+
 
     bool VideoStream::recv_packet(AVPacket *packet) {
         // The video stream contains raw packets, without time information. When we
@@ -32,13 +31,13 @@ namespace irobot::video {
         // It is followed by <packet_size> bytes containing the packet/frame.
 
         uint8_t header[HEADER_SIZE];
-        ssize_t r = net_recv_all(this->socket, header, HEADER_SIZE);
+        ssize_t r = platform::net_recv_all(this->socket, header, HEADER_SIZE);
         if (r < HEADER_SIZE) {
             return false;
         }
 
-        uint64_t pts = buffer_read64be(header);
-        uint32_t len = buffer_read32be(&header[8]);
+        uint64_t pts = util::buffer_read64be(header);
+        uint32_t len = util::buffer_read32be(&header[8]);
         assert(pts == NO_PTS || (pts & 0x8000000000000000) == 0);
         assert(len);
 
@@ -47,7 +46,7 @@ namespace irobot::video {
             return false;
         }
 
-        r = net_recv_all(this->socket, packet->data, len);
+        r = platform::net_recv_all(this->socket, packet->data, len);
         if (r < 0 || ((uint32_t) r) < len) {
             av_packet_unref(packet);
             return false;

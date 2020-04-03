@@ -11,10 +11,9 @@
 #include "ui/event_converter.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"
+#include "message/control_msg.hpp"
 
 namespace irobot::ui {
-
-
 
     static const int ACTION_DOWN = 1;
     static const int ACTION_UP = 1 << 1;
@@ -141,7 +140,7 @@ namespace irobot::ui {
         }
     }
 
-    void InputManager::switch_fps_counter_state(FpsCounter *fps_counter) {
+    void InputManager::switch_fps_counter_state(video::FpsCounter *fps_counter) {
         // the started state can only be written from the current thread, so there
         // is no ToCToU issue
         if (fps_counter->is_started()) {
@@ -347,7 +346,7 @@ namespace irobot::ui {
                     return;
                 case SDLK_i:
                     if (!shift && cmd && !repeat && down) {
-                        struct FpsCounter *fps_counter =
+                        struct video::FpsCounter *fps_counter =
                                 this->video_buffer->fps_counter;
                         switch_fps_counter_state(fps_counter);
                     }

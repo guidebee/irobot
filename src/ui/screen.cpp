@@ -13,21 +13,16 @@
 #include "ui/events.hpp"
 #include "ui/input_manager.hpp"
 
-
 #define DISPLAY_MARGINS 96
 
 namespace irobot {
 
-    using namespace irobot::video;
-    using namespace irobot::util;
-
     extern ui::Screen screen;
     extern ui::InputManager input_manager;
-    extern VideoBuffer video_buffer;
-    extern FileHandler file_handler;
+    extern video::VideoBuffer video_buffer;
+    extern android::FileHandler file_handler;
 
     namespace ui {
-
 
         // get the window size in a struct size
         struct Size Screen::get_window_size(SDL_Window *window) {
@@ -310,16 +305,16 @@ namespace irobot {
                                  frame->data[2], frame->linesize[2]);
         }
 
-        bool Screen::update_frame(VideoBuffer *vb) {
-            mutex_lock(vb->mutex);
+        bool Screen::update_frame(video::VideoBuffer *vb) {
+            util::mutex_lock(vb->mutex);
             const AVFrame *frame = vb->consume_rendered_frame();
             struct Size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
             if (!prepare_for_frame(new_frame_size)) {
-                mutex_unlock(vb->mutex);
+                util::mutex_unlock(vb->mutex);
                 return false;
             }
             update_texture(frame);
-            mutex_unlock(vb->mutex);
+            util::mutex_unlock(vb->mutex);
 
             this->render();
             return true;

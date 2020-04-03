@@ -13,10 +13,7 @@
 
 namespace irobot::video {
 
-    using namespace irobot::util;
-
     static const AVRational SCRCPY_TIME_BASE = {1, 1000000}; // timestamps in us
-
 
     bool Recorder::init(
             const char *filename,
@@ -200,17 +197,17 @@ namespace irobot::video {
         auto *recorder = static_cast<struct Recorder *>(data);
 
         for (;;) {
-            mutex_lock(recorder->mutex);
+            util::mutex_lock(recorder->mutex);
 
             while (!recorder->stopped && queue_is_empty(&recorder->queue)) {
-                cond_wait(recorder->queue_cond, recorder->mutex);
+                util::cond_wait(recorder->queue_cond, recorder->mutex);
             }
 
             // if stopped is set, continue to process the remaining events (to
             // finish the recording) before actually stopping
 
             if (recorder->stopped && queue_is_empty(&recorder->queue)) {
-                mutex_unlock(recorder->mutex);
+                util::mutex_unlock(recorder->mutex);
                 struct RecordPacket *last = recorder->previous;
                 if (last) {
                     // assign an arbitrary duration to the last packet
@@ -230,7 +227,7 @@ namespace irobot::video {
             struct RecordPacket *rec;
             queue_take(&recorder->queue, next, &rec);
 
-            mutex_unlock(recorder->mutex);
+            util::mutex_unlock(recorder->mutex);
 
             // recorder->previous is only written from this thread, no need to lock
             struct RecordPacket *previous = recorder->previous;
@@ -253,11 +250,11 @@ namespace irobot::video {
             if (!ok) {
                 LOGE("Could not record packet");
 
-                mutex_lock(recorder->mutex);
+                util::mutex_lock(recorder->mutex);
                 recorder->failed = true;
                 // discard pending packets
                 recorder_queue_clear(&recorder->queue);
-                mutex_unlock(recorder->mutex);
+                util::mutex_unlock(recorder->mutex);
                 break;
             }
 
@@ -282,10 +279,10 @@ namespace irobot::video {
 
     void Recorder::stop() {
         Recorder *recorder = this;
-        mutex_lock(recorder->mutex);
+        util::mutex_lock(recorder->mutex);
         recorder->stopped = true;
-        cond_signal(recorder->queue_cond);
-        mutex_unlock(recorder->mutex);
+        util::cond_signal(recorder->queue_cond);
+        util::mutex_unlock(recorder->mutex);
     }
 
     void Recorder::join() {
@@ -295,7 +292,7 @@ namespace irobot::video {
 
     bool Recorder::push(const AVPacket *packet) {
         Recorder *recorder = this;
-        mutex_lock(recorder->mutex);
+        util::mutex_lock(recorder->mutex);
         assert(!recorder->stopped);
 
         if (recorder->failed) {
@@ -310,9 +307,9 @@ namespace irobot::video {
         }
 
         queue_push(&recorder->queue, next, rec);
-        cond_signal(recorder->queue_cond);
+        util::cond_signal(recorder->queue_cond);
 
-        mutex_unlock(recorder->mutex);
+        util::mutex_unlock(recorder->mutex);
         return true;
     }
 

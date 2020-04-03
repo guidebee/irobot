@@ -84,7 +84,7 @@ TEST_CASE("options", "[ui][cli]") {
     REQUIRE(opts->port == 1234);
     REQUIRE(!strcmp(opts->push_target, "/sdcard/Movies"));
     REQUIRE(!strcmp(opts->record_filename, "file"));
-    REQUIRE(opts->record_format == RECORDER_FORMAT_MKV);
+    REQUIRE(opts->record_format == video::RECORDER_FORMAT_MKV);
     REQUIRE(opts->render_expired_frames);
     REQUIRE(!strcmp(opts->serial, "0123456789abcdef"));
     REQUIRE(opts->show_touches);
@@ -118,5 +118,5 @@ TEST_CASE("options2", "[ui][cli]") {
     REQUIRE(!opts->control);
     REQUIRE(!opts->display);
     REQUIRE(!strcmp(opts->record_filename, "file.mp4"));
-    REQUIRE(opts->record_format == RECORDER_FORMAT_MP4);
+    REQUIRE(opts->record_format == video::RECORDER_FORMAT_MP4);
 }

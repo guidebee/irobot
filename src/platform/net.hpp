@@ -48,7 +48,7 @@ namespace irobot::platform {
 
     socket_t net_accept(socket_t server_socket);
 
-// the _all versions wait/retry until len bytes have been written/read
+    // the _all versions wait/retry until len bytes have been written/read
     ssize_t net_recv(socket_t socket, void *buf, size_t len);
 
     ssize_t net_recv_all(socket_t socket, void *buf, size_t len);
@@ -57,7 +57,7 @@ namespace irobot::platform {
 
     ssize_t net_send_all(socket_t socket, const void *buf, size_t len);
 
-// how is SHUT_RD (read), SHUT_WR (write) or SHUT_RDWR (both)
+    // how is SHUT_RD (read), SHUT_WR (write) or SHUT_RDWR (both)
     bool net_shutdown(socket_t socket, int how);
 
     bool net_close(socket_t socket);

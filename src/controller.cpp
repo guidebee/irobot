@@ -12,9 +12,6 @@
 
 namespace irobot {
 
-    using namespace irobot::message;
-    using namespace irobot::util;
-    using namespace irobot::platform;
 
     bool Controller::init(socket_t control_socket) {
 
@@ -45,7 +42,7 @@ namespace irobot {
         SDL_DestroyCond(this->msg_cond);
         SDL_DestroyMutex(this->mutex);
 
-        struct ControlMessage msg{};
+        struct message::ControlMessage msg{};
         while (cbuf_take(&this->queue, &msg)) {
             msg.destroy();
         }
@@ -54,26 +51,27 @@ namespace irobot {
     }
 
     bool Controller::push_msg(
-            const struct ControlMessage *msg) {
-        mutex_lock(this->mutex);
+            const struct message::ControlMessage *msg) {
+        util::mutex_lock(this->mutex);
         bool was_empty = cbuf_is_empty(&this->queue);
         bool res = cbuf_push(&this->queue, *msg);
         if (was_empty) {
-            cond_signal(this->msg_cond);
+            util::cond_signal(this->msg_cond);
         }
-        mutex_unlock(this->mutex);
+        util::mutex_unlock(this->mutex);
         return res;
     }
 
     bool Controller::process_msg(
-            struct ControlMessage *msg) {
+            struct message::ControlMessage *msg) {
 
         unsigned char serialized_msg[CONTROL_MSG_SERIALIZED_MAX_SIZE];
         int length = msg->serialize(serialized_msg);
         if (!length) {
             return false;
         }
-        int w = net_send_all(this->control_socket, serialized_msg, length);
+        int w = platform::net_send_all(this->control_socket,
+                serialized_msg, length);
         return w == length;
     }
 
@@ -81,20 +79,20 @@ namespace irobot {
         auto *controller = static_cast<Controller *>(data);
 
         for (;;) {
-            mutex_lock(controller->mutex);
+            util::mutex_lock(controller->mutex);
             while (!controller->stopped && cbuf_is_empty(&controller->queue)) {
-                cond_wait(controller->msg_cond, controller->mutex);
+                util::cond_wait(controller->msg_cond, controller->mutex);
             }
             if (controller->stopped) {
                 // stop immediately, do not process further msgs
-                mutex_unlock(controller->mutex);
+                util::mutex_unlock(controller->mutex);
                 break;
             }
-            struct ControlMessage msg{};
+            struct message::ControlMessage msg{};
             bool non_empty = cbuf_take(&controller->queue, &msg);
             assert(non_empty);
             (void) non_empty;
-            mutex_unlock(controller->mutex);
+            util::mutex_unlock(controller->mutex);
 
             bool ok = controller->process_msg(&msg);
             msg.destroy();
@@ -127,10 +125,10 @@ namespace irobot {
     }
 
     void Controller::stop() {
-        mutex_lock(this->mutex);
+        util::mutex_lock(this->mutex);
         this->stopped = true;
-        cond_signal(this->msg_cond);
-        mutex_unlock(this->mutex);
+        util::cond_signal(this->msg_cond);
+        util::mutex_unlock(this->mutex);
     }
 
     void Controller::join() {

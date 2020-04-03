@@ -26,9 +26,9 @@ extern "C" {
 
 namespace irobot {
 
-    using namespace irobot::message;
 
-    struct ControlMessageQueue CBUF(struct ControlMessage, 64);
+
+    struct ControlMessageQueue CBUF(struct message::ControlMessage, 64);
 
 
     class Controller {
@@ -40,7 +40,7 @@ namespace irobot {
         bool stopped;
         struct ControlMessageQueue queue;
 
-        class Receiver receiver;
+        class android::Receiver receiver;
 
         bool init(socket_t control_socket);
 
@@ -52,12 +52,12 @@ namespace irobot {
 
         void join();
 
-        bool push_msg(const struct ControlMessage *msg);
+        bool push_msg(const struct message::ControlMessage *msg);
 
         static int run_controller(void *data);
 
     private:
-        bool process_msg(struct ControlMessage *msg);
+        bool process_msg(struct message::ControlMessage *msg);
 
     };
 }

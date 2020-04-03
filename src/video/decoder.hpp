@@ -19,6 +19,7 @@ extern "C" {
 #include "config.hpp"
 
 namespace irobot::video {
+
     class VideoBuffer;
 
     class Decoder {

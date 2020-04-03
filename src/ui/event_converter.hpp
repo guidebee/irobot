@@ -25,7 +25,6 @@ namespace irobot::ui {
 
     using namespace irobot::android;
 
-
     bool convert_keycode_action(SDL_EventType from,
                                 enum AndroidKeyEventAction *to);
 
