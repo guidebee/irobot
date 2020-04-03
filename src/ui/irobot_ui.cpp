@@ -12,7 +12,7 @@
 
 Screen screen{};
 
-extern struct video_buffer video_buffer;
+extern struct VideoBuffer video_buffer;
 extern class Controller controller;
 extern class FileHandler file_handler;
 

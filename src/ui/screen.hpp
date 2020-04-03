@@ -23,7 +23,7 @@ extern "C" {
 #include "common.hpp"
 #include "video/stream.hpp"
 
-struct video_buffer;
+struct VideoBuffer;
 
 class Screen {
 public:
@@ -61,7 +61,7 @@ public:
     void destroy();
 
     // resize if necessary and write the rendered frame into the texture
-    bool update_frame(struct video_buffer *vb);
+    bool update_frame(struct VideoBuffer *vb);
 
     // render the texture to the renderer
     void render();

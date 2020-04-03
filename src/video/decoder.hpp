@@ -18,15 +18,15 @@ extern "C" {
 
 #include "config.hpp"
 
-struct video_buffer;
+struct VideoBuffer;
 
 struct decoder {
-    struct video_buffer *video_buffer;
+    VideoBuffer *video_buffer;
     AVCodecContext *codec_ctx;
 };
 
 void
-decoder_init(struct decoder *decoder, struct video_buffer *vb);
+decoder_init(struct decoder *decoder, struct VideoBuffer *vb);
 
 bool
 decoder_open(struct decoder *decoder, const AVCodec *codec);

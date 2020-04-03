@@ -20,7 +20,7 @@ class InputManager {
 public:
     class Controller *controller;
 
-    struct video_buffer *video_buffer;
+    struct VideoBuffer *video_buffer;
     struct Screen *screen;
     bool prefer_text;
 

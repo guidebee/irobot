@@ -26,7 +26,7 @@
 
 static Server server{};
 static struct fps_counter fps_counter;
-struct video_buffer video_buffer;
+struct VideoBuffer video_buffer;
 static struct stream stream;
 
 static struct recorder recorder;
@@ -178,7 +178,7 @@ IRobotOptions::init() {
         }
         fps_counter_initialized = true;
 
-        if (!cannot_cont & !video_buffer_init(&video_buffer, &fps_counter,
+        if (!cannot_cont & !video_buffer.init( &fps_counter,
                                               options->render_expired_frames)) {
             cannot_cont = true;
         }
@@ -312,7 +312,7 @@ IRobotOptions::init() {
     }
 
     if (video_buffer_initialized) {
-        video_buffer_destroy(&video_buffer);
+        video_buffer.destroy();
     }
 
     if (fps_counter_initialized) {

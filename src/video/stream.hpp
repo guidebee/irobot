@@ -30,11 +30,11 @@ extern "C" {
 #include "util/net.hpp"
 #include "video/decoder.hpp"
 
-struct video_buffer;
+struct VideoBuffer;
 
 struct stream {
     socket_t socket;
-    struct video_buffer *video_buffer;
+    struct VideoBuffer *video_buffer;
     SDL_Thread *thread;
     struct decoder *decoder;
     struct recorder *recorder;

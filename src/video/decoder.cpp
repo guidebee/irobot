@@ -14,7 +14,7 @@
 static void
 push_frame(struct decoder *decoder) {
     bool previous_frame_skipped;
-    video_buffer_offer_decoded_frame(decoder->video_buffer,
+    decoder->video_buffer->offer_decoded_frame(
                                      &previous_frame_skipped);
     if (previous_frame_skipped) {
         // the previous EVENT_NEW_FRAME will consume this frame
@@ -27,7 +27,7 @@ push_frame(struct decoder *decoder) {
 }
 
 void
-decoder_init(struct decoder *decoder, struct video_buffer *vb) {
+decoder_init(struct decoder *decoder, struct VideoBuffer *vb) {
     decoder->video_buffer = vb;
 }
 
@@ -79,5 +79,5 @@ decoder_push(struct decoder *decoder, const AVPacket *packet) {
 
 void
 decoder_interrupt(struct decoder *decoder) {
-    video_buffer_interrupt(decoder->video_buffer);
+    decoder->video_buffer->interrupt();
 }

@@ -10,8 +10,9 @@
 #include "util/lock.hpp"
 
 bool
-video_buffer_init(struct video_buffer *vb, struct fps_counter *fps_counter,
+VideoBuffer::init(struct fps_counter *fps_counter,
                   bool render_expired_frames) {
+    VideoBuffer *vb = this;
     vb->fps_counter = fps_counter;
 
     if (!(vb->decoding_frame = av_frame_alloc())) {
@@ -52,7 +53,8 @@ video_buffer_init(struct video_buffer *vb, struct fps_counter *fps_counter,
 }
 
 void
-video_buffer_destroy(struct video_buffer *vb) {
+VideoBuffer::destroy() {
+    VideoBuffer *vb = this;
     if (vb->render_expired_frames) {
         SDL_DestroyCond(vb->rendering_frame_consumed_cond);
     }
@@ -61,16 +63,18 @@ video_buffer_destroy(struct video_buffer *vb) {
     av_frame_free(&vb->decoding_frame);
 }
 
-static void
-video_buffer_swap_frames(struct video_buffer *vb) {
+void
+VideoBuffer::swap_frames() {
+    VideoBuffer *vb = this;
     AVFrame *tmp = vb->decoding_frame;
     vb->decoding_frame = vb->rendering_frame;
     vb->rendering_frame = tmp;
 }
 
 void
-video_buffer_offer_decoded_frame(struct video_buffer *vb,
-                                 bool *previous_frame_skipped) {
+VideoBuffer::offer_decoded_frame(
+        bool *previous_frame_skipped) {
+    VideoBuffer *vb = this;
     mutex_lock(vb->mutex);
     if (vb->render_expired_frames) {
         // wait for the current (expired) frame to be consumed
@@ -81,7 +85,7 @@ video_buffer_offer_decoded_frame(struct video_buffer *vb,
         fps_counter_add_skipped_frame(vb->fps_counter);
     }
 
-    video_buffer_swap_frames(vb);
+    vb->swap_frames();
 
     *previous_frame_skipped = !vb->rendering_frame_consumed;
     vb->rendering_frame_consumed = false;
@@ -90,7 +94,8 @@ video_buffer_offer_decoded_frame(struct video_buffer *vb,
 }
 
 const AVFrame *
-video_buffer_consume_rendered_frame(struct video_buffer *vb) {
+VideoBuffer::consume_rendered_frame() {
+    VideoBuffer *vb = this;
     assert(!vb->rendering_frame_consumed);
     vb->rendering_frame_consumed = true;
     fps_counter_add_rendered_frame(vb->fps_counter);
@@ -102,7 +107,8 @@ video_buffer_consume_rendered_frame(struct video_buffer *vb) {
 }
 
 void
-video_buffer_interrupt(struct video_buffer *vb) {
+VideoBuffer::interrupt() {
+    VideoBuffer *vb = this;
     if (vb->render_expired_frames) {
         mutex_lock(vb->mutex);
         vb->interrupted = true;

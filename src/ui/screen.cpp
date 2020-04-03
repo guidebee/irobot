@@ -321,10 +321,10 @@ update_texture(Screen *screen, const AVFrame *frame) {
 }
 
 bool
-Screen::update_frame(struct video_buffer *vb) {
+Screen::update_frame(VideoBuffer *vb) {
     Screen *screen = this;
     mutex_lock(vb->mutex);
-    const AVFrame *frame = video_buffer_consume_rendered_frame(vb);
+    const AVFrame *frame = vb->consume_rendered_frame();
     struct size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
     if (!prepare_for_frame(screen, new_frame_size)) {
         mutex_unlock(vb->mutex);
