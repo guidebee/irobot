@@ -30,13 +30,10 @@ extern "C" {
 #include "util/net.hpp"
 #include "video/decoder.hpp"
 
-struct VideoBuffer;
-
 struct stream {
     socket_t socket;
-    struct VideoBuffer *video_buffer;
     SDL_Thread *thread;
-    struct decoder *decoder;
+    struct Decoder *decoder;
     struct recorder *recorder;
     AVCodecContext *codec_ctx;
     AVCodecParserContext *parser;
@@ -48,7 +45,7 @@ struct stream {
 
 void
 stream_init(struct stream *stream, socket_t socket,
-            struct decoder *decoder, struct recorder *recorder);
+            struct Decoder *decoder, struct recorder *recorder);
 
 bool
 stream_start(struct stream *stream);

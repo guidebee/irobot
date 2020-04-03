@@ -18,26 +18,25 @@ extern "C" {
 
 #include "config.hpp"
 
-struct VideoBuffer;
+class VideoBuffer;
 
-struct decoder {
+class Decoder {
+public:
     VideoBuffer *video_buffer;
     AVCodecContext *codec_ctx;
+
+    void push_frame();
+
+    void init(VideoBuffer *vb);
+
+    bool open(const AVCodec *codec);
+
+    void close();
+
+    bool push(const AVPacket *packet);
+
+    void interrupt();
 };
 
-void
-decoder_init(struct decoder *decoder, struct VideoBuffer *vb);
-
-bool
-decoder_open(struct decoder *decoder, const AVCodec *codec);
-
-void
-decoder_close(struct decoder *decoder);
-
-bool
-decoder_push(struct decoder *decoder, const AVPacket *packet);
-
-void
-decoder_interrupt(struct decoder *decoder);
 
 #endif //ANDROID_IROBOT_DECODER_HPP

@@ -35,7 +35,7 @@ class Controller controller{};
 
 struct FileHandler file_handler;
 
-static struct decoder decoder;
+static struct Decoder decoder;
 extern struct InputManager input_manager;
 extern struct Screen screen;
 
@@ -171,7 +171,7 @@ IRobotOptions::init() {
         cannot_cont = true;
     }
 
-    struct decoder *dec = nullptr;
+    Decoder *dec = nullptr;
     if (!cannot_cont & options->display) {
         if (!fps_counter_init(&fps_counter)) {
             cannot_cont = true;
@@ -192,7 +192,7 @@ IRobotOptions::init() {
             file_handler_initialized = true;
         }
 
-        decoder_init(&decoder, &video_buffer);
+        decoder.init( &video_buffer);
         dec = &decoder;
     }
 

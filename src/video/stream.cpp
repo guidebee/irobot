@@ -72,7 +72,7 @@ process_config_packet(struct stream *stream, AVPacket *packet) {
 
 static bool
 process_frame(struct stream *stream, AVPacket *packet) {
-    if (stream->decoder && !decoder_push(stream->decoder, packet)) {
+    if (stream->decoder && !stream->decoder->push( packet)) {
         return false;
     }
 
@@ -188,7 +188,7 @@ run_stream(void *data) {
         goto end;
     }
 
-    if (stream->decoder && !decoder_open(stream->decoder, codec)) {
+    if (stream->decoder && !stream->decoder->open( codec)) {
         LOGE("Could not open decoder");
         goto finally_free_codec_ctx;
     }
@@ -250,7 +250,7 @@ run_stream(void *data) {
     }
     finally_close_decoder:
     if (stream->decoder) {
-        decoder_close(stream->decoder);
+        stream->decoder->close();
     }
     finally_free_codec_ctx:
     avcodec_free_context(&stream->codec_ctx);
@@ -261,7 +261,7 @@ run_stream(void *data) {
 
 void
 stream_init(struct stream *stream, socket_t socket,
-            struct decoder *decoder, struct recorder *recorder) {
+            struct Decoder *decoder, struct recorder *recorder) {
     stream->socket = socket;
     stream->decoder = decoder,
             stream->recorder = recorder;
@@ -283,7 +283,7 @@ stream_start(struct stream *stream) {
 void
 stream_stop(struct stream *stream) {
     if (stream->decoder) {
-        decoder_interrupt(stream->decoder);
+        stream->decoder->interrupt();
     }
 }
 
