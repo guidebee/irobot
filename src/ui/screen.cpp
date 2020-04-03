@@ -548,7 +548,7 @@ namespace irobot {
                     } else {
                         action = ACTION_PUSH_FILE;
                     }
-                    file_handler.request(action, event->drop.file);
+                    file_handler.Request(action, event->drop.file);
                     break;
                 }
             }

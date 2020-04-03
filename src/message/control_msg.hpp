@@ -81,16 +81,16 @@ namespace irobot::message {
 
         // buf size must be at least CONTROL_MSG_SERIALIZED_MAX_SIZE
         // return the number of bytes written
-        size_t serialize(unsigned char *buf);
+        size_t Serialize(unsigned char *buf);
 
-        void destroy();
+        void Destroy();
 
-        static void write_position(uint8_t *buf, const struct Position *position);
+        static void WritePosition(uint8_t *buf, const struct Position *position);
 
         // write length (2 bytes) + string (non nul-terminated)
-        static size_t write_string(const char *utf8, size_t max_len, unsigned char *buf);
+        static size_t WriteString(const char *utf8, size_t max_len, unsigned char *buf);
 
-        static uint16_t to_fixed_point_16(float f);
+        static uint16_t ToFixedPoint16(float f);
     };
 }
 #endif //ANDROID_IROBOT_CONTROL_MSG_HPP

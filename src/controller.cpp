@@ -17,17 +17,17 @@ namespace irobot {
 
         cbuf_init(&this->queue);
 
-        if (!this->receiver.init(control_socket)) {
+        if (!this->receiver.Init(control_socket)) {
             return false;
         }
 
         if (!(this->mutex = SDL_CreateMutex())) {
-            this->receiver.destroy();
+            this->receiver.Destroy();
             return false;
         }
 
         if (!(this->msg_cond = SDL_CreateCond())) {
-            this->receiver.destroy();
+            this->receiver.Destroy();
             SDL_DestroyMutex(this->mutex);
             return false;
         }
@@ -44,10 +44,10 @@ namespace irobot {
 
         struct message::ControlMessage msg{};
         while (cbuf_take(&this->queue, &msg)) {
-            msg.destroy();
+            msg.Destroy();
         }
 
-        this->receiver.destroy();
+        this->receiver.Destroy();
     }
 
     bool Controller::push_msg(
@@ -66,7 +66,7 @@ namespace irobot {
             struct message::ControlMessage *msg) {
 
         unsigned char serialized_msg[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-        int length = msg->serialize(serialized_msg);
+        int length = msg->Serialize(serialized_msg);
         if (!length) {
             return false;
         }
@@ -95,7 +95,7 @@ namespace irobot {
             util::mutex_unlock(controller->mutex);
 
             bool ok = controller->process_msg(&msg);
-            msg.destroy();
+            msg.Destroy();
             if (!ok) {
                 LOGD("Could not write msg to socket");
                 break;
@@ -115,7 +115,7 @@ namespace irobot {
             return false;
         }
 
-        if (!this->receiver.start()) {
+        if (!this->receiver.Start()) {
             this->stop();
             SDL_WaitThread(this->thread, nullptr);
             return false;
@@ -133,7 +133,7 @@ namespace irobot {
 
     void Controller::join() {
         SDL_WaitThread(this->thread, nullptr);
-        this->receiver.join();
+        this->receiver.Join();
     }
 
 }

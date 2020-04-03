@@ -24,14 +24,12 @@ extern "C" {
 
 namespace irobot::android {
 
-
     typedef enum {
         ACTION_INSTALL_APK,
         ACTION_PUSH_FILE,
     } FileHandlerActionType;
 
     struct FileHandlerRequest {
-
         FileHandlerActionType action;
         char *file;
 
@@ -55,28 +53,27 @@ namespace irobot::android {
         ProcessType current_process;
         struct FileHandlerRequestQueue queue;
 
-        bool init(const char *serial, const char *push_target);
+        bool Init(const char *serial, const char *push_target);
 
-        void destroy();
+        void Destroy();
 
-        bool start();
+        bool Start();
 
-        void stop();
+        void Stop();
 
-        void join();
+        void Join();
 
         // take ownership of file, and will SDL_free() it
-        bool request(FileHandlerActionType action, char *file);
+        bool Request(FileHandlerActionType action, char *file);
 
-        static int run_file_handler(void *data);
 
-        static ProcessType
-        install_apk(const char *serial, const char *file) {
+        static int RunFileHandler(void *data);
+
+        static ProcessType InstallApk(const char *serial, const char *file) {
             return platform::adb_install(serial, file);
         }
 
-        static ProcessType
-        push_file(const char *serial, const char *file, const char *push_target) {
+        static ProcessType PushFile(const char *serial, const char *file, const char *push_target) {
             return platform::adb_push(serial, file, push_target);
         }
 

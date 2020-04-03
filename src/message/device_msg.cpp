@@ -10,7 +10,7 @@
 
 namespace irobot::message {
 
-    ssize_t DeviceMessage::deserialize(const unsigned char *buf, size_t len
+    ssize_t DeviceMessage::Deserialize(const unsigned char *buf, size_t len
     ) {
 
         struct DeviceMessage *msg = this;
@@ -45,7 +45,7 @@ namespace irobot::message {
         }
     }
 
-    void DeviceMessage::destroy() {
+    void DeviceMessage::Destroy() {
         struct DeviceMessage *msg = this;
         if (msg->type == DEVICE_MSG_TYPE_CLIPBOARD) {
             SDL_free(msg->clipboard.text);

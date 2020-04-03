@@ -15,7 +15,7 @@
 
 namespace irobot::android {
 
-    bool FileHandler::init(const char *serial,
+    bool FileHandler::Init(const char *serial,
                            const char *push_target) {
 
         cbuf_init(&this->queue);
@@ -49,7 +49,7 @@ namespace irobot::android {
         return true;
     }
 
-    void FileHandler::destroy() {
+    void FileHandler::Destroy() {
         SDL_DestroyCond(this->event_cond);
         SDL_DestroyMutex(this->mutex);
         SDL_free(this->serial);
@@ -61,12 +61,12 @@ namespace irobot::android {
     }
 
 
-    bool FileHandler::request(
+    bool FileHandler::Request(
             FileHandlerActionType action, char *file) {
 
         // start file_handler if it's used for the first time
         if (!this->initialized) {
-            if (!this->start()) {
+            if (!this->Start()) {
                 return false;
             }
             this->initialized = true;
@@ -90,9 +90,9 @@ namespace irobot::android {
     }
 
 
-    bool FileHandler::start() {
+    bool FileHandler::Start() {
         LOGD("Starting file_handler thread");
-        this->thread = SDL_CreateThread(FileHandler::run_file_handler, "file_handler",
+        this->thread = SDL_CreateThread(FileHandler::RunFileHandler, "file_handler",
                                         this);
         if (!this->thread) {
             LOGC("Could not start file_handler thread");
@@ -101,7 +101,7 @@ namespace irobot::android {
         return true;
     }
 
-    void FileHandler::stop() {
+    void FileHandler::Stop() {
         util::mutex_lock(this->mutex);
         this->stopped = true;
         util::cond_signal(this->event_cond);
@@ -115,11 +115,11 @@ namespace irobot::android {
         util::mutex_unlock(this->mutex);
     }
 
-    void FileHandler::join() {
+    void FileHandler::Join() {
         SDL_WaitThread(this->thread, nullptr);
     }
 
-    int FileHandler::run_file_handler(void *data) {
+    int FileHandler::RunFileHandler(void *data) {
         auto *file_handler = (FileHandler *) data;
 
         for (;;) {
@@ -141,11 +141,11 @@ namespace irobot::android {
             ProcessType process;
             if (req.action == ACTION_INSTALL_APK) {
                 LOGI("Installing %s...", req.file);
-                process = install_apk(file_handler->serial, req.file);
+                process = InstallApk(file_handler->serial, req.file);
             } else {
                 LOGI("Pushing %s...", req.file);
-                process = push_file(file_handler->serial, req.file,
-                                    file_handler->push_target);
+                process = PushFile(file_handler->serial, req.file,
+                                   file_handler->push_target);
             }
             file_handler->current_process = process;
             util::mutex_unlock(file_handler->mutex);

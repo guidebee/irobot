@@ -38,9 +38,9 @@ namespace irobot::message {
             } clipboard;
         };
 
-        ssize_t deserialize(const unsigned char *buf, size_t len);
+        ssize_t Deserialize(const unsigned char *buf, size_t len);
 
-        void destroy();
+        void Destroy();
     };
 
 }

@@ -22,7 +22,7 @@ TEST_CASE("serialize inject keycode", "[message][ControlMessage]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = msg.serialize(buf);
+    int size = msg.Serialize(buf);
     REQUIRE(size == 10);
 
     const unsigned char expected[] = {
@@ -43,7 +43,7 @@ TEST_CASE("serialize inject text", "[message][ControlMessage]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = msg.serialize(buf);
+    int size = msg.Serialize(buf);
     REQUIRE(size == 16);
 
     const unsigned char expected[] = {
@@ -63,7 +63,7 @@ TEST_CASE("serialize inject text long", "[message][ControlMessage]") {
     msg.inject_text.text = text;
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = msg.serialize(buf);
+    int size = msg.Serialize(buf);
     REQUIRE(size == 3 + CONTROL_MSG_TEXT_MAX_LENGTH);
 
     unsigned char expected[3 + CONTROL_MSG_TEXT_MAX_LENGTH];
@@ -99,7 +99,7 @@ TEST_CASE("serialize inject touch event", "[message][ControlMessage]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = msg.serialize(buf);
+    int size = msg.Serialize(buf);
     REQUIRE(size == 28);
 
     const unsigned char expected[] = {
@@ -135,7 +135,7 @@ TEST_CASE("serialize inject scroll event", "[message][ControlMessage]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = msg.serialize(buf);
+    int size = msg.Serialize(buf);
     REQUIRE(size == 21);
 
     const unsigned char expected[] = {
@@ -154,7 +154,7 @@ TEST_CASE("serialize back or screen on", "[message][ControlMessage]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = msg.serialize(buf);
+    int size = msg.Serialize(buf);
     REQUIRE(size == 1);
 
     const unsigned char expected[] = {
@@ -169,7 +169,7 @@ TEST_CASE("serialize expand notification panel", "[message][ControlMessage]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = msg.serialize(buf);
+    int size = msg.Serialize(buf);
     REQUIRE(size == 1);
 
     const unsigned char expected[] = {
@@ -184,7 +184,7 @@ TEST_CASE("serialize collapse notification panel", "[message][ControlMessage]") 
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = msg.serialize(buf);
+    int size = msg.Serialize(buf);
     REQUIRE(size == 1);
 
     const unsigned char expected[] = {
@@ -199,7 +199,7 @@ TEST_CASE("serialize get clipboard", "[message][ControlMessage]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = msg.serialize(buf);
+    int size = msg.Serialize(buf);
     REQUIRE(size == 1);
 
     const unsigned char expected[] = {
@@ -217,7 +217,7 @@ TEST_CASE("serialize set clipboard", "[message][ControlMessage]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = msg.serialize(buf);
+    int size = msg.Serialize(buf);
     REQUIRE(size == 16);
 
     const unsigned char expected[] = {
@@ -237,7 +237,7 @@ TEST_CASE("serialize set screen power mode", "[message][ControlMessage]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = msg.serialize(buf);
+    int size = msg.Serialize(buf);
     REQUIRE(size == 2);
 
     const unsigned char expected[] = {
@@ -253,7 +253,7 @@ TEST_CASE("serialize rotate device", "[message][ControlMessage]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size = msg.serialize(buf);
+    int size = msg.Serialize(buf);
     REQUIRE(size == 1);
 
     const unsigned char expected[] = {
@@ -270,14 +270,14 @@ TEST_CASE("deserialize clipboard", "[message][ControlMessage]") {
     };
 
     struct DeviceMessage msg{};
-    ssize_t r = msg.deserialize(input, sizeof(input));
+    ssize_t r = msg.Deserialize(input, sizeof(input));
     REQUIRE(r == 6);
 
     REQUIRE(msg.type == DEVICE_MSG_TYPE_CLIPBOARD);
     REQUIRE(msg.clipboard.text);
     REQUIRE(!strcmp("ABC", msg.clipboard.text));
 
-    msg.destroy();
+    msg.Destroy();
 }
 
 

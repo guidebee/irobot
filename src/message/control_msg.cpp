@@ -14,7 +14,7 @@
 
 namespace irobot::message {
 
-    size_t ControlMessage::serialize(unsigned char *buf) {
+    size_t ControlMessage::Serialize(unsigned char *buf) {
         struct ControlMessage *msg = this;
         buf[0] = msg->type;
         switch (msg->type) {
@@ -24,31 +24,31 @@ namespace irobot::message {
                 util::buffer_write32be(&buf[6], msg->inject_keycode.metastate);
                 return 10;
             case CONTROL_MSG_TYPE_INJECT_TEXT: {
-                size_t len = write_string(msg->inject_text.text,
-                                          CONTROL_MSG_TEXT_MAX_LENGTH, &buf[1]);
+                size_t len = WriteString(msg->inject_text.text,
+                                         CONTROL_MSG_TEXT_MAX_LENGTH, &buf[1]);
                 return 1 + len;
             }
             case CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT: {
                 buf[1] = msg->inject_touch_event.action;
                 util::buffer_write64be(&buf[2], msg->inject_touch_event.pointer_id);
-                write_position(&buf[10], &msg->inject_touch_event.position);
+                WritePosition(&buf[10], &msg->inject_touch_event.position);
                 uint16_t pressure =
-                        to_fixed_point_16(msg->inject_touch_event.pressure);
+                        ToFixedPoint16(msg->inject_touch_event.pressure);
                 util::buffer_write16be(&buf[22], pressure);
                 util::buffer_write32be(&buf[24], msg->inject_touch_event.buttons);
                 return 28;
             }
             case CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT:
-                write_position(&buf[1], &msg->inject_scroll_event.position);
+                WritePosition(&buf[1], &msg->inject_scroll_event.position);
                 util::buffer_write32be(&buf[13],
                                        (uint32_t) msg->inject_scroll_event.hscroll);
                 util::buffer_write32be(&buf[17],
                                        (uint32_t) msg->inject_scroll_event.vscroll);
                 return 21;
             case CONTROL_MSG_TYPE_SET_CLIPBOARD: {
-                size_t len = write_string(msg->inject_text.text,
-                                          CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH,
-                                          &buf[1]);
+                size_t len = WriteString(msg->inject_text.text,
+                                         CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH,
+                                         &buf[1]);
                 return 1 + len;
             }
             case CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE:
@@ -68,7 +68,7 @@ namespace irobot::message {
     }
 
 
-    void ControlMessage::destroy() {
+    void ControlMessage::Destroy() {
         struct ControlMessage *msg = this;
         switch (msg->type) {
             case CONTROL_MSG_TYPE_INJECT_TEXT:
@@ -84,7 +84,7 @@ namespace irobot::message {
     }
 
 
-    void ControlMessage::write_position(uint8_t *buf, const struct Position *position) {
+    void ControlMessage::WritePosition(uint8_t *buf, const struct Position *position) {
         util::buffer_write32be(&buf[0], position->point.x);
         util::buffer_write32be(&buf[4], position->point.y);
         util::buffer_write16be(&buf[8], position->screen_size.width);
@@ -92,14 +92,14 @@ namespace irobot::message {
     }
 
 // write length (2 bytes) + string (non nul-terminated)
-    size_t ControlMessage::write_string(const char *utf8, size_t max_len, unsigned char *buf) {
+    size_t ControlMessage::WriteString(const char *utf8, size_t max_len, unsigned char *buf) {
         size_t len = util::utf8_truncation_index(utf8, max_len);
         util::buffer_write16be(buf, (uint16_t) len);
         memcpy(&buf[2], utf8, len);
         return 2 + len;
     }
 
-    uint16_t ControlMessage::to_fixed_point_16(float f) {
+    uint16_t ControlMessage::ToFixedPoint16(float f) {
         assert(f >= 0.0f && f <= 1.0f);
         uint32_t u = f * 0x1p16f; // 2^16
         if (u >= 0xffff) {

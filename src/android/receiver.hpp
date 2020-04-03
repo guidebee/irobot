@@ -25,28 +25,28 @@ namespace irobot::android {
 
 // receive events from the device
 // managed by the controller
-class Receiver {
+    class Receiver {
 
     public:
         socket_t control_socket;
         SDL_Thread *thread;
         SDL_mutex *mutex;
 
-        bool init(socket_t control_socket);
+        bool Init(socket_t control_socket);
 
-        void destroy();
+        void Destroy();
 
-        bool start();
+        bool Start();
 
         // no receiver_stop(), it will automatically stop on control_socket shutdown
 
-        void join();
+        void Join();
 
-        static void process_msg(struct message::DeviceMessage *msg);
+        static void ProcessMessage(struct message::DeviceMessage *msg);
 
-        static ssize_t process_msgs(const unsigned char *buf, size_t len);
+        static ssize_t ProcessMessages(const unsigned char *buf, size_t len);
 
-        static int run_receiver(void *data);
+        static int RunReceiver(void *data);
     };
 }
 #endif //ANDROID_IROBOT_RECEIVER_HPP

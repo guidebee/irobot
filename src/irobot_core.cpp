@@ -191,7 +191,7 @@ namespace irobot {
         // screenrecord does not send frames when the screen content does not
         // change therefore, we transmit the screen size before the video stream,
         // to be able to init the window immediately
-        if (!cannot_cont & !device_read_info(server.video_socket, device_name, &frame_size)) {
+        if (!cannot_cont & !ReadDeviceInfomation(server.video_socket, device_name, &frame_size)) {
             cannot_cont = true;
         }
 
@@ -209,7 +209,7 @@ namespace irobot {
             video_buffer_initialized = true;
 
             if (!cannot_cont & options->control) {
-                if (!file_handler.init(server.serial,
+                if (!file_handler.Init(server.serial,
                                        options->push_target)) {
                     cannot_cont = true;
                 }
@@ -315,7 +315,7 @@ namespace irobot {
             controller.stop();
         }
         if (file_handler_initialized) {
-            file_handler.stop();
+            file_handler.Stop();
         }
         if (fps_counter_initialized) {
             fps_counter.interrupt();
@@ -341,8 +341,8 @@ namespace irobot {
         }
 
         if (file_handler_initialized) {
-            file_handler.join();
-            file_handler.destroy();
+            file_handler.Join();
+            file_handler.Destroy();
         }
 
         if (video_buffer_initialized) {
