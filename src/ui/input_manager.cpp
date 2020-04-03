@@ -61,7 +61,7 @@ send_keycode(Controller *controller, enum android_keycode keycode,
 
     if (actions & ACTION_UP) {
         msg.inject_keycode.action = AKEY_EVENT_ACTION_UP;
-        if (!controller->push_msg( &msg)) {
+        if (!controller->push_msg(&msg)) {
             LOGW("Could not request 'inject %s (UP)'", name);
         }
     }
@@ -118,7 +118,7 @@ expand_notification_panel(Controller *controller) {
     struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL;
 
-    if (!controller->push_msg( &msg)) {
+    if (!controller->push_msg(&msg)) {
         LOGW("Could not request 'expand notification panel'");
     }
 }
@@ -227,8 +227,9 @@ rotate_device(Controller *controller) {
 }
 
 void
-input_manager_process_text_input(struct input_manager *im,
-                                 const SDL_TextInputEvent *event) {
+InputManager::process_text_input(
+        const SDL_TextInputEvent *event) {
+    struct InputManager *im = this;
     if (!im->prefer_text) {
         char c = event->text[0];
         if (isalpha(c) || c == ' ') {
@@ -272,12 +273,12 @@ convert_input_key(const SDL_KeyboardEvent *from, struct ControlMessage *to,
 }
 
 void
-input_manager_process_key(struct input_manager *im,
-                          const SDL_KeyboardEvent *event,
-                          bool control) {
+InputManager::process_key(
+        const SDL_KeyboardEvent *event,
+        bool control) {
     // control: indicates the state of the command-line option --no-control
     // ctrl: the Ctrl key
-
+    InputManager *im = this;
     bool ctrl = event->keysym.mod & (KMOD_LCTRL | KMOD_RCTRL);
     bool alt = event->keysym.mod & (KMOD_LALT | KMOD_RALT);
     bool meta = event->keysym.mod & (KMOD_LGUI | KMOD_RGUI);
@@ -443,8 +444,9 @@ convert_mouse_motion(const SDL_MouseMotionEvent *from, struct screen *screen,
 }
 
 void
-input_manager_process_mouse_motion(struct input_manager *im,
-                                   const SDL_MouseMotionEvent *event) {
+InputManager::process_mouse_motion(
+        const SDL_MouseMotionEvent *event) {
+    InputManager *im = this;
     if (!event->state) {
         // do not send motion events when no button is pressed
         return;
@@ -455,7 +457,7 @@ input_manager_process_mouse_motion(struct input_manager *im,
     }
     struct ControlMessage msg{};
     if (convert_mouse_motion(event, im->screen, &msg)) {
-        if (!im->controller->push_msg( &msg)) {
+        if (!im->controller->push_msg(&msg)) {
             LOGW("Could not request 'inject mouse motion event'");
         }
     }
@@ -483,8 +485,9 @@ convert_touch(const SDL_TouchFingerEvent *from, struct screen *screen,
 }
 
 void
-input_manager_process_touch(struct input_manager *im,
-                            const SDL_TouchFingerEvent *event) {
+InputManager::process_touch(
+        const SDL_TouchFingerEvent *event) {
+    InputManager *im = this;
     struct ControlMessage msg{};
     if (convert_touch(event, im->screen, &msg)) {
         if (!im->controller->push_msg(&msg)) {
@@ -494,7 +497,7 @@ input_manager_process_touch(struct input_manager *im,
 }
 
 static bool
-is_outside_device_screen(struct input_manager *im, int x, int y) {
+is_outside_device_screen(InputManager *im, int x, int y) {
     return x < 0 || x >= im->screen->frame_size.width ||
            y < 0 || y >= im->screen->frame_size.height;
 }
@@ -520,9 +523,10 @@ convert_mouse_button(const SDL_MouseButtonEvent *from, struct screen *screen,
 }
 
 void
-input_manager_process_mouse_button(struct input_manager *im,
-                                   const SDL_MouseButtonEvent *event,
-                                   bool control) {
+InputManager::process_mouse_button(
+        const SDL_MouseButtonEvent *event,
+        bool control) {
+    InputManager *im = this;
     if (event->which == SDL_TOUCH_MOUSEID) {
         // simulated from touch events, so it's a duplicate
         return;
@@ -578,8 +582,9 @@ convert_mouse_wheel(const SDL_MouseWheelEvent *from, struct screen *screen,
 }
 
 void
-input_manager_process_mouse_wheel(struct input_manager *im,
-                                  const SDL_MouseWheelEvent *event) {
+InputManager::process_mouse_wheel(
+        const SDL_MouseWheelEvent *event) {
+    InputManager *im = this;
     struct ControlMessage msg{};
     if (convert_mouse_wheel(event, im->screen, &msg)) {
         if (!im->controller->push_msg(&msg)) {

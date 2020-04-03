@@ -36,7 +36,7 @@ class Controller controller{};
 struct FileHandler file_handler;
 
 static struct decoder decoder;
-extern struct input_manager input_manager;
+extern struct InputManager input_manager;
 extern struct screen screen;
 
 static process_t

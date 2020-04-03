@@ -16,38 +16,34 @@
 #include "video/video_buffer.hpp"
 
 
-struct input_manager {
+class InputManager {
+public:
     class Controller *controller;
+
     struct video_buffer *video_buffer;
     struct screen *screen;
     bool prefer_text;
+
+    void process_text_input(
+            const SDL_TextInputEvent *event);
+
+    void process_key(
+            const SDL_KeyboardEvent *event,
+            bool control);
+
+    void process_mouse_motion(
+            const SDL_MouseMotionEvent *event);
+
+    void process_touch(
+            const SDL_TouchFingerEvent *event);
+
+    void process_mouse_button(
+            const SDL_MouseButtonEvent *event,
+            bool control);
+
+    void process_mouse_wheel(
+            const SDL_MouseWheelEvent *event);
 };
-
-void
-input_manager_process_text_input(struct input_manager *im,
-                                 const SDL_TextInputEvent *event);
-
-void
-input_manager_process_key(struct input_manager *im,
-                          const SDL_KeyboardEvent *event,
-                          bool control);
-
-void
-input_manager_process_mouse_motion(struct input_manager *im,
-                                   const SDL_MouseMotionEvent *event);
-
-void
-input_manager_process_touch(struct input_manager *im,
-                            const SDL_TouchFingerEvent *event);
-
-void
-input_manager_process_mouse_button(struct input_manager *im,
-                                   const SDL_MouseButtonEvent *event,
-                                   bool control);
-
-void
-input_manager_process_mouse_wheel(struct input_manager *im,
-                                  const SDL_MouseWheelEvent *event);
 
 
 #endif //ANDROID_IROBOT_INPUT_MANAGER_HPP

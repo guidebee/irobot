@@ -16,7 +16,7 @@ extern struct video_buffer video_buffer;
 extern class Controller controller;
 extern class FileHandler file_handler;
 
-struct input_manager input_manager = {
+struct InputManager input_manager = {
         .controller = &controller,
         .video_buffer = &video_buffer,
         .screen = &screen,
@@ -126,37 +126,37 @@ handle_event(SDL_Event *event, bool control) {
             if (!control) {
                 break;
             }
-            input_manager_process_text_input(&input_manager, &event->text);
+            input_manager.process_text_input( &event->text);
             break;
         case SDL_KEYDOWN:
         case SDL_KEYUP:
             // some key events do not interact with the device, so process the
             // event even if control is disabled
-            input_manager_process_key(&input_manager, &event->key, control);
+            input_manager.process_key( &event->key, control);
             break;
         case SDL_MOUSEMOTION:
             if (!control) {
                 break;
             }
-            input_manager_process_mouse_motion(&input_manager, &event->motion);
+            input_manager.process_mouse_motion( &event->motion);
             break;
         case SDL_MOUSEWHEEL:
             if (!control) {
                 break;
             }
-            input_manager_process_mouse_wheel(&input_manager, &event->wheel);
+            input_manager.process_mouse_wheel( &event->wheel);
             break;
         case SDL_MOUSEBUTTONDOWN:
         case SDL_MOUSEBUTTONUP:
             // some mouse events do not interact with the device, so process
             // the event even if control is disabled
-            input_manager_process_mouse_button(&input_manager, &event->button,
+            input_manager.process_mouse_button( &event->button,
                                                control);
             break;
         case SDL_FINGERMOTION:
         case SDL_FINGERDOWN:
         case SDL_FINGERUP:
-            input_manager_process_touch(&input_manager, &event->tfinger);
+            input_manager.process_touch( &event->tfinger);
             break;
         case SDL_DROPFILE: {
             if (!control) {
