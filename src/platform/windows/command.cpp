@@ -76,7 +76,7 @@ bool cmd_simple_wait(HANDLE handle, DWORD *exit_code) {
     return !code;
 }
 
-char * get_executable_path(void) {
+char *get_executable_path(void) {
     HMODULE hModule = GetModuleHandleW(NULL);
     if (!hModule) {
         return NULL;

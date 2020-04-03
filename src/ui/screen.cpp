@@ -4,28 +4,21 @@
 //
 
 #include "screen.hpp"
-
 #include <cassert>
-
 #include "common.hpp"
-
+#include "android/file_handler.hpp"
 #include "video/video_buffer.hpp"
 #include "util/lock.hpp"
-
 #include "util/log.hpp"
-
 #include "ui/events.hpp"
 #include "ui/input_manager.hpp"
-#include "android/file_handler.hpp"
+
+#define DISPLAY_MARGINS 96
 
 extern Screen screen;
 extern InputManager input_manager;
 extern VideoBuffer video_buffer;
-extern Controller controller;
 extern FileHandler file_handler;
-
-
-#define DISPLAY_MARGINS 96
 
 // get the window size in a struct size
 struct Size Screen::get_window_size(SDL_Window *window) {
@@ -416,8 +409,7 @@ void Screen::handle_window_event(
     }
 }
 
-
-static bool is_apk(const char *file) {
+bool Screen::is_apk(const char *file) {
     const char *ext = strrchr(file, '.');
     return ext && !strcmp(ext, ".apk");
 }

@@ -23,7 +23,6 @@
 #include "android/keycodes.hpp"
 
 
-
 enum ControlMessageType {
     CONTROL_MSG_TYPE_INJECT_KEYCODE,
     CONTROL_MSG_TYPE_INJECT_TEXT,

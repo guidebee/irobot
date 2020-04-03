@@ -24,6 +24,7 @@ extern "C" {
 #include "video/stream.hpp"
 
 class VideoBuffer;
+
 enum EventResult {
     EVENT_RESULT_CONTINUE,
     EVENT_RESULT_STOPPED_BY_USER,
@@ -107,6 +108,8 @@ public:
     static bool event_loop(bool display, bool control);
 
     static enum EventResult handle_event(SDL_Event *event, bool control);
+
+    static bool is_apk(const char *file);
 
 private:
     struct Size get_windowed_window_size();

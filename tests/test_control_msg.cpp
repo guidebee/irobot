@@ -215,7 +215,7 @@ TEST_CASE("serialize set clipboard", "[message][ControlMessage]") {
     };
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
-    int size =msg.serialize(buf);
+    int size = msg.serialize(buf);
     REQUIRE(size == 16);
 
     const unsigned char expected[] = {
@@ -268,7 +268,7 @@ TEST_CASE("deserialize clipboard", "[message][ControlMessage]") {
     };
 
     struct DeviceMessage msg{};
-    ssize_t r =msg.deserialize(input, sizeof(input));
+    ssize_t r = msg.deserialize(input, sizeof(input));
     REQUIRE(r == 6);
 
     REQUIRE(msg.type == DEVICE_MSG_TYPE_CLIPBOARD);

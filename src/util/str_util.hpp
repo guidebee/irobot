@@ -28,7 +28,7 @@ size_t xstrjoin(char *dst, const char *const tokens[], char sep, size_t n);
 
 // quote a string
 // returns the new allocated string, to be freed by the caller
-char * strquote(const char *src);
+char *strquote(const char *src);
 
 // parse s as an integer into value
 // returns true if the conversion succeeded, false otherwise
@@ -43,7 +43,7 @@ bool parse_integer_with_suffix(const char *s, long *out);
 // return the index to truncate a UTF-8 string at a valid position
 size_t utf8_truncation_index(const char *utf8, size_t max_len);
 
-char * str_replace(char *orig, char *rep, char *with);
+char *str_replace(char *orig, char *rep, char *with);
 
 #ifdef _WIN32
 // convert a UTF-8 string to a wchar_t string
