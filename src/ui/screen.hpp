@@ -42,6 +42,7 @@ public:
     bool no_window;
 
     struct size device_screen_size;
+
     // initialize default values
     void init();
 
@@ -59,7 +60,7 @@ public:
     void destroy();
 
     // resize if necessary and write the rendered frame into the texture
-    bool update_frame( VideoBuffer *vb);
+    bool update_frame(VideoBuffer *vb);
 
     // render the texture to the renderer
     void render();
@@ -76,18 +77,16 @@ public:
     // react to window events
     void handle_window_event(const SDL_WindowEvent *event);
 
-    static struct size
-    get_window_size(SDL_Window *window);
+    static struct size get_window_size(SDL_Window *window);
 
-    static bool
-    get_preferred_display_bounds(struct size *bounds);
+    static bool get_preferred_display_bounds(struct size *bounds);
 
-    static struct size
-    get_optimal_size(struct size current_size, struct size frame_size);
+    static struct size get_optimal_size(struct size current_size,
+                                        struct size frame_size);
 
-    static  struct size
-    get_initial_optimal_size(struct size frame_size, uint16_t req_width,
-                             uint16_t req_height);
+    static struct size get_initial_optimal_size(struct size frame_size,
+                                                uint16_t req_width,
+                                                uint16_t req_height);
 
     static inline SDL_Texture *create_texture(SDL_Renderer *renderer,
                                               struct size frame_size) {
@@ -97,16 +96,17 @@ public:
     }
 
 private:
-    struct size    get_windowed_window_size();
-    void            apply_windowed_size();
-    void
-    set_window_size( struct size new_size);
-    struct size
-    get_optimal_window_size(struct size frame_size);
-    bool
-    prepare_for_frame( struct size new_frame_size);
-    void
-    update_texture( const AVFrame *frame);
+    struct size get_windowed_window_size();
+
+    void apply_windowed_size();
+
+    void set_window_size(struct size new_size);
+
+    struct size get_optimal_window_size(struct size frame_size);
+
+    bool prepare_for_frame(struct size new_frame_size);
+
+    void update_texture(const AVFrame *frame);
 
 
 };

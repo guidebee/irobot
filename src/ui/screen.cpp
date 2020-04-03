@@ -72,7 +72,7 @@ bool Screen::get_preferred_display_bounds(struct size *bounds) {
 //  - it keeps the aspect ratio
 //  - it scales down to make it fit in the display_size
 struct size Screen::get_optimal_size(struct size current_size,
-        struct size frame_size) {
+                                     struct size frame_size) {
     if (frame_size.width == 0 || frame_size.height == 0) {
         // avoid division by 0
         return current_size;
@@ -168,14 +168,13 @@ bool Screen::init_rendering(const char *window_title,
                             int16_t window_x, int16_t window_y, uint16_t window_width,
                             uint16_t window_height, uint16_t screen_width,
                             uint16_t screen_height, bool window_borderless) {
-    Screen *screen = this;
-    screen->frame_size = frame_size;
+    this->frame_size = frame_size;
 
     if (screen_width * screen_height != 0) {
-        screen->device_screen_size.width = screen_width;
-        screen->device_screen_size.height = screen_height;
+        this->device_screen_size.width = screen_width;
+        this->device_screen_size.height = screen_height;
     } else {
-        screen->device_screen_size = frame_size;
+        this->device_screen_size = frame_size;
     }
 
     struct size window_size =
@@ -194,26 +193,26 @@ bool Screen::init_rendering(const char *window_title,
 
     int x = window_x != -1 ? window_x : (int) SDL_WINDOWPOS_UNDEFINED;
     int y = window_y != -1 ? window_y : (int) SDL_WINDOWPOS_UNDEFINED;
-    screen->window = SDL_CreateWindow(window_title, x, y,
-                                      window_size.width, window_size.height,
-                                      window_flags);
-    if (!screen->window) {
+    this->window = SDL_CreateWindow(window_title, x, y,
+                                    window_size.width, window_size.height,
+                                    window_flags);
+    if (!this->window) {
         LOGC("Could not create window: %s", SDL_GetError());
         return false;
     }
 
-    screen->renderer = SDL_CreateRenderer(screen->window, -1,
-                                          SDL_RENDERER_ACCELERATED);
-    if (!screen->renderer) {
+    this->renderer = SDL_CreateRenderer(this->window, -1,
+                                        SDL_RENDERER_ACCELERATED);
+    if (!this->renderer) {
         LOGC("Could not create renderer: %s", SDL_GetError());
-        screen->destroy();
+        this->destroy();
         return false;
     }
 
-    if (SDL_RenderSetLogicalSize(screen->renderer, frame_size.width,
+    if (SDL_RenderSetLogicalSize(this->renderer, frame_size.width,
                                  frame_size.height)) {
         LOGE("Could not set renderer logical size: %s", SDL_GetError());
-        screen->destroy();
+        this->destroy();
         return false;
     }
 
@@ -223,33 +222,31 @@ bool Screen::init_rendering(const char *window_title,
                  "x%"
                  PRIu16, frame_size.width,
          frame_size.height);
-    screen->texture = create_texture(screen->renderer, frame_size);
-    if (!screen->texture) {
+    this->texture = create_texture(this->renderer, frame_size);
+    if (!this->texture) {
         LOGC("Could not create texture: %s", SDL_GetError());
-        screen->destroy();
+        this->destroy();
         return false;
     }
 
-    screen->windowed_window_size = window_size;
+    this->windowed_window_size = window_size;
 
     return true;
 }
 
 void Screen::show_window() {
-    Screen *screen = this;
-    SDL_ShowWindow(screen->window);
+    SDL_ShowWindow(this->window);
 }
 
 void Screen::destroy() {
-    Screen *screen = this;
-    if (screen->texture) {
-        SDL_DestroyTexture(screen->texture);
+    if (this->texture) {
+        SDL_DestroyTexture(this->texture);
     }
-    if (screen->renderer) {
-        SDL_DestroyRenderer(screen->renderer);
+    if (this->renderer) {
+        SDL_DestroyRenderer(this->renderer);
     }
-    if (screen->window) {
-        SDL_DestroyWindow(screen->window);
+    if (this->window) {
+        SDL_DestroyWindow(this->window);
     }
 }
 
@@ -302,7 +299,6 @@ void Screen::update_texture(const AVFrame *frame) {
 }
 
 bool Screen::update_frame(VideoBuffer *vb) {
-    Screen *screen = this;
     mutex_lock(vb->mutex);
     const AVFrame *frame = vb->consume_rendered_frame();
     struct size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
@@ -313,102 +309,98 @@ bool Screen::update_frame(VideoBuffer *vb) {
     update_texture(frame);
     mutex_unlock(vb->mutex);
 
-    screen->render();
+    this->render();
     return true;
 }
 
 void Screen::render() {
-    Screen *screen = this;
-    SDL_RenderClear(screen->renderer);
-    SDL_RenderCopy(screen->renderer, screen->texture, nullptr, nullptr);
-    SDL_RenderPresent(screen->renderer);
+    SDL_RenderClear(this->renderer);
+    SDL_RenderCopy(this->renderer, this->texture,
+                   nullptr, nullptr);
+    SDL_RenderPresent(this->renderer);
 }
 
 void Screen::switch_fullscreen() {
-    Screen *screen = this;
-    uint32_t new_mode = screen->fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
-    if (SDL_SetWindowFullscreen(screen->window, new_mode)) {
+    uint32_t new_mode = this->fullscreen ? 0 : SDL_WINDOW_FULLSCREEN_DESKTOP;
+    if (SDL_SetWindowFullscreen(this->window, new_mode)) {
         LOGW("Could not switch fullscreen mode: %s", SDL_GetError());
         return;
     }
 
-    screen->fullscreen = !screen->fullscreen;
+    this->fullscreen = !this->fullscreen;
     apply_windowed_size();
 
-    LOGD("Switched to %s mode", screen->fullscreen ? "fullscreen" : "windowed");
-    screen->render();
+    LOGD("Switched to %s mode", this->fullscreen ? "fullscreen" : "windowed");
+    this->render();
 }
 
 void Screen::resize_to_fit() {
-    Screen *screen = this;
-    if (screen->fullscreen) {
+    if (this->fullscreen) {
         return;
     }
 
-    if (screen->maximized) {
-        SDL_RestoreWindow(screen->window);
-        screen->maximized = false;
+    if (this->maximized) {
+        SDL_RestoreWindow(this->window);
+        this->maximized = false;
     }
 
     struct size optimal_size =
-            get_optimal_window_size(screen->frame_size);
-    SDL_SetWindowSize(screen->window, optimal_size.width, optimal_size.height);
+            get_optimal_window_size(this->frame_size);
+    SDL_SetWindowSize(this->window, optimal_size.width, optimal_size.height);
     LOGD("Resized to optimal size");
 }
 
 void Screen::resize_to_pixel_perfect() {
-    Screen *screen = this;
-    if (screen->fullscreen) {
+    if (this->fullscreen) {
         return;
     }
 
-    if (screen->maximized) {
-        SDL_RestoreWindow(screen->window);
-        screen->maximized = false;
+    if (this->maximized) {
+        SDL_RestoreWindow(this->window);
+        this->maximized = false;
     }
 
-    SDL_SetWindowSize(screen->window, screen->frame_size.width,
-                      screen->frame_size.height);
+    SDL_SetWindowSize(this->window, this->frame_size.width,
+                      this->frame_size.height);
     LOGD("Resized to pixel-perfect");
 }
 
 void Screen::handle_window_event(
         const SDL_WindowEvent *event) {
-    Screen *screen = this;
     switch (event->event) {
         case SDL_WINDOWEVENT_EXPOSED:
-            screen->render();
+            this->render();
             break;
         case SDL_WINDOWEVENT_SIZE_CHANGED:
-            if (!screen->fullscreen && !screen->maximized) {
+            if (!this->fullscreen && !this->maximized) {
                 // Backup the previous size: if we receive the MAXIMIZED event,
                 // then the new size must be ignored (it's the maximized size).
                 // We could not rely on the window flags due to race conditions
                 // (they could be updated asynchronously, at least on X11).
-                screen->windowed_window_size_backup =
-                        screen->windowed_window_size;
+                this->windowed_window_size_backup =
+                        this->windowed_window_size;
 
                 // Save the windowed size, so that it is available once the
                 // window is maximized or fullscreen is enabled.
-                screen->windowed_window_size = get_window_size(screen->window);
+                this->windowed_window_size = get_window_size(this->window);
             }
-            screen->render();
+            this->render();
             break;
         case SDL_WINDOWEVENT_MAXIMIZED:
             // The backup size must be non-nul.
-            assert(screen->windowed_window_size_backup.width);
-            assert(screen->windowed_window_size_backup.height);
+            assert(this->windowed_window_size_backup.width);
+            assert(this->windowed_window_size_backup.height);
             // Revert the last size, it was updated while screen was maximized.
-            screen->windowed_window_size = screen->windowed_window_size_backup;
+            this->windowed_window_size = this->windowed_window_size_backup;
 #ifndef NDEBUG
             // Reset the backup to invalid values to detect unexpected usage
-            screen->windowed_window_size_backup.width = 0;
-            screen->windowed_window_size_backup.height = 0;
+            this->windowed_window_size_backup.width = 0;
+            this->windowed_window_size_backup.height = 0;
 #endif
-            screen->maximized = true;
+            this->maximized = true;
             break;
         case SDL_WINDOWEVENT_RESTORED:
-            screen->maximized = false;
+            this->maximized = false;
             apply_windowed_size();
             break;
     }

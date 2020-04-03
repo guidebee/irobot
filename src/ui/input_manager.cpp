@@ -184,8 +184,7 @@ void InputManager::rotate_device(Controller *controller) {
 
 void InputManager::process_text_input(
         const SDL_TextInputEvent *event) {
-    struct InputManager *im = this;
-    if (!im->prefer_text) {
+    if (!this->prefer_text) {
         char c = event->text[0];
         if (isalpha(c) || c == ' ') {
             assert(event->text[1] == '\0');
@@ -201,7 +200,7 @@ void InputManager::process_text_input(
         LOGW("Could not strdup input text");
         return;
     }
-    if (!im->controller->push_msg(&msg)) {
+    if (!this->controller->push_msg(&msg)) {
         SDL_free(msg.inject_text.text);
         LOGW("Could not request 'inject text'");
     }
@@ -232,7 +231,7 @@ void InputManager::process_key(
         bool control) {
     // control: indicates the state of the command-line option --no-control
     // ctrl: the Ctrl key
-    InputManager *im = this;
+
     bool ctrl = event->keysym.mod & (KMOD_LCTRL | KMOD_RCTRL);
     bool alt = event->keysym.mod & (KMOD_LALT | KMOD_RALT);
     bool meta = event->keysym.mod & (KMOD_LGUI | KMOD_RGUI);
@@ -254,7 +253,7 @@ void InputManager::process_key(
         return;
     }
 
-    Controller *controller = im->controller;
+    Controller *controller = this->controller;
 
     // capture all Ctrl events
     if (ctrl || cmd) {
@@ -329,23 +328,23 @@ void InputManager::process_key(
                 return;
             case SDLK_f:
                 if (!shift && cmd && !repeat && down) {
-                    im->screen->switch_fullscreen();
+                    this->screen->switch_fullscreen();
                 }
                 return;
             case SDLK_x:
                 if (!shift && cmd && !repeat && down) {
-                    im->screen->resize_to_fit();
+                    this->screen->resize_to_fit();
                 }
                 return;
             case SDLK_g:
                 if (!shift && cmd && !repeat && down) {
-                    im->screen->resize_to_pixel_perfect();
+                    this->screen->resize_to_pixel_perfect();
                 }
                 return;
             case SDLK_i:
                 if (!shift && cmd && !repeat && down) {
                     struct FpsCounter *fps_counter =
-                            im->video_buffer->fps_counter;
+                            this->video_buffer->fps_counter;
                     switch_fps_counter_state(fps_counter);
                 }
                 return;
@@ -375,7 +374,7 @@ void InputManager::process_key(
     }
 
     struct ControlMessage msg{};
-    if (convert_input_key(event, &msg, im->prefer_text)) {
+    if (convert_input_key(event, &msg, this->prefer_text)) {
         if (!controller->push_msg(&msg)) {
             LOGW("Could not request 'inject keycode'");
         }
@@ -399,7 +398,6 @@ bool InputManager::convert_mouse_motion(const SDL_MouseMotionEvent *from,
 
 void InputManager::process_mouse_motion(
         const SDL_MouseMotionEvent *event) {
-    InputManager *im = this;
     if (!event->state) {
         // do not send motion events when no button is pressed
         return;
@@ -409,8 +407,8 @@ void InputManager::process_mouse_motion(
         return;
     }
     struct ControlMessage msg{};
-    if (convert_mouse_motion(event, im->screen, &msg)) {
-        if (!im->controller->push_msg(&msg)) {
+    if (convert_mouse_motion(event, this->screen, &msg)) {
+        if (!this->controller->push_msg(&msg)) {
             LOGW("Could not request 'inject mouse motion event'");
         }
     }
@@ -438,10 +436,9 @@ bool InputManager::convert_touch(const SDL_TouchFingerEvent *from, Screen *scree
 
 void InputManager::process_touch(
         const SDL_TouchFingerEvent *event) {
-    InputManager *im = this;
     struct ControlMessage msg{};
-    if (convert_touch(event, im->screen, &msg)) {
-        if (!im->controller->push_msg(&msg)) {
+    if (convert_touch(event, this->screen, &msg)) {
+        if (!this->controller->push_msg(&msg)) {
             LOGW("Could not request 'inject touch event'");
         }
     }
@@ -476,18 +473,17 @@ bool InputManager::convert_mouse_button(const SDL_MouseButtonEvent *from,
 void InputManager::process_mouse_button(
         const SDL_MouseButtonEvent *event,
         bool control) {
-    InputManager *im = this;
     if (event->which == SDL_TOUCH_MOUSEID) {
         // simulated from touch events, so it's a duplicate
         return;
     }
     if (event->type == SDL_MOUSEBUTTONDOWN) {
         if (control && event->button == SDL_BUTTON_RIGHT) {
-            press_back_or_turn_screen_on(im->controller);
+            press_back_or_turn_screen_on(this->controller);
             return;
         }
         if (control && event->button == SDL_BUTTON_MIDDLE) {
-            action_home(im->controller, ACTION_DOWN | ACTION_UP);
+            action_home(this->controller, ACTION_DOWN | ACTION_UP);
             return;
         }
         // double-click on black borders resize to fit the device screen
@@ -495,7 +491,7 @@ void InputManager::process_mouse_button(
             bool outside =
                     this->is_outside_device_screen(event->x, event->y);
             if (outside) {
-                im->screen->resize_to_fit();
+                this->screen->resize_to_fit();
                 return;
             }
         }
@@ -507,8 +503,8 @@ void InputManager::process_mouse_button(
     }
 
     struct ControlMessage msg{};
-    if (convert_mouse_button(event, im->screen, &msg)) {
-        if (!im->controller->push_msg(&msg)) {
+    if (convert_mouse_button(event, this->screen, &msg)) {
+        if (!this->controller->push_msg(&msg)) {
             LOGW("Could not request 'inject mouse button event'");
         }
     }
@@ -533,10 +529,9 @@ bool InputManager::convert_mouse_wheel(const SDL_MouseWheelEvent *from,
 
 void InputManager::process_mouse_wheel(
         const SDL_MouseWheelEvent *event) {
-    InputManager *im = this;
     struct ControlMessage msg{};
-    if (convert_mouse_wheel(event, im->screen, &msg)) {
-        if (!im->controller->push_msg(&msg)) {
+    if (convert_mouse_wheel(event, this->screen, &msg)) {
+        if (!this->controller->push_msg(&msg)) {
             LOGW("Could not request 'inject mouse wheel event'");
         }
     }
