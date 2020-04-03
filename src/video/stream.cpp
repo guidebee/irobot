@@ -13,8 +13,8 @@
 #define HEADER_SIZE 12
 #define NO_PTS UINT64_C(-1)
 
-static bool
-stream_recv_packet(struct stream *stream, AVPacket *packet) {
+bool
+VideoStream::recv_packet(AVPacket *packet) {
     // The video stream contains raw packets, without time information. When we
     // record, we retrieve the timestamps separately, from a "meta" header
     // added by the server before each raw packet.
@@ -27,6 +27,7 @@ stream_recv_packet(struct stream *stream, AVPacket *packet) {
     //
     // It is followed by <packet_size> bytes containing the packet/frame.
 
+    VideoStream *stream = this;
     uint8_t header[HEADER_SIZE];
     ssize_t r = net_recv_all(stream->socket, header, HEADER_SIZE);
     if (r < HEADER_SIZE) {
@@ -61,25 +62,27 @@ notify_stopped() {
     SDL_PushEvent(&stop_event);
 }
 
-static bool
-process_config_packet(struct stream *stream, AVPacket *packet) {
-    if (stream->recorder && !stream->recorder->push( packet)) {
+bool
+VideoStream::process_config_packet(AVPacket *packet) {
+    VideoStream *stream = this;
+    if (stream->recorder && !stream->recorder->push(packet)) {
         LOGE("Could not send config packet to recorder");
         return false;
     }
     return true;
 }
 
-static bool
-process_frame(struct stream *stream, AVPacket *packet) {
-    if (stream->decoder && !stream->decoder->push( packet)) {
+bool
+VideoStream::process_frame(AVPacket *packet) {
+    VideoStream *stream = this;
+    if (stream->decoder && !stream->decoder->push(packet)) {
         return false;
     }
 
     if (stream->recorder) {
         packet->dts = packet->pts;
 
-        if (!stream->recorder->push( packet)) {
+        if (!stream->recorder->push(packet)) {
             LOGE("Could not send packet to recorder");
             return false;
         }
@@ -88,8 +91,9 @@ process_frame(struct stream *stream, AVPacket *packet) {
     return true;
 }
 
-static bool
-stream_parse(struct stream *stream, AVPacket *packet) {
+bool
+VideoStream::parse(AVPacket *packet) {
+    VideoStream *stream = this;
     uint8_t *in_data = packet->data;
     int in_len = packet->size;
     uint8_t *out_data = nullptr;
@@ -107,7 +111,7 @@ stream_parse(struct stream *stream, AVPacket *packet) {
         packet->flags |= AV_PKT_FLAG_KEY;
     }
 
-    bool ok = process_frame(stream, packet);
+    bool ok = stream->process_frame(packet);
     if (!ok) {
         LOGE("Could not process frame");
         return false;
@@ -116,8 +120,9 @@ stream_parse(struct stream *stream, AVPacket *packet) {
     return true;
 }
 
-static bool
-stream_push_packet(struct stream *stream, AVPacket *packet) {
+bool
+VideoStream::push_packet(AVPacket *packet) {
+    VideoStream *stream = this;
     bool is_config = packet->pts == AV_NOPTS_VALUE;
 
     // A config packet must not be decoded immetiately (it contains no
@@ -152,13 +157,13 @@ stream_push_packet(struct stream *stream, AVPacket *packet) {
 
     if (is_config) {
         // config packet
-        bool ok = process_config_packet(stream, packet);
+        bool ok = stream->process_config_packet(packet);
         if (!ok) {
             return false;
         }
     } else {
         // data packet
-        bool ok = stream_parse(stream, packet);
+        bool ok = stream->parse(packet);
 
         if (stream->has_pending) {
             // the pending packet must be discarded (consumed or error)
@@ -175,7 +180,7 @@ stream_push_packet(struct stream *stream, AVPacket *packet) {
 
 static int
 run_stream(void *data) {
-    auto *stream = (struct stream *) data;
+    auto *stream = (struct VideoStream *) data;
 
     AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_H264);
     if (!codec) {
@@ -188,7 +193,7 @@ run_stream(void *data) {
         goto end;
     }
 
-    if (stream->decoder && !stream->decoder->open( codec)) {
+    if (stream->decoder && !stream->decoder->open(codec)) {
         LOGE("Could not open decoder");
         goto finally_free_codec_ctx;
     }
@@ -217,13 +222,13 @@ run_stream(void *data) {
 
     for (;;) {
         AVPacket packet;
-        bool ok = stream_recv_packet(stream, &packet);
+        bool ok = stream->recv_packet(&packet);
         if (!ok) {
             // end of stream
             break;
         }
 
-        ok = stream_push_packet(stream, &packet);
+        ok = stream->push_packet(&packet);
         av_packet_unref(&packet);
         if (!ok) {
             // cannot process packet (error already logged)
@@ -260,8 +265,9 @@ run_stream(void *data) {
 }
 
 void
-stream_init(struct stream *stream, socket_t socket,
-            struct Decoder *decoder, struct Recorder *recorder) {
+VideoStream::init(socket_t socket,
+                  struct Decoder *decoder, struct Recorder *recorder) {
+    VideoStream *stream = this;
     stream->socket = socket;
     stream->decoder = decoder,
             stream->recorder = recorder;
@@ -269,9 +275,9 @@ stream_init(struct stream *stream, socket_t socket,
 }
 
 bool
-stream_start(struct stream *stream) {
+VideoStream::start() {
     LOGD("Starting stream thread");
-
+    VideoStream *stream = this;
     stream->thread = SDL_CreateThread(run_stream, "stream", stream);
     if (!stream->thread) {
         LOGC("Could not start stream thread");
@@ -281,13 +287,15 @@ stream_start(struct stream *stream) {
 }
 
 void
-stream_stop(struct stream *stream) {
+VideoStream::stop() {
+    VideoStream *stream = this;
     if (stream->decoder) {
         stream->decoder->interrupt();
     }
 }
 
 void
-stream_join(struct stream *stream) {
+VideoStream::join() {
+    VideoStream *stream = this;
     SDL_WaitThread(stream->thread, nullptr);
 }

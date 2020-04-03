@@ -27,7 +27,7 @@
 static Server server{};
 static struct FpsCounter fps_counter;
 struct VideoBuffer video_buffer;
-static struct stream stream;
+static struct VideoStream stream;
 
 static struct Recorder recorder;
 
@@ -178,7 +178,7 @@ IRobotOptions::init() {
         }
         fps_counter_initialized = true;
 
-        if (!cannot_cont & !video_buffer.init( &fps_counter,
+        if (!cannot_cont & !video_buffer.init(&fps_counter,
                                               options->render_expired_frames)) {
             cannot_cont = true;
         }
@@ -192,16 +192,16 @@ IRobotOptions::init() {
             file_handler_initialized = true;
         }
 
-        decoder.init( &video_buffer);
+        decoder.init(&video_buffer);
         dec = &decoder;
     }
 
     struct Recorder *rec = nullptr;
     if (!cannot_cont & record) {
         if (!recorder.init(
-                           options->record_filename,
-                           options->record_format,
-                           frame_size)) {
+                options->record_filename,
+                options->record_format,
+                frame_size)) {
             cannot_cont = true;
         }
         rec = &recorder;
@@ -210,12 +210,12 @@ IRobotOptions::init() {
 
     av_log_set_callback(av_log_callback);
 
-    stream_init(&stream, server.video_socket, dec, rec);
+    stream.init(server.video_socket, dec, rec);
 
 
     // now we consumed the header values, the socket receives the video stream
     // start the stream
-    if (!cannot_cont & !stream_start(&stream)) {
+    if (!cannot_cont & !stream.start()) {
         cannot_cont = true;
     }
 
@@ -236,7 +236,7 @@ IRobotOptions::init() {
         const char *_window_title =
                 options->window_title ? options->window_title : device_name;
 
-        if (!cannot_cont & !screen.init_rendering( _window_title, frame_size,
+        if (!cannot_cont & !screen.init_rendering(_window_title, frame_size,
                                                   options->always_on_top, options->window_x,
                                                   options->window_y, options->window_width,
                                                   options->window_height, options->screen_width,
@@ -275,7 +275,7 @@ IRobotOptions::init() {
 
     // stop stream and controller so that they don't continue once their socket
     // is shutdown
-    stream_stop(&stream);
+    stream.stop();
 
     if (controller_started) {
         controller.stop();
@@ -292,7 +292,7 @@ IRobotOptions::init() {
 
     // now that the sockets are shutdown, the stream and controller are
     // interrupted, we can join them
-    stream_join(&stream);
+    stream.join();
 
 
     if (controller_started) {

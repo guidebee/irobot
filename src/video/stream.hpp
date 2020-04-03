@@ -30,7 +30,9 @@ extern "C" {
 #include "util/net.hpp"
 #include "video/decoder.hpp"
 
-struct stream {
+class VideoStream {
+public:
+
     socket_t socket;
     SDL_Thread *thread;
     struct Decoder *decoder;
@@ -41,19 +43,30 @@ struct stream {
     // packet is available
     bool has_pending;
     AVPacket pending;
+
+    void init(socket_t socket,
+              struct Decoder *decoder, Recorder *recorder);
+
+    bool start();
+
+    void stop();
+
+    void join();
+    bool recv_packet(AVPacket *packet);
+    bool
+    push_packet( AVPacket *packet);
+
+private:
+
+
+    bool process_config_packet(AVPacket *packet);
+
+    bool process_frame(AVPacket *packet);
+
+    bool parse(AVPacket *packet);
+
+
 };
 
-void
-stream_init(struct stream *stream, socket_t socket,
-            struct Decoder *decoder, Recorder *recorder);
-
-bool
-stream_start(struct stream *stream);
-
-void
-stream_stop(struct stream *stream);
-
-void
-stream_join(struct stream *stream);
 
 #endif //ANDROID_IROBOT_STREAM_HPP
