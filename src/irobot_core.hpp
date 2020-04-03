@@ -3,8 +3,8 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#ifndef ANDROID_IROBOT_SCRCPY_HPP
-#define ANDROID_IROBOT_SCRCPY_HPP
+#ifndef ANDROID_IROBOT_CORE_HPP
+#define ANDROID_IROBOT_CORE_HPP
 
 #define SDL_MAIN_HANDLED // avoid link error on Linux Windows Subsystem
 
@@ -57,9 +57,9 @@ public:
     bool help;
     bool version;
 
+    IRobotCore();
 
     bool init();
-
 
     static ProcessType set_show_touches_enabled(const char *serial, bool enabled);
 
@@ -69,7 +69,25 @@ public:
 
     static void av_log_callback(void *avcl, int level, const char *fmt, va_list vl);
 
-    IRobotCore();
+    static bool parse_integer_arg(const char *s, long *out, bool accept_suffix, long min,
+                                  long max, const char *name);
+
+    static bool parse_bit_rate(const char *s, uint32_t *bit_rate);
+
+    static bool parse_max_size(const char *s, uint16_t *max_size);
+
+    static bool parse_max_fps(const char *s, uint16_t *max_fps);
+
+    static bool parse_window_position(const char *s, int16_t *position);
+
+    static bool parse_window_dimension(const char *s, uint16_t *dimension);
+
+    static bool parse_port(const char *s, uint16_t *port);
+
+    static bool parse_record_format(const char *opt_arg, enum RecordFormat *format);
+
+    static enum RecordFormat guess_record_format(const char *filename);
+
 
     bool parse_args(int argc, char *argv[]);
 
@@ -81,4 +99,4 @@ public:
 };
 
 
-#endif //ANDROID_IROBOT_SCRCPY_HPP
+#endif //ANDROID_IROBOT_CORE_HPP

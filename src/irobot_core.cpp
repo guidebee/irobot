@@ -60,7 +60,6 @@ InputManager input_manager = {
 };
 
 
-
 ProcessType IRobotCore::set_show_touches_enabled(const char *serial, bool enabled) {
     const char *value = enabled ? "1" : "0";
     const char *const adb_cmd[] = {
@@ -284,7 +283,7 @@ bool IRobotCore::init() {
         wait_show_touches(proc_show_touches);
         show_touches_waited = true;
     }
-    bool ret = false;
+    bool ret;
 #ifdef UI_SCREEN
     ret = event_loop(options->display, options->control);
     LOGD("quit...");
@@ -557,8 +556,9 @@ void IRobotCore::irobot_print_usage(const char *arg0) {
             DEFAULT_LOCAL_PORT);
 }
 
-static bool parse_integer_arg(const char *s, long *out, bool accept_suffix, long min,
-                              long max, const char *name) {
+bool IRobotCore::parse_integer_arg(const char *s, long *out,
+                                   bool accept_suffix, long min,
+                                   long max, const char *name) {
     long value;
     bool ok;
     if (accept_suffix) {
@@ -581,7 +581,7 @@ static bool parse_integer_arg(const char *s, long *out, bool accept_suffix, long
     return true;
 }
 
-static bool parse_bit_rate(const char *s, uint32_t *bit_rate) {
+bool IRobotCore::parse_bit_rate(const char *s, uint32_t *bit_rate) {
     long value;
     // long may be 32 bits (it is the case on mingw), so do not use more than
     // 31 bits (long is signed)
@@ -594,7 +594,7 @@ static bool parse_bit_rate(const char *s, uint32_t *bit_rate) {
     return true;
 }
 
-static bool parse_max_size(const char *s, uint16_t *max_size) {
+bool IRobotCore::parse_max_size(const char *s, uint16_t *max_size) {
     long value;
     bool ok = parse_integer_arg(s, &value, false, 0, 0xFFFF, "max size");
     if (!ok) {
@@ -605,7 +605,7 @@ static bool parse_max_size(const char *s, uint16_t *max_size) {
     return true;
 }
 
-static bool parse_max_fps(const char *s, uint16_t *max_fps) {
+bool IRobotCore::parse_max_fps(const char *s, uint16_t *max_fps) {
     long value;
     bool ok = parse_integer_arg(s, &value, false, 0, 1000, "max fps");
     if (!ok) {
@@ -616,7 +616,7 @@ static bool parse_max_fps(const char *s, uint16_t *max_fps) {
     return true;
 }
 
-static bool parse_window_position(const char *s, int16_t *position) {
+bool IRobotCore::parse_window_position(const char *s, int16_t *position) {
     long value;
     bool ok = parse_integer_arg(s, &value, false, -1, 0x7FFF,
                                 "window position");
@@ -628,7 +628,7 @@ static bool parse_window_position(const char *s, int16_t *position) {
     return true;
 }
 
-static bool parse_window_dimension(const char *s, uint16_t *dimension) {
+bool IRobotCore::parse_window_dimension(const char *s, uint16_t *dimension) {
     long value;
     bool ok = parse_integer_arg(s, &value, false, 0, 0xFFFF,
                                 "window dimension");
@@ -640,7 +640,7 @@ static bool parse_window_dimension(const char *s, uint16_t *dimension) {
     return true;
 }
 
-static bool parse_port(const char *s, uint16_t *port) {
+bool IRobotCore::parse_port(const char *s, uint16_t *port) {
     long value;
     bool ok = parse_integer_arg(s, &value, false, 0, 0xFFFF, "port");
     if (!ok) {
@@ -651,7 +651,7 @@ static bool parse_port(const char *s, uint16_t *port) {
     return true;
 }
 
-static bool parse_record_format(const char *opt_arg, enum RecordFormat *format) {
+bool IRobotCore::parse_record_format(const char *opt_arg, enum RecordFormat *format) {
     if (!strcmp(opt_arg, "mp4")) {
         *format = RECORDER_FORMAT_MP4;
         return true;
@@ -664,7 +664,7 @@ static bool parse_record_format(const char *opt_arg, enum RecordFormat *format) 
     return false;
 }
 
-static enum RecordFormat guess_record_format(const char *filename) {
+enum RecordFormat IRobotCore::guess_record_format(const char *filename) {
     size_t len = strlen(filename);
     if (len < 4) {
         return static_cast<RecordFormat>(0);
