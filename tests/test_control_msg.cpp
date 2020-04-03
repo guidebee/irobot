@@ -14,8 +14,8 @@ TEST_CASE("serialize inject keycode", "[message][ControlMessage]") {
             .inject_keycode = {
                     .action = AKEY_EVENT_ACTION_UP,
                     .keycode = AKEYCODE_ENTER,
-                    .metastate = static_cast<enum android_metastate>(AMETA_SHIFT_ON
-                                                                     | AMETA_SHIFT_LEFT_ON),
+                    .metastate = static_cast<enum AndroidMetaState>(AMETA_SHIFT_ON
+                                                                    | AMETA_SHIFT_LEFT_ON),
             },
     };
 

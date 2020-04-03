@@ -14,7 +14,7 @@
 /**
  * Meta key / modifer state.
  */
-enum android_metastate {
+enum AndroidMetaState {
     /** No meta keys are pressed. */
     AMETA_NONE = 0,
 
@@ -73,7 +73,7 @@ enum android_metastate {
 /**
  * Input event types.
  */
-enum android_input_event_type {
+enum AndroidInputEventType {
     /** Indicates that the input event is a key event. */
     AINPUT_EVENT_TYPE_KEY = 1,
     /** Indicates that the input event is a motion event. */
@@ -83,7 +83,7 @@ enum android_input_event_type {
 /**
  * Key event actions.
  */
-enum android_keyevent_action {
+enum AndroidKeyEventAction {
     /** The key has been pressed down. */
     AKEY_EVENT_ACTION_DOWN = 0,
 
@@ -102,7 +102,7 @@ enum android_keyevent_action {
 /**
  * Key event flags.
  */
-enum android_keyevent_flags {
+enum AndroidKeyEventFlags {
     /** This mask is set if the device woke because of this key event. */
     AKEY_EVENT_FLAG_WOKE_HERE = 0x1,
 
@@ -186,7 +186,7 @@ enum android_keyevent_flags {
 #define AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT 8
 
 /** Motion event actions */
-enum android_motionevent_action {
+enum AndroidMotionEventAction {
     /** Bit mask of the parts of the action code that are the action itself. */
     AMOTION_EVENT_ACTION_MASK = 0xff,
 
@@ -272,7 +272,7 @@ enum android_motionevent_action {
 /**
  * Motion event flags.
  */
-enum android_motionevent_flags {
+enum AndroidMotionEventFlags {
     /**
      * This flag indicates that the window that received this motion event is partly
      * or wholly obscured by another visible window above it.  This flag is set to true
@@ -289,7 +289,7 @@ enum android_motionevent_flags {
 /**
  * Motion event edge touch flags.
  */
-enum android_motionevent_edge_touch_flags {
+enum AndroidMotionEventEdgeTouchFlags {
     /** No edges intersected. */
     AMOTION_EVENT_EDGE_FLAG_NONE = 0,
 
@@ -310,7 +310,7 @@ enum android_motionevent_edge_touch_flags {
  * Constants that identify each individual axis of a motion event.
  * @anchor AMOTION_EVENT_AXIS
  */
-enum android_motionevent_axis {
+enum AndroidMotionEventAxis {
     /**
      * Axis constant: X axis of a motion event.
      *
@@ -679,7 +679,7 @@ enum android_motionevent_axis {
  * Constants that identify buttons that are associated with motion events.
  * Refer to the documentation on the MotionEvent class for descriptions of each button.
  */
-enum android_motionevent_buttons {
+enum AndroidMotionEventButtons {
     /** primary */
     AMOTION_EVENT_BUTTON_PRIMARY = 1 << 0,
     /** secondary */
@@ -698,7 +698,7 @@ enum android_motionevent_buttons {
  * Constants that identify tool types.
  * Refer to the documentation on the MotionEvent class for descriptions of each tool type.
  */
-enum android_motionevent_tool_type {
+enum AndroidMotionEventToolType {
     /** unknown */
     AMOTION_EVENT_TOOL_TYPE_UNKNOWN = 0,
     /** finger */
@@ -717,7 +717,7 @@ enum android_motionevent_tool_type {
  * Refer to the documentation on android.view.InputDevice for more details about input sources
  * and their correct interpretation.
  */
-enum android_input_source_class {
+enum AndroidInputSourceClass {
     /** mask */
     AINPUT_SOURCE_CLASS_MASK = 0x000000ff,
 
@@ -738,7 +738,7 @@ enum android_input_source_class {
 /**
  * Input sources.
  */
-enum android_input_source {
+enum AndroidInputSource {
     /** unknown */
     AINPUT_SOURCE_UNKNOWN = 0x00000000,
 
@@ -775,7 +775,7 @@ enum android_input_source {
  *
  * Refer to the documentation on android.view.InputDevice for more details.
  */
-enum android_keyboard_type {
+enum AndroidKeyboardType {
     /** none */
     AINPUT_KEYBOARD_TYPE_NONE = 0,
     /** non alphabetic */
@@ -793,7 +793,7 @@ enum android_keyboard_type {
  *
  * @deprecated These constants are deprecated. Use {@link AMOTION_EVENT_AXIS AMOTION_EVENT_AXIS_*} constants instead.
  */
-enum android_motion_range {
+enum AndroidMotionRange {
     /** x */
     AINPUT_MOTION_RANGE_X = AMOTION_EVENT_AXIS_X,
     /** y */

@@ -10,7 +10,7 @@
 /**
  * Key codes.
  */
-enum android_keycode {
+enum AndroidKeycode {
     /** Unknown key code. */
     AKEYCODE_UNKNOWN = 0,
     /** Soft Left key.

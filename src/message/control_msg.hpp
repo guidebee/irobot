@@ -49,16 +49,16 @@ struct ControlMessage {
     enum ControlMessageType type;
     union {
         struct {
-            enum android_keyevent_action action;
-            enum android_keycode keycode;
-            enum android_metastate metastate;
+            enum AndroidKeyEventAction action;
+            enum AndroidKeycode keycode;
+            enum AndroidMetaState metastate;
         } inject_keycode;
         struct {
             char *text; // owned, to be freed by SDL_free()
         } inject_text;
         struct {
-            enum android_motionevent_action action;
-            enum android_motionevent_buttons buttons;
+            enum AndroidMotionEventAction action;
+            enum AndroidMotionEventButtons buttons;
             uint64_t pointer_id;
             struct Position position;
             float pressure;

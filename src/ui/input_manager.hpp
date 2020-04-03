@@ -49,7 +49,7 @@ public:
     static struct Point get_mouse_point(Screen *screen);
 
     static void send_keycode(Controller *controller,
-                             enum android_keycode keycode,
+                             enum AndroidKeycode keycode,
                              int actions, const char *name);
 
     static inline void action_home(Controller *controller, int actions) {

@@ -42,13 +42,13 @@ struct Point InputManager::get_mouse_point(Screen *screen) {
 }
 
 
-void InputManager::send_keycode(Controller *controller, enum android_keycode keycode,
+void InputManager::send_keycode(Controller *controller, enum AndroidKeycode keycode,
                                 int actions, const char *name) {
     // send DOWN event
     struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_INJECT_KEYCODE;
     msg.inject_keycode.keycode = keycode;
-    msg.inject_keycode.metastate = static_cast<android_metastate>(0);
+    msg.inject_keycode.metastate = static_cast<AndroidMetaState>(0);
 
     if (actions & ACTION_DOWN) {
         msg.inject_keycode.action = AKEY_EVENT_ACTION_DOWN;
@@ -430,7 +430,7 @@ bool InputManager::convert_touch(const SDL_TouchFingerEvent *from, Screen *scree
     to->inject_touch_event.position.point.x = from->x * static_cast<float>(frame_size.width);
     to->inject_touch_event.position.point.y = from->y * static_cast<float>(frame_size.height);
     to->inject_touch_event.pressure = from->pressure;
-    to->inject_touch_event.buttons = static_cast<android_motionevent_buttons>(0);
+    to->inject_touch_event.buttons = static_cast<AndroidMotionEventButtons>(0);
     return true;
 }
 
