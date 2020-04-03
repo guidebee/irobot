@@ -30,6 +30,10 @@ typedef enum {
 struct FileHandlerRequest {
     FileHandlerActionType action;
     char *file;
+
+    inline void destroy() {
+        SDL_free(this->file);
+    }
 };
 
 struct FileHandlerRequestQueue CBUF(struct FileHandlerRequest, 16);
@@ -46,29 +50,19 @@ public:
     process_t current_process;
     struct FileHandlerRequestQueue queue;
 
-    bool
-    init( const char *serial,
-                      const char *push_target);
+    bool init(const char *serial, const char *push_target);
 
-    void
-    destroy();
+    void destroy();
 
-    bool
-    start();
+    bool start();
 
-    void
-    stop();
+    void stop();
 
-    void
-    join();
+    void join();
 
-// take ownership of file, and will SDL_free() it
-    bool
-    request(
-                         FileHandlerActionType action,
-                         char *file);
+    // take ownership of file, and will SDL_free() it
+    bool request(FileHandlerActionType action, char *file);
 };
-
 
 
 #endif //ANDROID_IROBOT_FILE_HANDLER_HPP

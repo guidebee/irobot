@@ -13,10 +13,6 @@
 
 #define DEFAULT_PUSH_TARGET "/sdcard/"
 
-static void
-file_handler_request_destroy(struct FileHandlerRequest *req) {
-    SDL_free(req->file);
-}
 
 bool
 FileHandler::init(const char *serial,
@@ -66,7 +62,7 @@ FileHandler::destroy() {
 
     struct FileHandlerRequest req{};
     while (cbuf_take(&file_handler->queue, &req)) {
-        file_handler_request_destroy(&req);
+        req.destroy();
     }
 }
 
@@ -157,7 +153,7 @@ run_file_handler(void *data) {
             }
         }
 
-        file_handler_request_destroy(&req);
+        req.destroy();
     }
     return 0;
 }
