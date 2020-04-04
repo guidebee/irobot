@@ -295,7 +295,7 @@ namespace irobot {
         }
         bool ret;
 #ifdef UI_SCREEN
-        ret = Screen::EventLoop(options->display, options->control);
+        ret = input_manager.EventLoop(options->display, options->control);
         LOGD("quit...");
         screen.Destroy();
 #else

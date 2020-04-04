@@ -25,27 +25,26 @@ namespace irobot::ui {
         struct Screen *screen;
         bool prefer_text;
 
-        void ProcessTextInput(
-                const SDL_TextInputEvent *event);
+        void ProcessTextInput(const SDL_TextInputEvent *event);
 
-        void ProcessKey(
-                const SDL_KeyboardEvent *event,
-                bool control);
+        void ProcessKey(const SDL_KeyboardEvent *event,
+                        bool control);
 
-        void ProcessMouseMotion(
-                const SDL_MouseMotionEvent *event);
+        void ProcessMouseMotion(const SDL_MouseMotionEvent *event);
 
-        void ProcessTouch(
-                const SDL_TouchFingerEvent *event);
+        void ProcessTouch(const SDL_TouchFingerEvent *event);
 
-        void ProcessMouseButton(
-                const SDL_MouseButtonEvent *event,
-                bool control);
+        void ProcessMouseButton(const SDL_MouseButtonEvent *event,
+                                bool control);
 
-        void ProcessMouseWheel(
-                const SDL_MouseWheelEvent *event);
+        void ProcessMouseWheel(const SDL_MouseWheelEvent *event);
 
-        static void ConvertToRendererCoordinates(SDL_Renderer *renderer, int *x, int *y);
+        bool EventLoop(bool display, bool control);
+
+        enum EventResult HandleEvent(SDL_Event *event, bool control);
+
+        static void ConvertToRendererCoordinates(SDL_Renderer *renderer,
+                                                 int *x, int *y);
 
         static struct Point GetMousePoint(Screen *screen);
 
@@ -119,6 +118,12 @@ namespace irobot::ui {
         static bool ConvertMouseWheel(const SDL_MouseWheelEvent *from,
                                       Screen *screen,
                                       struct ControlMessage *to);
+
+
+        static bool IsApk(const char *file);
+
+        static int EventWatcher(void *data, SDL_Event *event);
+
 
     private:
         bool IsOutsideDeviceScreen(int x, int y);

@@ -31,7 +31,6 @@ namespace irobot::ui {
         EVENT_RESULT_STOPPED_BY_EOS,
     };
 
-
     class Screen {
     public:
         SDL_Window *window;
@@ -48,7 +47,7 @@ namespace irobot::ui {
         bool maximized;
 
         struct Size device_screen_size;
-        android::FileHandler* file_handler;
+        android::FileHandler *file_handler;
 
         // initialize default values
         void Init();
@@ -60,7 +59,7 @@ namespace irobot::ui {
                            uint16_t window_height, uint16_t screen_width,
                            uint16_t screen_height, bool window_borderless);
 
-        void InitFileHandler(android::FileHandler* file_handler);
+        void InitFileHandler(android::FileHandler *file_handler);
 
         // show the window
         void ShowWindow();
@@ -106,13 +105,6 @@ namespace irobot::ui {
 
         static bool InitSDLAndConfigure(bool display);
 
-        static int EventWatcher(void *data, SDL_Event *event);
-
-        static bool EventLoop(bool display, bool control);
-
-        static enum EventResult HandleEvent(SDL_Event *event, bool control);
-
-        static bool IsApk(const char *file);
 
     private:
         struct Size GetWindowedWindowSize();
