@@ -17,6 +17,8 @@
 
 
 namespace irobot::platform {
+
+
     static const char *adb_command;
 
     static inline const char *get_adb_command() {
@@ -143,11 +145,11 @@ namespace irobot::platform {
 #ifdef __WINDOWS__
         // Windows will parse the string, so the paths must be quoted
         // (see sys/win/command.c)
-        local = strquote(local);
+        local = util::strquote(local);
         if (!local) {
             return PROCESS_NONE;
         }
-        remote = strquote(remote);
+        remote = util::strquote(remote);
         if (!remote) {
             SDL_free((void *) local);
             return PROCESS_NONE;
@@ -169,7 +171,7 @@ namespace irobot::platform {
 #ifdef __WINDOWS__
         // Windows will parse the string, so the local name must be quoted
         // (see sys/win/command.c)
-        local = strquote(local);
+        local = util::strquote(local);
         if (!local) {
             return PROCESS_NONE;
         }

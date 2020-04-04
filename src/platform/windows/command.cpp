@@ -15,7 +15,7 @@ namespace irobot::platform {
         // <http://daviddeley.com/autohotkey/parameters/parameters.htm#WINPASS>
         // only make it work for this very specific program
         // (don't handle escaping nor quotes)
-        size_t ret = xstrjoin(cmd, argv, ' ', len);
+        size_t ret = util::xstrjoin(cmd, argv, ' ', len);
         if (ret >= len) {
             LOGE("Command too long (%"
                          PRIsizet
@@ -37,7 +37,7 @@ namespace irobot::platform {
             return PROCESS_ERROR_GENERIC;
         }
 
-        wchar_t *wide = utf8_to_wide_char(cmd);
+        wchar_t *wide = util::utf8_to_wide_char(cmd);
         if (!wide) {
             LOGC("Could not allocate wide char string");
             return PROCESS_ERROR_GENERIC;
@@ -88,7 +88,7 @@ namespace irobot::platform {
             return NULL;
         }
         buf[len] = '\0';
-        return utf8_from_wide_char(buf);
+        return util::utf8_from_wide_char(buf);
     }
 
 }
