@@ -19,16 +19,18 @@ namespace irobot::ui {
 
     class InputManager {
     public:
-        class Controller *controller;
-
-        struct video::VideoBuffer *video_buffer;
-        struct Screen *screen;
+        Controller *controller;
+        video::VideoBuffer *video_buffer;
+        Screen *screen;
         bool prefer_text;
+
+        bool EventLoop(bool display, bool control);
+
+        enum EventResult HandleEvent(SDL_Event *event, bool control);
 
         void ProcessTextInput(const SDL_TextInputEvent *event);
 
-        void ProcessKey(const SDL_KeyboardEvent *event,
-                        bool control);
+        void ProcessKey(const SDL_KeyboardEvent *event, bool control);
 
         void ProcessMouseMotion(const SDL_MouseMotionEvent *event);
 
@@ -97,33 +99,28 @@ namespace irobot::ui {
         static void RotateDevice(Controller *controller);
 
         static bool ConvertInputKey(const SDL_KeyboardEvent *from,
-                                    struct ControlMessage *to,
+                                    ControlMessage *to,
                                     bool prefer_text);
 
         static bool ConvertMouseMotion(const SDL_MouseMotionEvent *from,
                                        Screen *screen,
-                                       struct ControlMessage *to);
+                                       ControlMessage *to);
 
         static bool ConvertTouch(const SDL_TouchFingerEvent *from,
                                  Screen *screen,
-                                 struct ControlMessage *to);
+                                 ControlMessage *to);
 
         static bool ConvertMouseButton(const SDL_MouseButtonEvent *from,
                                        Screen *screen,
-                                       struct ControlMessage *to);
+                                       ControlMessage *to);
 
         static bool ConvertMouseWheel(const SDL_MouseWheelEvent *from,
                                       Screen *screen,
-                                      struct ControlMessage *to);
+                                      ControlMessage *to);
 
         static bool IsApk(const char *file);
 
         static int EventWatcher(void *data, SDL_Event *event);
-
-        bool EventLoop(bool display, bool control);
-
-        enum EventResult HandleEvent(SDL_Event *event, bool control);
-
 
 
     private:
