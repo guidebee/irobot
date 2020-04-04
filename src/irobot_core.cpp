@@ -297,14 +297,12 @@ namespace irobot {
         LOGD("quit...");
         screen.Destroy();
 #else
-        char c;
-        while (true) {
-            printf("Press Q to exit\n");
+        char c='0';
+        printf("Press Q to exit\n");
+        while (!(c == 'Q' || c == 'q')) {
             c = getchar();
-            if (c == 'Q' || c == 'q') {
-                break;
-            }
         }
+        printf("Exting ...\n");
 #endif
 
         // stop stream and controller so that they don't continue once their socket
