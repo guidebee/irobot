@@ -66,7 +66,7 @@ namespace irobot {
     };
 
 
-    ProcessType IRobotCore::set_show_touches_enabled(const char *serial, bool enabled) {
+    ProcessType IRobotCore::SetShowTouchesEnabled(const char *serial, bool enabled) {
         const char *value = enabled ? "1" : "0";
         const char *const adb_cmd[] = {
                 "shell", "settings", "put", "system", "show_touches", value
@@ -74,12 +74,12 @@ namespace irobot {
         return platform::adb_execute(serial, adb_cmd, ARRAY_LEN(adb_cmd));
     }
 
-    void IRobotCore::wait_show_touches(ProcessType process) {
+    void IRobotCore::WaitShowTouches(ProcessType process) {
         // reap the process, ignore the result
         platform::process_check_success(process, "show_touches");
     }
 
-    SDL_LogPriority IRobotCore::sdl_priority_from_av_level(int level) {
+    SDL_LogPriority IRobotCore::SDLPriorityFromAVLevel(int level) {
         switch (level) {
             case AV_LOG_PANIC:
             case AV_LOG_FATAL:
@@ -95,9 +95,9 @@ namespace irobot {
         }
     }
 
-    void IRobotCore::av_log_callback(void *avcl, int level, const char *fmt, va_list vl) {
+    void IRobotCore::AVLogCallback(void *avcl, int level, const char *fmt, va_list vl) {
         (void) avcl;
-        SDL_LogPriority priority = sdl_priority_from_av_level(level);
+        SDL_LogPriority priority = SDLPriorityFromAVLevel(level);
         if (priority == 0) {
             return;
         }
@@ -144,7 +144,7 @@ namespace irobot {
 
     }
 
-    bool IRobotCore::init() {
+    bool IRobotCore::Init() {
         const struct IRobotCore *options = this;
         bool record = options->record_filename != nullptr;
         struct ServerParameters params = {
@@ -155,7 +155,7 @@ namespace irobot {
                 .max_fps = options->max_fps,
                 .control = options->control,
         };
-        if (!server.start(options->serial, &params)) {
+        if (!server.Start(options->serial, &params)) {
             return false;
         }
 
@@ -163,7 +163,7 @@ namespace irobot {
         bool show_touches_waited = false;
         if (options->show_touches) {
             LOGI("Enable show_touches");
-            proc_show_touches = set_show_touches_enabled(options->serial, true);
+            proc_show_touches = SetShowTouchesEnabled(options->serial, true);
             show_touches_waited = false;
         }
 
@@ -177,11 +177,11 @@ namespace irobot {
         bool cannot_cont = false;
 
 #ifdef UI_SCREEN
-        if (!Screen::sdl_init_and_configure(options->display)) {
+        if (!Screen::InitSDLAndConfigure(options->display)) {
             cannot_cont = true;
         }
 #endif
-        if (!cannot_cont & !server.connect_to()) {
+        if (!cannot_cont & !server.ConnectTo()) {
             cannot_cont = true;
         }
 
@@ -197,12 +197,12 @@ namespace irobot {
 
         Decoder *dec = nullptr;
         if (!cannot_cont & options->display) {
-            if (!fps_counter.init()) {
+            if (!fps_counter.Init()) {
                 cannot_cont = true;
             }
             fps_counter_initialized = true;
 
-            if (!cannot_cont & !video_buffer.init(&fps_counter,
+            if (!cannot_cont & !video_buffer.Init(&fps_counter,
                                                   options->render_expired_frames)) {
                 cannot_cont = true;
             }
@@ -216,13 +216,13 @@ namespace irobot {
                 file_handler_initialized = true;
             }
 
-            decoder.init(&video_buffer);
+            decoder.Init(&video_buffer);
             dec = &decoder;
         }
 
         struct Recorder *rec = nullptr;
         if (!cannot_cont & record) {
-            if (!recorder.init(
+            if (!recorder.Init(
                     options->record_filename,
                     options->record_format,
                     frame_size)) {
@@ -232,26 +232,26 @@ namespace irobot {
             recorder_initialized = true;
         }
 
-        av_log_set_callback(av_log_callback);
+        av_log_set_callback(AVLogCallback);
 
-        stream.init(server.video_socket, dec, rec);
+        stream.Init(server.video_socket, dec, rec);
 
 
         // now we consumed the header values, the socket receives the video stream
         // start the stream
-        if (!cannot_cont & !stream.start()) {
+        if (!cannot_cont & !stream.Start()) {
             cannot_cont = true;
         }
 
 
         if (!cannot_cont & options->display) {
             if (options->control) {
-                if (!controller.init(server.control_socket)) {
+                if (!controller.Init(server.control_socket)) {
                     cannot_cont = true;
                 }
                 controller_initialized = true;
 
-                if (!controller.start()) {
+                if (!controller.Start()) {
                     cannot_cont = true;
                 }
                 controller_started = true;
@@ -276,7 +276,7 @@ namespace irobot {
                 msg.type = message::CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
                 msg.set_screen_power_mode.mode = message::SCREEN_POWER_MODE_OFF;
 
-                if (!controller.push_msg(&msg)) {
+                if (!controller.PushMessage(&msg)) {
                     LOGW("Could not request 'set screen power mode'");
                 }
             }
@@ -288,12 +288,12 @@ namespace irobot {
         }
 
         if (options->show_touches) {
-            wait_show_touches(proc_show_touches);
+            WaitShowTouches(proc_show_touches);
             show_touches_waited = true;
         }
         bool ret;
 #ifdef UI_SCREEN
-        ret = Screen::event_loop(options->display, options->control);
+        ret = Screen::EventLoop(options->display, options->control);
         LOGD("quit...");
         screen.Destroy();
 #else
@@ -309,35 +309,35 @@ namespace irobot {
 
         // stop stream and controller so that they don't continue once their socket
         // is shutdown
-        stream.stop();
+        stream.Stop();
 
         if (controller_started) {
-            controller.stop();
+            controller.Stop();
         }
         if (file_handler_initialized) {
             file_handler.Stop();
         }
         if (fps_counter_initialized) {
-            fps_counter.interrupt();
+            fps_counter.Interrupt();
         }
 
         // shutdown the sockets and kill the server
-        server.stop();
+        server.Stop();
 
         // now that the sockets are shutdown, the stream and controller are
         // interrupted, we can join them
-        stream.join();
+        stream.Join();
 
 
         if (controller_started) {
-            controller.join();
+            controller.Join();
         }
         if (controller_initialized) {
-            controller.destroy();
+            controller.Destroy();
         }
 
         if (recorder_initialized) {
-            recorder.destroy();
+            recorder.Destroy();
         }
 
         if (file_handler_initialized) {
@@ -346,31 +346,31 @@ namespace irobot {
         }
 
         if (video_buffer_initialized) {
-            video_buffer.destroy();
+            video_buffer.Destroy();
         }
 
         if (fps_counter_initialized) {
-            fps_counter.join();
-            fps_counter.destroy();
+            fps_counter.Join();
+            fps_counter.Destroy();
         }
 
         if (options->show_touches) {
             if (!show_touches_waited) {
                 // wait the process which enabled "show touches"
-                wait_show_touches(proc_show_touches);
+                WaitShowTouches(proc_show_touches);
             }
             LOGI("Disable show_touches");
-            proc_show_touches = set_show_touches_enabled(options->serial, false);
-            wait_show_touches(proc_show_touches);
+            proc_show_touches = SetShowTouchesEnabled(options->serial, false);
+            WaitShowTouches(proc_show_touches);
         }
 
-        server.destroy();
+        server.Destroy();
 
         return ret;
     }
 
 
-    void IRobotCore::irobot_print_usage(const char *arg0) {
+    void IRobotCore::PrintUsage(const char *arg0) {
 #ifdef __APPLE__
 # define CTRL_OR_CMD "Cmd"
 #else
@@ -564,9 +564,9 @@ namespace irobot {
                 DEFAULT_LOCAL_PORT);
     }
 
-    bool IRobotCore::parse_integer_arg(const char *s, long *out,
-                                       bool accept_suffix, long min,
-                                       long max, const char *name) {
+    bool IRobotCore::ParseIntegerArg(const char *s, long *out,
+                                     bool accept_suffix, long min,
+                                     long max, const char *name) {
         long value;
         bool ok;
         if (accept_suffix) {
@@ -589,11 +589,11 @@ namespace irobot {
         return true;
     }
 
-    bool IRobotCore::parse_bit_rate(const char *s, uint32_t *bit_rate) {
+    bool IRobotCore::ParseBitRate(const char *s, uint32_t *bit_rate) {
         long value;
         // long may be 32 bits (it is the case on mingw), so do not use more than
         // 31 bits (long is signed)
-        bool ok = parse_integer_arg(s, &value, true, 0, 0x7FFFFFFF, "bit-rate");
+        bool ok = ParseIntegerArg(s, &value, true, 0, 0x7FFFFFFF, "bit-rate");
         if (!ok) {
             return false;
         }
@@ -602,9 +602,9 @@ namespace irobot {
         return true;
     }
 
-    bool IRobotCore::parse_max_size(const char *s, uint16_t *max_size) {
+    bool IRobotCore::ParseMaxSize(const char *s, uint16_t *max_size) {
         long value;
-        bool ok = parse_integer_arg(s, &value, false, 0, 0xFFFF, "max size");
+        bool ok = ParseIntegerArg(s, &value, false, 0, 0xFFFF, "max size");
         if (!ok) {
             return false;
         }
@@ -613,9 +613,9 @@ namespace irobot {
         return true;
     }
 
-    bool IRobotCore::parse_max_fps(const char *s, uint16_t *max_fps) {
+    bool IRobotCore::ParseMaxFps(const char *s, uint16_t *max_fps) {
         long value;
-        bool ok = parse_integer_arg(s, &value, false, 0, 1000, "max fps");
+        bool ok = ParseIntegerArg(s, &value, false, 0, 1000, "max fps");
         if (!ok) {
             return false;
         }
@@ -624,10 +624,10 @@ namespace irobot {
         return true;
     }
 
-    bool IRobotCore::parse_window_position(const char *s, int16_t *position) {
+    bool IRobotCore::ParseWindowPosition(const char *s, int16_t *position) {
         long value;
-        bool ok = parse_integer_arg(s, &value, false, -1, 0x7FFF,
-                                    "window position");
+        bool ok = ParseIntegerArg(s, &value, false, -1, 0x7FFF,
+                                  "window position");
         if (!ok) {
             return false;
         }
@@ -636,10 +636,10 @@ namespace irobot {
         return true;
     }
 
-    bool IRobotCore::parse_window_dimension(const char *s, uint16_t *dimension) {
+    bool IRobotCore::ParseWindowDimension(const char *s, uint16_t *dimension) {
         long value;
-        bool ok = parse_integer_arg(s, &value, false, 0, 0xFFFF,
-                                    "window dimension");
+        bool ok = ParseIntegerArg(s, &value, false, 0, 0xFFFF,
+                                  "window dimension");
         if (!ok) {
             return false;
         }
@@ -648,9 +648,9 @@ namespace irobot {
         return true;
     }
 
-    bool IRobotCore::parse_port(const char *s, uint16_t *port) {
+    bool IRobotCore::ParsePort(const char *s, uint16_t *port) {
         long value;
-        bool ok = parse_integer_arg(s, &value, false, 0, 0xFFFF, "port");
+        bool ok = ParseIntegerArg(s, &value, false, 0, 0xFFFF, "port");
         if (!ok) {
             return false;
         }
@@ -659,7 +659,7 @@ namespace irobot {
         return true;
     }
 
-    bool IRobotCore::parse_record_format(const char *opt_arg, enum RecordFormat *format) {
+    bool IRobotCore::ParseRecordFormat(const char *opt_arg, enum RecordFormat *format) {
         if (!strcmp(opt_arg, "mp4")) {
             *format = RECORDER_FORMAT_MP4;
             return true;
@@ -672,7 +672,7 @@ namespace irobot {
         return false;
     }
 
-    enum RecordFormat IRobotCore::guess_record_format(const char *filename) {
+    enum RecordFormat IRobotCore::GuessRecordFormat(const char *filename) {
         size_t len = strlen(filename);
         if (len < 4) {
             return static_cast<RecordFormat>(0);
@@ -688,7 +688,7 @@ namespace irobot {
     }
 
 
-    bool IRobotCore::parse_args(int argc, char *argv[]) {
+    bool IRobotCore::ParseArgs(int argc, char **argv) {
         struct IRobotCore *args = this;
         static const struct option long_options[] = {
                 {"always-on-top",         no_argument,       nullptr, OPT_ALWAYS_ON_TOP},
@@ -732,7 +732,7 @@ namespace irobot {
                                 nullptr)) != -1) {
             switch (c) {
                 case 'b':
-                    if (!parse_bit_rate(optarg, &opts->bit_rate)) {
+                    if (!ParseBitRate(optarg, &opts->bit_rate)) {
                         return false;
                     }
                     break;
@@ -749,7 +749,7 @@ namespace irobot {
                     LOGW("Deprecated option -F. Use --record-format instead.");
                     // fall through
                 case OPT_RECORD_FORMAT:
-                    if (!parse_record_format(optarg, &opts->record_format)) {
+                    if (!ParseRecordFormat(optarg, &opts->record_format)) {
                         return false;
                     }
                     break;
@@ -757,12 +757,12 @@ namespace irobot {
                     args->help = true;
                     break;
                 case OPT_MAX_FPS:
-                    if (!parse_max_fps(optarg, &opts->max_fps)) {
+                    if (!ParseMaxFps(optarg, &opts->max_fps)) {
                         return false;
                     }
                     break;
                 case 'm':
-                    if (!parse_max_size(optarg, &opts->max_size)) {
+                    if (!ParseMaxSize(optarg, &opts->max_size)) {
                         return false;
                     }
                     break;
@@ -773,7 +773,7 @@ namespace irobot {
                     opts->display = false;
                     break;
                 case 'p':
-                    if (!parse_port(optarg, &opts->port)) {
+                    if (!ParsePort(optarg, &opts->port)) {
                         return false;
                     }
                     break;
@@ -805,32 +805,32 @@ namespace irobot {
                     opts->window_title = optarg;
                     break;
                 case OPT_WINDOW_X:
-                    if (!parse_window_position(optarg, &opts->window_x)) {
+                    if (!ParseWindowPosition(optarg, &opts->window_x)) {
                         return false;
                     }
                     break;
                 case OPT_WINDOW_Y:
-                    if (!parse_window_position(optarg, &opts->window_y)) {
+                    if (!ParseWindowPosition(optarg, &opts->window_y)) {
                         return false;
                     }
                     break;
                 case OPT_WINDOW_WIDTH:
-                    if (!parse_window_dimension(optarg, &opts->window_width)) {
+                    if (!ParseWindowDimension(optarg, &opts->window_width)) {
                         return false;
                     }
                     break;
                 case OPT_WINDOW_HEIGHT:
-                    if (!parse_window_dimension(optarg, &opts->window_height)) {
+                    if (!ParseWindowDimension(optarg, &opts->window_height)) {
                         return false;
                     }
                     break;
                 case OPT_SCREEN_WIDTH:
-                    if (!parse_window_dimension(optarg, &opts->screen_width)) {
+                    if (!ParseWindowDimension(optarg, &opts->screen_width)) {
                         return false;
                     }
                     break;
                 case OPT_SCREEN_HEIGHT:
-                    if (!parse_window_dimension(optarg, &opts->screen_height)) {
+                    if (!ParseWindowDimension(optarg, &opts->screen_height)) {
                         return false;
                     }
                     break;
@@ -871,7 +871,7 @@ namespace irobot {
         }
 
         if (opts->record_filename && !opts->record_format) {
-            opts->record_format = guess_record_format(opts->record_filename);
+            opts->record_format = GuessRecordFormat(opts->record_filename);
             if (!opts->record_format) {
                 LOGE("No format specified for \"%s\" (try with -F mkv)",
                      opts->record_filename);
@@ -887,7 +887,7 @@ namespace irobot {
         return true;
     }
 
-    void IRobotCore::print_version() {
+    void IRobotCore::PrintVersion() {
         fprintf(stderr, "scrcpy %s\n\n", SCRCPY_VERSION);
 
         fprintf(stderr, "dependencies:\n");
@@ -904,7 +904,7 @@ namespace irobot {
                 LIBAVUTIL_VERSION_MICRO);
     }
 
-    int IRobotCore::irobot_main(int argc, char *argv[]) {
+    int IRobotCore::iRobotMain(int argc, char **argv) {
 
 #ifdef __WINDOWS__
         // disable buffering, we want logs immediately
@@ -919,17 +919,17 @@ namespace irobot {
 
         struct IRobotCore args = {};
 
-        if (!args.parse_args(argc, argv)) {
+        if (!args.ParseArgs(argc, argv)) {
             return 1;
         }
 
         if (args.help) {
-            irobot_print_usage(argv[0]);
+            PrintUsage(argv[0]);
             return 0;
         }
 
         if (args.version) {
-            print_version();
+            PrintVersion();
             return 0;
         }
 
@@ -942,7 +942,7 @@ namespace irobot {
             return 1;
         }
 
-        int res = args.init() ? 0 : 1;
+        int res = args.Init() ? 0 : 1;
 
         avformat_network_deinit(); // ignore failure
 

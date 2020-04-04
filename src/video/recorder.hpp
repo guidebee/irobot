@@ -59,26 +59,26 @@ namespace irobot::video {
         // need to be protected by the mutex
         struct RecordPacket *previous;
 
-        bool init(const char *filename,
+        bool Init(const char *filename,
                   enum RecordFormat format, struct Size declared_frame_size);
 
-        void destroy();
+        void Destroy();
 
-        bool open(const AVCodec *input_codec);
+        bool Open(const AVCodec *input_codec);
 
-        void close();
+        void Close();
 
-        bool start();
+        bool Start();
 
-        void stop();
+        void Stop();
 
-        void join();
+        void Join();
 
-        bool push(const AVPacket *packet);
+        bool Push(const AVPacket *packet);
 
-        bool write(AVPacket *packet);
+        bool Write(AVPacket *packet);
 
-        static inline const AVOutputFormat *find_muxer(const char *name) {
+        static inline const AVOutputFormat *FindMuxer(const char *name) {
 #ifdef SCRCPY_LAVF_HAS_NEW_MUXER_ITERATOR_API
             void *opaque = nullptr;
 #endif
@@ -94,7 +94,7 @@ namespace irobot::video {
             return oformat;
         }
 
-        static inline struct RecordPacket *record_packet_new(const AVPacket *packet) {
+        static inline struct RecordPacket *RecordPacketNew(const AVPacket *packet) {
             auto rec = (struct RecordPacket *) SDL_malloc(sizeof(struct RecordPacket));
             if (!rec) {
                 return nullptr;
@@ -111,20 +111,20 @@ namespace irobot::video {
             return rec;
         }
 
-        static inline void record_packet_delete(struct RecordPacket *rec) {
+        static inline void RecordPacketDelete(struct RecordPacket *rec) {
             av_packet_unref(&rec->packet);
             SDL_free(rec);
         }
 
-        static inline void recorder_queue_clear(struct RecordQueue *queue) {
+        static inline void RecorderQueueClear(struct RecordQueue *queue) {
             while (!queue_is_empty(queue)) {
                 struct RecordPacket *rec;
                 queue_take(queue, next, &rec);
-                record_packet_delete(rec);
+                RecordPacketDelete(rec);
             }
         }
 
-        static const char *recorder_get_format_name(enum RecordFormat format) {
+        static const char *RecorderGetFormatName(enum RecordFormat format) {
             switch (format) {
                 case RECORDER_FORMAT_MP4:
                     return "mp4";
@@ -135,13 +135,13 @@ namespace irobot::video {
             }
         }
 
-        static int run_recorder(void *data);
+        static int RunRecorder(void *data);
 
     private:
 
-        bool write_header(const AVPacket *packet);
+        bool WriteHeader(const AVPacket *packet);
 
-        void rescale_packet(AVPacket *packet);
+        void RescalePacket(AVPacket *packet);
 
     };
 }

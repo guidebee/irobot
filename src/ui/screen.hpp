@@ -78,51 +78,51 @@ namespace irobot::ui {
         void ResizeToFit();
 
         // resize window to 1:1 (pixel-perfect)
-        void resize_to_pixel_perfect();
+        void ResizeToPixelPerfect();
 
         // react to window events
-        void handle_window_event(const SDL_WindowEvent *event);
+        void HandleWindowEvent(const SDL_WindowEvent *event);
 
-        static struct Size get_window_size(SDL_Window *window);
+        static struct Size GetWindowSize(SDL_Window *window);
 
-        static bool get_preferred_display_bounds(struct Size *bounds);
+        static bool GetPreferredDisplayBounds(struct Size *bounds);
 
-        static struct Size get_optimal_size(struct Size current_size,
-                                            struct Size frame_size);
+        static struct Size GetOptimalSize(struct Size current_size,
+                                          struct Size frame_size);
 
-        static struct Size get_initial_optimal_size(struct Size frame_size,
-                                                    uint16_t req_width,
-                                                    uint16_t req_height);
+        static struct Size GetInitialOptimalSize(struct Size frame_size,
+                                                 uint16_t req_width,
+                                                 uint16_t req_height);
 
-        static inline SDL_Texture *create_texture(SDL_Renderer *renderer,
-                                                  struct Size frame_size) {
+        static inline SDL_Texture *CreateTexture(SDL_Renderer *renderer,
+                                                 struct Size frame_size) {
             return SDL_CreateTexture(renderer, SDL_PIXELFORMAT_YV12,
                                      SDL_TEXTUREACCESS_STREAMING,
                                      frame_size.width, frame_size.height);
         }
 
-        static bool sdl_init_and_configure(bool display);
+        static bool InitSDLAndConfigure(bool display);
 
-        static int event_watcher(void *data, SDL_Event *event);
+        static int EventWatcher(void *data, SDL_Event *event);
 
-        static bool event_loop(bool display, bool control);
+        static bool EventLoop(bool display, bool control);
 
-        static enum EventResult handle_event(SDL_Event *event, bool control);
+        static enum EventResult HandleEvent(SDL_Event *event, bool control);
 
-        static bool is_apk(const char *file);
+        static bool IsApk(const char *file);
 
     private:
-        struct Size get_windowed_window_size();
+        struct Size GetWindowedWindowSize();
 
-        void apply_windowed_size();
+        void ApplyWindowedSize();
 
-        void set_window_size(struct Size new_size);
+        void SetWindowSize(struct Size new_size);
 
-        struct Size get_optimal_window_size(struct Size frame_size);
+        struct Size GetOptimalWindowSize(struct Size frame_size);
 
-        bool prepare_for_frame(struct Size new_frame_size);
+        bool PrepareForFrame(struct Size new_frame_size);
 
-        void update_texture(const AVFrame *frame);
+        void UpdateTexture(const AVFrame *frame);
 
 
     };

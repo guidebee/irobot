@@ -27,7 +27,7 @@ namespace irobot {
 
     using namespace irobot::platform;
 
-    const char *Server::get_server_path() {
+    const char *Server::GetServerPath() {
         const char *server_path_env = getenv("SCRCPY_SERVER_PATH");
         if (server_path_env) {
             LOGD("Using SCRCPY_SERVER_PATH: %s", server_path_env);
@@ -74,8 +74,8 @@ namespace irobot {
 #endif
     }
 
-    bool Server::push_server(const char *serial) {
-        const char *server_path = get_server_path();
+    bool Server::PushServer(const char *serial) {
+        const char *server_path = GetServerPath();
         if (!is_regular_file(server_path)) {
             LOGE("'%s' does not exist or is not a regular file\n", server_path);
             return false;
@@ -84,44 +84,44 @@ namespace irobot {
         return process_check_success(process, "adb push");
     }
 
-    bool Server::enable_tunnel_reverse(const char *serial, uint16_t local_port) {
+    bool Server::EnableTunnelReverse(const char *serial, uint16_t local_port) {
         ProcessType process = adb_reverse(serial, SOCKET_NAME, local_port);
         return process_check_success(process, "adb reverse");
     }
 
-    bool Server::disable_tunnel_reverse(const char *serial) {
+    bool Server::DisableTunnelReverse(const char *serial) {
         ProcessType process = adb_reverse_remove(serial, SOCKET_NAME);
         return process_check_success(process, "adb reverse --remove");
     }
 
-    bool Server::enable_tunnel_forward(const char *serial, uint16_t local_port) {
+    bool Server::EnableTunnelForward(const char *serial, uint16_t local_port) {
         ProcessType process = adb_forward(serial, local_port, SOCKET_NAME);
         return process_check_success(process, "adb forward");
     }
 
-    bool Server::disable_tunnel_forward(const char *serial, uint16_t local_port) {
+    bool Server::DisableTunnelForward(const char *serial, uint16_t local_port) {
         ProcessType process = adb_forward_remove(serial, local_port);
         return process_check_success(process, "adb forward --remove");
     }
 
-    bool Server::enable_tunnel() {
-        if (enable_tunnel_reverse(this->serial, this->local_port)) {
+    bool Server::EnableTunnel() {
+        if (EnableTunnelReverse(this->serial, this->local_port)) {
             return true;
         }
 
         LOGW("'adb reverse' failed, fallback to 'adb forward'");
         this->tunnel_forward = true;
-        return enable_tunnel_forward(this->serial, this->local_port);
+        return EnableTunnelForward(this->serial, this->local_port);
     }
 
-    bool Server::disable_tunnel() {
+    bool Server::DisableTunnel() {
         if (this->tunnel_forward) {
-            return disable_tunnel_forward(this->serial, this->local_port);
+            return DisableTunnelForward(this->serial, this->local_port);
         }
-        return disable_tunnel_reverse(this->serial);
+        return DisableTunnelReverse(this->serial);
     }
 
-    ProcessType Server::execute_server(const struct ServerParameters *params) {
+    ProcessType Server::ExecuteServer(const struct ServerParameters *params) {
         char max_size_string[6];
         char bit_rate_string[11];
         char max_fps_string[6];
@@ -163,11 +163,11 @@ namespace irobot {
     }
 
 
-    socket_t Server::listen_on_port(uint16_t port) {
+    socket_t Server::ListenOnPort(uint16_t port) {
         return net_listen(IPV4_LOCALHOST, port, 1);
     }
 
-    socket_t Server::connect_and_read_byte(uint16_t port) {
+    socket_t Server::ConnectAndReadByte(uint16_t port) {
         socket_t socket = net_connect(IPV4_LOCALHOST, port);
         if (socket == INVALID_SOCKET) {
             return INVALID_SOCKET;
@@ -184,10 +184,10 @@ namespace irobot {
         return socket;
     }
 
-    socket_t Server::connect_to_server(uint16_t port, uint32_t attempts, uint32_t delay) {
+    socket_t Server::ConnectToServer(uint16_t port, uint32_t attempts, uint32_t delay) {
         do {
             LOGD("Remaining connection attempts: %d", (int) attempts);
-            socket_t socket = connect_and_read_byte(port);
+            socket_t socket = ConnectAndReadByte(port);
             if (socket != INVALID_SOCKET) {
                 // it worked!
                 return socket;
@@ -199,7 +199,7 @@ namespace irobot {
         return INVALID_SOCKET;
     }
 
-    void Server::close_socket(socket_t *socket) {
+    void Server::CloseSocket(socket_t *socket) {
         assert(*socket != INVALID_SOCKET);
         net_shutdown(*socket, SHUT_RDWR);
         if (!net_close(*socket)) {
@@ -209,7 +209,7 @@ namespace irobot {
         *socket = INVALID_SOCKET;
     }
 
-    void Server::init() {
+    void Server::Init() {
         this->serial = nullptr;
         this->process = PROCESS_NONE;
         this->server_socket = INVALID_SOCKET;
@@ -220,7 +220,7 @@ namespace irobot {
         this->tunnel_forward = false;
     }
 
-    bool Server::start(const char *serial,
+    bool Server::Start(const char *serial,
                        const struct ServerParameters *params) {
         this->local_port = params->local_port;
 
@@ -231,12 +231,12 @@ namespace irobot {
             }
         }
 
-        if (!push_server(serial)) {
+        if (!PushServer(serial)) {
             SDL_free(this->serial);
             return false;
         }
 
-        if (!enable_tunnel()) {
+        if (!EnableTunnel()) {
             SDL_free(this->serial);
             return false;
         }
@@ -251,11 +251,11 @@ namespace irobot {
             // need to try to connect until the server socket is listening on the
             // device.
 
-            this->server_socket = listen_on_port(params->local_port);
+            this->server_socket = ListenOnPort(params->local_port);
             if (this->server_socket == INVALID_SOCKET) {
                 LOGE("Could not listen on port %"
                              PRIu16, params->local_port);
-                disable_tunnel();
+                DisableTunnel();
                 SDL_free(this->serial);
                 return false;
             }
@@ -263,13 +263,13 @@ namespace irobot {
 
 
         // server will connect to our server socket
-        this->process = execute_server(params);
+        this->process = ExecuteServer(params);
 
         if (this->process == PROCESS_NONE) {
             if (!this->tunnel_forward) {
-                close_socket(&this->server_socket);
+                CloseSocket(&this->server_socket);
             }
-            disable_tunnel();
+            DisableTunnel();
             SDL_free(this->serial);
             return false;
         }
@@ -280,7 +280,7 @@ namespace irobot {
     }
 
 
-    bool Server::connect_to() {
+    bool Server::ConnectTo() {
 
         if (!this->tunnel_forward) {
             this->video_socket = net_accept(this->server_socket);
@@ -295,12 +295,12 @@ namespace irobot {
             }
 
             // we don't need the server socket anymore
-            close_socket(&this->server_socket);
+            CloseSocket(&this->server_socket);
         } else {
             uint32_t attempts = 100;
             uint32_t delay = 100; // ms
             this->video_socket =
-                    connect_to_server(this->local_port, attempts, delay);
+                    ConnectToServer(this->local_port, attempts, delay);
             if (this->video_socket == INVALID_SOCKET) {
                 return false;
             }
@@ -314,22 +314,22 @@ namespace irobot {
         }
 
         // we don't need the adb tunnel anymore
-        disable_tunnel(); // ignore failure
+        DisableTunnel(); // ignore failure
         this->tunnel_enabled = false;
 
         return true;
     }
 
-    void Server::stop() {
+    void Server::Stop() {
 
         if (this->server_socket != INVALID_SOCKET) {
-            close_socket(&this->server_socket);
+            CloseSocket(&this->server_socket);
         }
         if (this->video_socket != INVALID_SOCKET) {
-            close_socket(&this->video_socket);
+            CloseSocket(&this->video_socket);
         }
         if (this->control_socket != INVALID_SOCKET) {
-            close_socket(&this->control_socket);
+            CloseSocket(&this->control_socket);
         }
 
         assert(this->process != PROCESS_NONE);
@@ -343,11 +343,11 @@ namespace irobot {
 
         if (this->tunnel_enabled) {
             // ignore failure
-            disable_tunnel();
+            DisableTunnel();
         }
     }
 
-    void Server::destroy() {
+    void Server::Destroy() {
         SDL_free(this->serial);
     }
 }

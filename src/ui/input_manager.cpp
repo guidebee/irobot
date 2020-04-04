@@ -55,7 +55,7 @@ namespace irobot::ui {
 
         if (actions & ACTION_DOWN) {
             msg.inject_keycode.action = AKEY_EVENT_ACTION_DOWN;
-            if (!controller->push_msg(&msg)) {
+            if (!controller->PushMessage(&msg)) {
                 LOGW("Could not request 'inject %s (DOWN)'", name);
                 return;
             }
@@ -63,7 +63,7 @@ namespace irobot::ui {
 
         if (actions & ACTION_UP) {
             msg.inject_keycode.action = AKEY_EVENT_ACTION_UP;
-            if (!controller->push_msg(&msg)) {
+            if (!controller->PushMessage(&msg)) {
                 LOGW("Could not request 'inject %s (UP)'", name);
             }
         }
@@ -75,7 +75,7 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON;
 
-        if (!controller->push_msg(&msg)) {
+        if (!controller->PushMessage(&msg)) {
             LOGW("Could not request 'press back or turn screen on'");
         }
     }
@@ -84,7 +84,7 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL;
 
-        if (!controller->push_msg(&msg)) {
+        if (!controller->PushMessage(&msg)) {
             LOGW("Could not request 'expand notification panel'");
         }
     }
@@ -93,7 +93,7 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL;
 
-        if (!controller->push_msg(&msg)) {
+        if (!controller->PushMessage(&msg)) {
             LOGW("Could not request 'collapse notification panel'");
         }
     }
@@ -102,7 +102,7 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_GET_CLIPBOARD;
 
-        if (!controller->push_msg(&msg)) {
+        if (!controller->PushMessage(&msg)) {
             LOGW("Could not request device clipboard");
         }
     }
@@ -123,7 +123,7 @@ namespace irobot::ui {
         msg.type = CONTROL_MSG_TYPE_SET_CLIPBOARD;
         msg.set_clipboard.text = text;
 
-        if (!controller->push_msg(&msg)) {
+        if (!controller->PushMessage(&msg)) {
             SDL_free(text);
             LOGW("Could not request 'set device clipboard'");
         }
@@ -135,7 +135,7 @@ namespace irobot::ui {
         msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
         msg.set_screen_power_mode.mode = mode;
 
-        if (!controller->push_msg(&msg)) {
+        if (!controller->PushMessage(&msg)) {
             LOGW("Could not request 'set screen power mode'");
         }
     }
@@ -143,11 +143,11 @@ namespace irobot::ui {
     void InputManager::SwitchFpsCounterState(video::FpsCounter *fps_counter) {
         // the started state can only be written from the current thread, so there
         // is no ToCToU issue
-        if (fps_counter->is_started()) {
-            fps_counter->stop();
+        if (fps_counter->IsStarted()) {
+            fps_counter->Stop();
             LOGI("FPS counter stopped");
         } else {
-            if (fps_counter->start()) {
+            if (fps_counter->Start()) {
                 LOGI("FPS counter started");
             } else {
                 LOGE("FPS counter starting failed");
@@ -170,7 +170,7 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_INJECT_TEXT;
         msg.inject_text.text = text;
-        if (!controller->push_msg(&msg)) {
+        if (!controller->PushMessage(&msg)) {
             SDL_free(text);
             LOGW("Could not request 'paste clipboard'");
         }
@@ -180,7 +180,7 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_ROTATE_DEVICE;
 
-        if (!controller->push_msg(&msg)) {
+        if (!controller->PushMessage(&msg)) {
             LOGW("Could not request device rotation");
         }
     }
@@ -203,7 +203,7 @@ namespace irobot::ui {
             LOGW("Could not strdup input text");
             return;
         }
-        if (!this->controller->push_msg(&msg)) {
+        if (!this->controller->PushMessage(&msg)) {
             SDL_free(msg.inject_text.text);
             LOGW("Could not request 'inject text'");
         }
@@ -341,7 +341,7 @@ namespace irobot::ui {
                     return;
                 case SDLK_g:
                     if (!shift && cmd && !repeat && down) {
-                        this->screen->resize_to_pixel_perfect();
+                        this->screen->ResizeToPixelPerfect();
                     }
                     return;
                 case SDLK_i:
@@ -378,7 +378,7 @@ namespace irobot::ui {
 
         struct ControlMessage msg{};
         if (ConvertInputKey(event, &msg, this->prefer_text)) {
-            if (!controller->push_msg(&msg)) {
+            if (!controller->PushMessage(&msg)) {
                 LOGW("Could not request 'inject keycode'");
             }
         }
@@ -411,7 +411,7 @@ namespace irobot::ui {
         }
         struct ControlMessage msg{};
         if (ConvertMouseMotion(event, this->screen, &msg)) {
-            if (!this->controller->push_msg(&msg)) {
+            if (!this->controller->PushMessage(&msg)) {
                 LOGW("Could not request 'inject mouse motion event'");
             }
         }
@@ -441,7 +441,7 @@ namespace irobot::ui {
             const SDL_TouchFingerEvent *event) {
         struct ControlMessage msg{};
         if (ConvertTouch(event, this->screen, &msg)) {
-            if (!this->controller->push_msg(&msg)) {
+            if (!this->controller->PushMessage(&msg)) {
                 LOGW("Could not request 'inject touch event'");
             }
         }
@@ -507,7 +507,7 @@ namespace irobot::ui {
 
         struct ControlMessage msg{};
         if (ConvertMouseButton(event, this->screen, &msg)) {
-            if (!this->controller->push_msg(&msg)) {
+            if (!this->controller->PushMessage(&msg)) {
                 LOGW("Could not request 'inject mouse button event'");
             }
         }
@@ -534,7 +534,7 @@ namespace irobot::ui {
             const SDL_MouseWheelEvent *event) {
         struct ControlMessage msg{};
         if (ConvertMouseWheel(event, this->screen, &msg)) {
-            if (!this->controller->push_msg(&msg)) {
+            if (!this->controller->PushMessage(&msg)) {
                 LOGW("Could not request 'inject mouse wheel event'");
             }
         }

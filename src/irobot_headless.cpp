@@ -7,5 +7,5 @@
 using namespace irobot;
 
 int main(int argc, char *argv[]) {
-    return IRobotCore::irobot_main(argc, argv);
+    return IRobotCore::iRobotMain(argc, argv);
 }

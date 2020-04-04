@@ -17,7 +17,7 @@ namespace irobot::video {
 
 
 
-    bool VideoStream::recv_packet(AVPacket *packet) {
+    bool VideoStream::ReceivePacket(AVPacket *packet) {
         // The video stream contains raw packets, without time information. When we
         // record, we retrieve the timestamps separately, from a "meta" header
         // added by the server before each raw packet.
@@ -57,29 +57,29 @@ namespace irobot::video {
         return true;
     }
 
-    void VideoStream::notify_stopped() {
+    void VideoStream::NotifyStopped() {
         SDL_Event stop_event;
         stop_event.type = EVENT_STREAM_STOPPED;
         SDL_PushEvent(&stop_event);
     }
 
-    bool VideoStream::process_config_packet(AVPacket *packet) {
-        if (this->recorder && !this->recorder->push(packet)) {
+    bool VideoStream::ProcessConfigPacket(AVPacket *packet) {
+        if (this->recorder && !this->recorder->Push(packet)) {
             LOGE("Could not send config packet to recorder");
             return false;
         }
         return true;
     }
 
-    bool VideoStream::process_frame(AVPacket *packet) {
-        if (this->decoder && !this->decoder->push(packet)) {
+    bool VideoStream::ProcessFrame(AVPacket *packet) {
+        if (this->decoder && !this->decoder->Push(packet)) {
             return false;
         }
 
         if (this->recorder) {
             packet->dts = packet->pts;
 
-            if (!this->recorder->push(packet)) {
+            if (!this->recorder->Push(packet)) {
                 LOGE("Could not send packet to recorder");
                 return false;
             }
@@ -88,7 +88,7 @@ namespace irobot::video {
         return true;
     }
 
-    bool VideoStream::parse(AVPacket *packet) {
+    bool VideoStream::Parse(AVPacket *packet) {
         uint8_t *in_data = packet->data;
         int in_len = packet->size;
         uint8_t *out_data = nullptr;
@@ -106,7 +106,7 @@ namespace irobot::video {
             packet->flags |= AV_PKT_FLAG_KEY;
         }
 
-        bool ok = this->process_frame(packet);
+        bool ok = this->ProcessFrame(packet);
         if (!ok) {
             LOGE("Could not process frame");
             return false;
@@ -115,7 +115,7 @@ namespace irobot::video {
         return true;
     }
 
-    bool VideoStream::push_packet(AVPacket *packet) {
+    bool VideoStream::PushPacket(AVPacket *packet) {
         bool is_config = packet->pts == AV_NOPTS_VALUE;
 
         // A config packet must not be decoded immetiately (it contains no
@@ -150,13 +150,13 @@ namespace irobot::video {
 
         if (is_config) {
             // config packet
-            bool ok = this->process_config_packet(packet);
+            bool ok = this->ProcessConfigPacket(packet);
             if (!ok) {
                 return false;
             }
         } else {
             // data packet
-            bool ok = this->parse(packet);
+            bool ok = this->Parse(packet);
 
             if (this->has_pending) {
                 // the pending packet must be discarded (consumed or error)
@@ -171,7 +171,7 @@ namespace irobot::video {
         return true;
     }
 
-    int VideoStream::run_stream(void *data) {
+    int VideoStream::RunStream(void *data) {
         auto *stream = (struct VideoStream *) data;
 
         AVCodec *codec = avcodec_find_decoder(AV_CODEC_ID_H264);
@@ -185,18 +185,18 @@ namespace irobot::video {
             goto end;
         }
 
-        if (stream->decoder && !stream->decoder->open(codec)) {
+        if (stream->decoder && !stream->decoder->Open(codec)) {
             LOGE("Could not open decoder");
             goto finally_free_codec_ctx;
         }
 
         if (stream->recorder) {
-            if (!stream->recorder->open(codec)) {
+            if (!stream->recorder->Open(codec)) {
                 LOGE("Could not open recorder");
                 goto finally_close_decoder;
             }
 
-            if (!stream->recorder->start()) {
+            if (!stream->recorder->Start()) {
                 LOGE("Could not start recorder");
                 goto finally_close_recorder;
             }
@@ -214,13 +214,13 @@ namespace irobot::video {
 
         for (;;) {
             AVPacket packet;
-            bool ok = stream->recv_packet(&packet);
+            bool ok = stream->ReceivePacket(&packet);
             if (!ok) {
                 // end of stream
                 break;
             }
 
-            ok = stream->push_packet(&packet);
+            ok = stream->PushPacket(&packet);
             av_packet_unref(&packet);
             if (!ok) {
                 // cannot process packet (error already logged)
@@ -240,26 +240,26 @@ namespace irobot::video {
         av_parser_close(stream->parser);
         finally_stop_and_join_recorder:
         if (stream->recorder) {
-            stream->recorder->stop();
+            stream->recorder->Stop();
             LOGI("Finishing recording...");
-            stream->recorder->join();
+            stream->recorder->Join();
         }
         finally_close_recorder:
         if (stream->recorder) {
-            stream->recorder->close();
+            stream->recorder->Close();
         }
         finally_close_decoder:
         if (stream->decoder) {
-            stream->decoder->close();
+            stream->decoder->Close();
         }
         finally_free_codec_ctx:
         avcodec_free_context(&stream->codec_ctx);
         end:
-        notify_stopped();
+        NotifyStopped();
         return 0;
     }
 
-    void VideoStream::init(socket_t socket,
+    void VideoStream::Init(socket_t socket,
                            struct Decoder *decoder, struct Recorder *recorder) {
         this->socket = socket;
         this->decoder = decoder,
@@ -267,9 +267,9 @@ namespace irobot::video {
         this->has_pending = false;
     }
 
-    bool VideoStream::start() {
+    bool VideoStream::Start() {
         LOGD("Starting stream thread");
-        this->thread = SDL_CreateThread(run_stream, "stream", this);
+        this->thread = SDL_CreateThread(RunStream, "stream", this);
         if (!this->thread) {
             LOGC("Could not start stream thread");
             return false;
@@ -277,13 +277,13 @@ namespace irobot::video {
         return true;
     }
 
-    void VideoStream::stop() {
+    void VideoStream::Stop() {
         if (this->decoder) {
-            this->decoder->interrupt();
+            this->decoder->Interrupt();
         }
     }
 
-    void VideoStream::join() {
+    void VideoStream::Join() {
 
         SDL_WaitThread(this->thread, nullptr);
     }

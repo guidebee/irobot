@@ -15,7 +15,7 @@ namespace irobot::video {
 
     static const AVRational SCRCPY_TIME_BASE = {1, 1000000}; // timestamps in us
 
-    bool Recorder::init(
+    bool Recorder::Init(
             const char *filename,
             enum RecordFormat format,
             struct Size declared_frame_size) {
@@ -52,7 +52,7 @@ namespace irobot::video {
         return true;
     }
 
-    void Recorder::destroy() {
+    void Recorder::Destroy() {
         Recorder *recorder = this;
         SDL_DestroyCond(recorder->queue_cond);
         SDL_DestroyMutex(recorder->mutex);
@@ -60,11 +60,11 @@ namespace irobot::video {
     }
 
 
-    bool Recorder::open(const AVCodec *input_codec) {
+    bool Recorder::Open(const AVCodec *input_codec) {
         Recorder *recorder = this;
-        const char *format_name = recorder_get_format_name(recorder->format);
+        const char *format_name = RecorderGetFormatName(recorder->format);
         assert(format_name);
-        const AVOutputFormat *format = find_muxer(format_name);
+        const AVOutputFormat *format = FindMuxer(format_name);
         if (!format) {
             LOGE("Could not find muxer");
             return false;
@@ -114,7 +114,7 @@ namespace irobot::video {
         return true;
     }
 
-    void Recorder::close() {
+    void Recorder::Close() {
         Recorder *recorder = this;
         if (recorder->header_written) {
             int ret = av_write_trailer(recorder->ctx);
@@ -132,12 +132,12 @@ namespace irobot::video {
         if (recorder->failed) {
             LOGE("Recording failed to %s", recorder->filename);
         } else {
-            const char *format_name = recorder_get_format_name(recorder->format);
+            const char *format_name = RecorderGetFormatName(recorder->format);
             LOGI("Recording complete to %s file: %s", format_name, recorder->filename);
         }
     }
 
-    bool Recorder::write_header(const AVPacket *packet) {
+    bool Recorder::WriteHeader(const AVPacket *packet) {
         Recorder *recorder = this;
         AVStream *ostream = recorder->ctx->streams[0];
 
@@ -163,20 +163,20 @@ namespace irobot::video {
         return true;
     }
 
-    void Recorder::rescale_packet(AVPacket *packet) {
+    void Recorder::RescalePacket(AVPacket *packet) {
         Recorder *recorder = this;
         AVStream *ostream = recorder->ctx->streams[0];
         av_packet_rescale_ts(packet, SCRCPY_TIME_BASE, ostream->time_base);
     }
 
-    bool Recorder::write(AVPacket *packet) {
+    bool Recorder::Write(AVPacket *packet) {
         Recorder *recorder = this;
         if (!recorder->header_written) {
             if (packet->pts != AV_NOPTS_VALUE) {
                 LOGE("The first packet is not a config packet");
                 return false;
             }
-            bool ok = recorder->write_header(packet);
+            bool ok = recorder->WriteHeader(packet);
             if (!ok) {
                 return false;
             }
@@ -189,11 +189,11 @@ namespace irobot::video {
             return true;
         }
 
-        recorder->rescale_packet(packet);
+        recorder->RescalePacket(packet);
         return av_write_frame(recorder->ctx, packet) >= 0;
     }
 
-    int Recorder::run_recorder(void *data) {
+    int Recorder::RunRecorder(void *data) {
         auto *recorder = static_cast<struct Recorder *>(data);
 
         for (;;) {
@@ -212,14 +212,14 @@ namespace irobot::video {
                 if (last) {
                     // assign an arbitrary duration to the last packet
                     last->packet.duration = 100000;
-                    bool ok = recorder->write(&last->packet);
+                    bool ok = recorder->Write(&last->packet);
                     if (!ok) {
                         // failing to write the last frame is not very serious, no
                         // future frame may depend on it, so the resulting file
                         // will still be valid
                         LOGW("Could not record last packet");
                     }
-                    record_packet_delete(last);
+                    RecordPacketDelete(last);
                 }
                 break;
             }
@@ -245,15 +245,15 @@ namespace irobot::video {
                 previous->packet.duration = rec->packet.pts - previous->packet.pts;
             }
 
-            bool ok = recorder->write(&previous->packet);
-            record_packet_delete(previous);
+            bool ok = recorder->Write(&previous->packet);
+            RecordPacketDelete(previous);
             if (!ok) {
                 LOGE("Could not record packet");
 
                 util::mutex_lock(recorder->mutex);
                 recorder->failed = true;
                 // discard pending packets
-                recorder_queue_clear(&recorder->queue);
+                RecorderQueueClear(&recorder->queue);
                 util::mutex_unlock(recorder->mutex);
                 break;
             }
@@ -265,10 +265,10 @@ namespace irobot::video {
         return 0;
     }
 
-    bool Recorder::start() {
+    bool Recorder::Start() {
         LOGD("Starting recorder thread");
         Recorder *recorder = this;
-        recorder->thread = SDL_CreateThread(run_recorder, "recorder", recorder);
+        recorder->thread = SDL_CreateThread(RunRecorder, "recorder", recorder);
         if (!recorder->thread) {
             LOGC("Could not start recorder thread");
             return false;
@@ -277,7 +277,7 @@ namespace irobot::video {
         return true;
     }
 
-    void Recorder::stop() {
+    void Recorder::Stop() {
         Recorder *recorder = this;
         util::mutex_lock(recorder->mutex);
         recorder->stopped = true;
@@ -285,12 +285,12 @@ namespace irobot::video {
         util::mutex_unlock(recorder->mutex);
     }
 
-    void Recorder::join() {
+    void Recorder::Join() {
         Recorder *recorder = this;
         SDL_WaitThread(recorder->thread, nullptr);
     }
 
-    bool Recorder::push(const AVPacket *packet) {
+    bool Recorder::Push(const AVPacket *packet) {
         Recorder *recorder = this;
         util::mutex_lock(recorder->mutex);
         assert(!recorder->stopped);
@@ -300,7 +300,7 @@ namespace irobot::video {
             return false;
         }
 
-        struct RecordPacket *rec = record_packet_new(packet);
+        struct RecordPacket *rec = RecordPacketNew(packet);
         if (!rec) {
             LOGC("Could not allocate record packet");
             return false;

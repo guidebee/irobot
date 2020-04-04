@@ -28,18 +28,18 @@ namespace irobot::video {
         VideoBuffer *video_buffer;
         AVCodecContext *codec_ctx;
 
-        void init(VideoBuffer *vb);
+        void Init(VideoBuffer *vb);
 
-        bool open(const AVCodec *codec);
+        bool Open(const AVCodec *codec);
 
-        void close();
+        void Close();
 
-        bool push(const AVPacket *packet);
+        bool Push(const AVPacket *packet);
 
-        void interrupt();
+        void Interrupt();
 
     private:
-        void push_frame();
+        void PushFrame();
     };
 }
 

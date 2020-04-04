@@ -42,29 +42,29 @@ namespace irobot::video {
         uint32_t next_timestamp;
 
 
-        bool init();
+        bool Init();
 
-        void destroy();
+        void Destroy();
 
-        bool start();
+        bool Start();
 
-        void stop();
+        void Stop();
 
-        bool is_started();
+        bool IsStarted();
 
         // request to stop the thread (on quit)
         // must be called before fps_counter_join()
-        void interrupt();
+        void Interrupt();
 
-        void join();
+        void Join();
 
-        void add_rendered_frame();
+        void AddRenderedFrame();
 
-        void add_skipped_frame();
+        void AddSkippedFrame();
 
-        void check_interval_expired(uint32_t now);
+        void CheckIntervalExpired(uint32_t now);
 
-        static int run_fps_counter(void *data);
+        static int RunFpsCounter(void *data);
 
     private:
         void display_fps();

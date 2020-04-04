@@ -38,29 +38,29 @@ namespace irobot::video {
         bool rendering_frame_consumed;
         struct FpsCounter *fps_counter;
 
-        bool init(struct FpsCounter *fps_counter,
+        bool Init(struct FpsCounter *fps_counter,
                   bool render_expired_frames);
 
-        void destroy();
+        void Destroy();
 
 
         // set the decoded frame as ready for rendering
         // this function locks frames->mutex during its execution
         // the output flag is set to report whether the previous frame has been skipped
-        void offer_decoded_frame(
+        void OfferDecodedFrame(
                 bool *previous_frame_skipped);
 
         // mark the rendering frame as consumed and return it
         // MUST be called with frames->mutex locked!!!
         // the caller is expected to render the returned frame to some texture before
         // unlocking frames->mutex
-        const AVFrame *consume_rendered_frame();
+        const AVFrame *ConsumeRenderedFrame();
 
         // wake up and avoid any blocking call
-        void interrupt();
+        void Interrupt();
 
     private:
-        void swap_frames();
+        void SwapFrames();
 
     };
 

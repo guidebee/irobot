@@ -25,7 +25,7 @@ namespace irobot {
     namespace ui {
 
         // get the window size in a struct size
-        struct Size Screen::get_window_size(SDL_Window *window) {
+        struct Size Screen::GetWindowSize(SDL_Window *window) {
             int width;
             int height;
             SDL_GetWindowSize(window, &width, &height);
@@ -37,15 +37,15 @@ namespace irobot {
         }
 
         // get the windowed window size
-        struct Size Screen::get_windowed_window_size() {
+        struct Size Screen::GetWindowedWindowSize() {
             if (this->fullscreen || this->maximized) {
                 return this->windowed_window_size;
             }
-            return get_window_size(this->window);
+            return GetWindowSize(this->window);
         }
 
         // apply the windowed window size if fullscreen and maximized are disabled
-        void Screen::apply_windowed_size() {
+        void Screen::ApplyWindowedSize() {
             if (!this->fullscreen && !this->maximized) {
                 SDL_SetWindowSize(this->window, this->windowed_window_size.width,
                                   this->windowed_window_size.height);
@@ -53,15 +53,15 @@ namespace irobot {
         }
 
         // set the window size to be applied when fullscreen is disabled
-        void Screen::set_window_size(struct Size new_size) {
+        void Screen::SetWindowSize(struct Size new_size) {
             // setting the window size during fullscreen is implementation defined,
             // so apply the resize only after fullscreen is disabled
             this->windowed_window_size = new_size;
-            apply_windowed_size();
+            ApplyWindowedSize();
         }
 
         // get the preferred display bounds (i.e. the screen bounds with some margins)
-        bool Screen::get_preferred_display_bounds(struct Size *bounds) {
+        bool Screen::GetPreferredDisplayBounds(struct Size *bounds) {
             SDL_Rect rect;
 # define GET_DISPLAY_BOUNDS(i, r) SDL_GetDisplayUsableBounds((i), (r))
             if (GET_DISPLAY_BOUNDS(0, &rect)) {
@@ -79,8 +79,8 @@ namespace irobot {
         //    crops the black borders)
         //  - it keeps the aspect ratio
         //  - it scales down to make it fit in the display_size
-        struct Size Screen::get_optimal_size(struct Size current_size,
-                                             struct Size frame_size) {
+        struct Size Screen::GetOptimalSize(struct Size current_size,
+                                           struct Size frame_size) {
             if (frame_size.width == 0 || frame_size.height == 0) {
                 // avoid division by 0
                 return current_size;
@@ -91,7 +91,7 @@ namespace irobot {
             uint32_t w;
             uint32_t h;
 
-            if (!get_preferred_display_bounds(&display_size)) {
+            if (!GetPreferredDisplayBounds(&display_size)) {
                 // could not get display bounds, do not constraint the size
                 w = current_size.width;
                 h = current_size.height;
@@ -116,18 +116,18 @@ namespace irobot {
         }
 
         // same as get_optimal_size(), but read the current size from the window
-        struct Size Screen::get_optimal_window_size(struct Size frame_size) {
-            struct Size windowed_size = get_windowed_window_size();
-            return get_optimal_size(windowed_size, frame_size);
+        struct Size Screen::GetOptimalWindowSize(struct Size frame_size) {
+            struct Size windowed_size = GetWindowedWindowSize();
+            return GetOptimalSize(windowed_size, frame_size);
         }
 
         // initially, there is no current size, so use the frame size as current size
         // req_width and req_height, if not 0, are the sizes requested by the user
-        struct Size Screen::get_initial_optimal_size(struct Size frame_size, uint16_t req_width,
-                                                     uint16_t req_height) {
+        struct Size Screen::GetInitialOptimalSize(struct Size frame_size, uint16_t req_width,
+                                                  uint16_t req_height) {
             struct Size window_size{};
             if (!req_width && !req_height) {
-                window_size = get_optimal_size(frame_size, frame_size);
+                window_size = GetOptimalSize(frame_size, frame_size);
             } else {
                 if (req_width) {
                     window_size.width = req_width;
@@ -185,7 +185,7 @@ namespace irobot {
             }
 
             struct Size window_size =
-                    get_initial_optimal_size(frame_size, window_width, window_height);
+                    GetInitialOptimalSize(frame_size, window_width, window_height);
             uint32_t window_flags = SDL_WINDOW_HIDDEN | SDL_WINDOW_RESIZABLE;
 
             window_flags |= SDL_WINDOW_ALLOW_HIGHDPI;
@@ -229,7 +229,7 @@ namespace irobot {
                          "x%"
                          PRIu16, frame_size.width,
                  frame_size.height);
-            this->texture = create_texture(this->renderer, frame_size);
+            this->texture = CreateTexture(this->renderer, frame_size);
             if (!this->texture) {
                 LOGC("Could not create texture: %s", SDL_GetError());
                 this->Destroy();
@@ -258,7 +258,7 @@ namespace irobot {
         }
 
         // recreate the texture and resize the window if the frame size has changed
-        bool Screen::prepare_for_frame(struct Size new_frame_size) {
+        bool Screen::PrepareForFrame(struct Size new_frame_size) {
             if (this->frame_size.width != new_frame_size.width
                 || this->frame_size.height != new_frame_size.height) {
                 if (SDL_RenderSetLogicalSize(this->renderer, new_frame_size.width,
@@ -270,15 +270,15 @@ namespace irobot {
                 // frame dimension changed, destroy texture
                 SDL_DestroyTexture(this->texture);
 
-                struct Size windowed_size = get_windowed_window_size();
+                struct Size windowed_size = GetWindowedWindowSize();
                 struct Size target_size = {
                         (uint16_t) ((uint32_t) windowed_size.width * new_frame_size.width
                                     / this->frame_size.width),
                         (uint16_t) ((uint32_t) windowed_size.height * new_frame_size.height
                                     / this->frame_size.height),
                 };
-                target_size = get_optimal_size(target_size, new_frame_size);
-                set_window_size(target_size);
+                target_size = GetOptimalSize(target_size, new_frame_size);
+                SetWindowSize(target_size);
 
                 this->frame_size = new_frame_size;
 
@@ -287,7 +287,7 @@ namespace irobot {
                              "x%"
                              PRIu16,
                      this->frame_size.width, this->frame_size.height);
-                this->texture = create_texture(this->renderer, new_frame_size);
+                this->texture = CreateTexture(this->renderer, new_frame_size);
                 if (!this->texture) {
                     LOGC("Could not create texture: %s", SDL_GetError());
                     return false;
@@ -298,7 +298,7 @@ namespace irobot {
         }
 
         // write the frame into the texture
-        void Screen::update_texture(const AVFrame *frame) {
+        void Screen::UpdateTexture(const AVFrame *frame) {
             SDL_UpdateYUVTexture(this->texture, nullptr,
                                  frame->data[0], frame->linesize[0],
                                  frame->data[1], frame->linesize[1],
@@ -307,13 +307,13 @@ namespace irobot {
 
         bool Screen::UpdateFrame(video::VideoBuffer *vb) {
             util::mutex_lock(vb->mutex);
-            const AVFrame *frame = vb->consume_rendered_frame();
+            const AVFrame *frame = vb->ConsumeRenderedFrame();
             struct Size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
-            if (!prepare_for_frame(new_frame_size)) {
+            if (!PrepareForFrame(new_frame_size)) {
                 util::mutex_unlock(vb->mutex);
                 return false;
             }
-            update_texture(frame);
+            UpdateTexture(frame);
             util::mutex_unlock(vb->mutex);
 
             this->Render();
@@ -335,7 +335,7 @@ namespace irobot {
             }
 
             this->fullscreen = !this->fullscreen;
-            apply_windowed_size();
+            ApplyWindowedSize();
 
             LOGD("Switched to %s mode", this->fullscreen ? "fullscreen" : "windowed");
             this->Render();
@@ -352,12 +352,12 @@ namespace irobot {
             }
 
             struct Size optimal_size =
-                    get_optimal_window_size(this->frame_size);
+                    GetOptimalWindowSize(this->frame_size);
             SDL_SetWindowSize(this->window, optimal_size.width, optimal_size.height);
             LOGD("Resized to optimal size");
         }
 
-        void Screen::resize_to_pixel_perfect() {
+        void Screen::ResizeToPixelPerfect() {
             if (this->fullscreen) {
                 return;
             }
@@ -372,7 +372,7 @@ namespace irobot {
             LOGD("Resized to pixel-perfect");
         }
 
-        void Screen::handle_window_event(
+        void Screen::HandleWindowEvent(
                 const SDL_WindowEvent *event) {
             switch (event->event) {
                 case SDL_WINDOWEVENT_EXPOSED:
@@ -389,7 +389,7 @@ namespace irobot {
 
                         // Save the windowed size, so that it is available once the
                         // window is maximized or fullscreen is enabled.
-                        this->windowed_window_size = get_window_size(this->window);
+                        this->windowed_window_size = GetWindowSize(this->window);
                     }
                     this->Render();
                     break;
@@ -408,18 +408,18 @@ namespace irobot {
                     break;
                 case SDL_WINDOWEVENT_RESTORED:
                     this->maximized = false;
-                    apply_windowed_size();
+                    ApplyWindowedSize();
                     break;
             }
         }
 
-        bool Screen::is_apk(const char *file) {
+        bool Screen::IsApk(const char *file) {
             const char *ext = strrchr(file, '.');
             return ext && !strcmp(ext, ".apk");
         }
 
         // init SDL and set appropriate hints
-        bool Screen::sdl_init_and_configure(bool display) {
+        bool Screen::InitSDLAndConfigure(bool display) {
             uint32_t flags = display ? SDL_INIT_VIDEO : SDL_INIT_EVENTS;
             if (SDL_Init(flags)) {
                 LOGC("Could not initialize SDL: %s", SDL_GetError());
@@ -468,7 +468,7 @@ namespace irobot {
 //
 // <https://bugzilla.libsdl.org/show_bug.cgi?id=2077>
 // <https://stackoverflow.com/a/40693139/1987178>
-        int Screen::event_watcher(void *data, SDL_Event *event) {
+        int Screen::EventWatcher(void *data, SDL_Event *event) {
             (void) data;
             if (event->type == SDL_WINDOWEVENT
                 && event->window.event == SDL_WINDOWEVENT_RESIZED) {
@@ -481,7 +481,7 @@ namespace irobot {
 #endif
 
 
-        enum EventResult Screen::handle_event(SDL_Event *event, bool control) {
+        enum EventResult Screen::HandleEvent(SDL_Event *event, bool control) {
             switch (event->type) {
                 case EVENT_STREAM_STOPPED:
                     LOGD("Video stream stopped");
@@ -500,7 +500,7 @@ namespace irobot {
                     }
                     break;
                 case SDL_WINDOWEVENT:
-                    screen.handle_window_event(&event->window);
+                    screen.HandleWindowEvent(&event->window);
                     break;
                 case SDL_TEXTINPUT:
                     if (!control) {
@@ -543,7 +543,7 @@ namespace irobot {
                         break;
                     }
                     FileHandlerActionType action;
-                    if (is_apk(event->drop.file)) {
+                    if (IsApk(event->drop.file)) {
                         action = ACTION_INSTALL_APK;
                     } else {
                         action = ACTION_PUSH_FILE;
@@ -555,16 +555,16 @@ namespace irobot {
             return EVENT_RESULT_CONTINUE;
         }
 
-        bool Screen::event_loop(bool display, bool control) {
+        bool Screen::EventLoop(bool display, bool control) {
             (void) display;
 #ifdef CONTINUOUS_RESIZING_WORKAROUND
             if (display) {
-                SDL_AddEventWatch(event_watcher, nullptr);
+                SDL_AddEventWatch(EventWatcher, nullptr);
             }
 #endif
             SDL_Event event;
             while (SDL_WaitEvent(&event)) {
-                enum EventResult result = handle_event(&event, control);
+                enum EventResult result = HandleEvent(&event, control);
                 switch (result) {
                     case EVENT_RESULT_STOPPED_BY_USER:
                         return true;

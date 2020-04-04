@@ -13,7 +13,7 @@
 namespace irobot {
 
 
-    bool Controller::init(socket_t control_socket) {
+    bool Controller::Init(socket_t control_socket) {
 
         cbuf_init(&this->queue);
 
@@ -38,7 +38,7 @@ namespace irobot {
         return true;
     }
 
-    void Controller::destroy() {
+    void Controller::Destroy() {
         SDL_DestroyCond(this->msg_cond);
         SDL_DestroyMutex(this->mutex);
 
@@ -50,7 +50,7 @@ namespace irobot {
         this->receiver.Destroy();
     }
 
-    bool Controller::push_msg(
+    bool Controller::PushMessage(
             const struct message::ControlMessage *msg) {
         util::mutex_lock(this->mutex);
         bool was_empty = cbuf_is_empty(&this->queue);
@@ -62,7 +62,7 @@ namespace irobot {
         return res;
     }
 
-    bool Controller::process_msg(
+    bool Controller::ProcessMessage(
             struct message::ControlMessage *msg) {
 
         unsigned char serialized_msg[CONTROL_MSG_SERIALIZED_MAX_SIZE];
@@ -75,7 +75,7 @@ namespace irobot {
         return w == length;
     }
 
-    int Controller::run_controller(void *data) {
+    int Controller::RunController(void *data) {
         auto *controller = static_cast<Controller *>(data);
 
         for (;;) {
@@ -94,7 +94,7 @@ namespace irobot {
             (void) non_empty;
             util::mutex_unlock(controller->mutex);
 
-            bool ok = controller->process_msg(&msg);
+            bool ok = controller->ProcessMessage(&msg);
             msg.Destroy();
             if (!ok) {
                 LOGD("Could not write msg to socket");
@@ -104,11 +104,11 @@ namespace irobot {
         return 0;
     }
 
-    bool Controller::start() {
+    bool Controller::Start() {
 
         LOGD("Starting controller thread");
 
-        this->thread = SDL_CreateThread(run_controller, "controller",
+        this->thread = SDL_CreateThread(RunController, "controller",
                                         this);
         if (!this->thread) {
             LOGC("Could not start controller thread");
@@ -116,7 +116,7 @@ namespace irobot {
         }
 
         if (!this->receiver.Start()) {
-            this->stop();
+            this->Stop();
             SDL_WaitThread(this->thread, nullptr);
             return false;
         }
@@ -124,14 +124,14 @@ namespace irobot {
         return true;
     }
 
-    void Controller::stop() {
+    void Controller::Stop() {
         util::mutex_lock(this->mutex);
         this->stopped = true;
         util::cond_signal(this->msg_cond);
         util::mutex_unlock(this->mutex);
     }
 
-    void Controller::join() {
+    void Controller::Join() {
         SDL_WaitThread(this->thread, nullptr);
         this->receiver.Join();
     }

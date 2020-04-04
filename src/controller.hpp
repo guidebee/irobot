@@ -42,22 +42,22 @@ namespace irobot {
 
         class android::Receiver receiver;
 
-        bool init(socket_t control_socket);
+        bool Init(socket_t control_socket);
 
-        void destroy();
+        void Destroy();
 
-        bool start();
+        bool Start();
 
-        void stop();
+        void Stop();
 
-        void join();
+        void Join();
 
-        bool push_msg(const struct message::ControlMessage *msg);
+        bool PushMessage(const struct message::ControlMessage *msg);
 
-        static int run_controller(void *data);
+        static int RunController(void *data);
 
     private:
-        bool process_msg(struct message::ControlMessage *msg);
+        bool ProcessMessage(struct message::ControlMessage *msg);
 
     };
 }

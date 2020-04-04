@@ -45,31 +45,31 @@ namespace irobot::video {
         bool has_pending;
         AVPacket pending;
 
-        void init(socket_t socket,
+        void Init(socket_t socket,
                   struct Decoder *decoder, Recorder *recorder);
 
-        bool start();
+        bool Start();
 
-        void stop();
+        void Stop();
 
-        void join();
+        void Join();
 
-        bool recv_packet(AVPacket *packet);
+        bool ReceivePacket(AVPacket *packet);
 
-        bool push_packet(AVPacket *packet);
+        bool PushPacket(AVPacket *packet);
 
-        static void notify_stopped();
+        static void NotifyStopped();
 
-        static int run_stream(void *data);
+        static int RunStream(void *data);
 
     private:
 
 
-        bool process_config_packet(AVPacket *packet);
+        bool ProcessConfigPacket(AVPacket *packet);
 
-        bool process_frame(AVPacket *packet);
+        bool ProcessFrame(AVPacket *packet);
 
-        bool parse(AVPacket *packet);
+        bool Parse(AVPacket *packet);
 
 
     };

@@ -62,43 +62,43 @@ namespace irobot {
 
         IRobotCore();
 
-        bool init();
+        bool Init();
 
-        static ProcessType set_show_touches_enabled(const char *serial, bool enabled);
+        static ProcessType SetShowTouchesEnabled(const char *serial, bool enabled);
 
-        static void wait_show_touches(ProcessType process);
+        static void WaitShowTouches(ProcessType process);
 
-        static SDL_LogPriority sdl_priority_from_av_level(int level);
+        static SDL_LogPriority SDLPriorityFromAVLevel(int level);
 
-        static void av_log_callback(void *avcl, int level, const char *fmt, va_list vl);
+        static void AVLogCallback(void *avcl, int level, const char *fmt, va_list vl);
 
-        static bool parse_integer_arg(const char *s, long *out, bool accept_suffix, long min,
-                                      long max, const char *name);
+        static bool ParseIntegerArg(const char *s, long *out, bool accept_suffix, long min,
+                                    long max, const char *name);
 
-        static bool parse_bit_rate(const char *s, uint32_t *bit_rate);
+        static bool ParseBitRate(const char *s, uint32_t *bit_rate);
 
-        static bool parse_max_size(const char *s, uint16_t *max_size);
+        static bool ParseMaxSize(const char *s, uint16_t *max_size);
 
-        static bool parse_max_fps(const char *s, uint16_t *max_fps);
+        static bool ParseMaxFps(const char *s, uint16_t *max_fps);
 
-        static bool parse_window_position(const char *s, int16_t *position);
+        static bool ParseWindowPosition(const char *s, int16_t *position);
 
-        static bool parse_window_dimension(const char *s, uint16_t *dimension);
+        static bool ParseWindowDimension(const char *s, uint16_t *dimension);
 
-        static bool parse_port(const char *s, uint16_t *port);
+        static bool ParsePort(const char *s, uint16_t *port);
 
-        static bool parse_record_format(const char *opt_arg, enum video::RecordFormat *format);
+        static bool ParseRecordFormat(const char *opt_arg, enum video::RecordFormat *format);
 
-        static enum video::RecordFormat guess_record_format(const char *filename);
+        static enum video::RecordFormat GuessRecordFormat(const char *filename);
 
 
-        bool parse_args(int argc, char *argv[]);
+        bool ParseArgs(int argc, char **argv);
 
-        static void irobot_print_usage(const char *arg0);
+        static void PrintUsage(const char *arg0);
 
-        static void print_version();
+        static void PrintVersion();
 
-        static int irobot_main(int argc, char *argv[]);
+        static int iRobotMain(int argc, char **argv);
     };
 
 }

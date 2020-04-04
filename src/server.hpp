@@ -47,48 +47,48 @@ namespace irobot {
         bool tunnel_forward; // use "adb forward" instead of "adb reverse"
 
         // init default values
-        void init();
+        void Init();
 
         // push, enable tunnel et start the server
-        bool start(const char *serial,
+        bool Start(const char *serial,
                    const struct ServerParameters *params);
 
         // block until the communication with the server is established
-        bool connect_to();
+        bool ConnectTo();
 
         // disconnect and kill the server process
-        void stop();
+        void Stop();
 
         // close and release sockets
-        void destroy();
+        void Destroy();
 
-        static const char *get_server_path();
+        static const char *GetServerPath();
 
-        static bool push_server(const char *serial);
+        static bool PushServer(const char *serial);
 
-        static bool enable_tunnel_reverse(const char *serial, uint16_t local_port);
+        static bool EnableTunnelReverse(const char *serial, uint16_t local_port);
 
-        static bool disable_tunnel_reverse(const char *serial);
+        static bool DisableTunnelReverse(const char *serial);
 
-        static bool enable_tunnel_forward(const char *serial, uint16_t local_port);
+        static bool EnableTunnelForward(const char *serial, uint16_t local_port);
 
-        static bool disable_tunnel_forward(const char *serial, uint16_t local_port);
+        static bool DisableTunnelForward(const char *serial, uint16_t local_port);
 
-        static socket_t listen_on_port(uint16_t port);
+        static socket_t ListenOnPort(uint16_t port);
 
-        static socket_t connect_and_read_byte(uint16_t port);
+        static socket_t ConnectAndReadByte(uint16_t port);
 
-        static socket_t connect_to_server(uint16_t port,
-                                          uint32_t attempts, uint32_t delay);
+        static socket_t ConnectToServer(uint16_t port,
+                                        uint32_t attempts, uint32_t delay);
 
-        static void close_socket(socket_t *socket);
+        static void CloseSocket(socket_t *socket);
 
     private:
-        bool enable_tunnel();
+        bool EnableTunnel();
 
-        bool disable_tunnel();
+        bool DisableTunnel();
 
-        ProcessType execute_server(const struct ServerParameters *params);
+        ProcessType ExecuteServer(const struct ServerParameters *params);
 
     };
 }

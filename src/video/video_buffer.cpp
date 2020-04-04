@@ -10,7 +10,7 @@
 
 namespace irobot::video {
 
-    bool VideoBuffer::init(struct FpsCounter *fps_counter,
+    bool VideoBuffer::Init(struct FpsCounter *fps_counter,
                            bool render_expired_frames) {
         this->fps_counter = fps_counter;
 
@@ -51,7 +51,7 @@ namespace irobot::video {
         return false;
     }
 
-    void VideoBuffer::destroy() {
+    void VideoBuffer::Destroy() {
         if (this->render_expired_frames) {
             SDL_DestroyCond(this->rendering_frame_consumed_cond);
         }
@@ -60,13 +60,13 @@ namespace irobot::video {
         av_frame_free(&this->decoding_frame);
     }
 
-    void VideoBuffer::swap_frames() {
+    void VideoBuffer::SwapFrames() {
         AVFrame *tmp = this->decoding_frame;
         this->decoding_frame = this->rendering_frame;
         this->rendering_frame = tmp;
     }
 
-    void VideoBuffer::offer_decoded_frame(
+    void VideoBuffer::OfferDecodedFrame(
             bool *previous_frame_skipped) {
         util::mutex_lock(this->mutex);
         if (this->render_expired_frames) {
@@ -75,10 +75,10 @@ namespace irobot::video {
                 util::cond_wait(this->rendering_frame_consumed_cond, this->mutex);
             }
         } else if (!this->rendering_frame_consumed) {
-            this->fps_counter->add_skipped_frame();
+            this->fps_counter->AddSkippedFrame();
         }
 
-        this->swap_frames();
+        this->SwapFrames();
 
         *previous_frame_skipped = !this->rendering_frame_consumed;
         this->rendering_frame_consumed = false;
@@ -86,10 +86,10 @@ namespace irobot::video {
         util::mutex_unlock(this->mutex);
     }
 
-    const AVFrame *VideoBuffer::consume_rendered_frame() {
+    const AVFrame *VideoBuffer::ConsumeRenderedFrame() {
         assert(!this->rendering_frame_consumed);
         this->rendering_frame_consumed = true;
-        this->fps_counter->add_rendered_frame();
+        this->fps_counter->AddRenderedFrame();
         if (this->render_expired_frames) {
             // unblock video_buffer_offer_decoded_frame()
             util::cond_signal(this->rendering_frame_consumed_cond);
@@ -97,7 +97,7 @@ namespace irobot::video {
         return this->rendering_frame;
     }
 
-    void VideoBuffer::interrupt() {
+    void VideoBuffer::Interrupt() {
         if (this->render_expired_frames) {
             util::mutex_lock(this->mutex);
             this->interrupted = true;

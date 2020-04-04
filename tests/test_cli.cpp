@@ -18,7 +18,7 @@ TEST_CASE("flag version", "[ui][cli]") {
     char *argv[] = {const_cast<char *>("scrcpy"),
                     const_cast<char *>("-v")};
 
-    bool ok = args.parse_args(2, argv);
+    bool ok = args.ParseArgs(2, argv);
     REQUIRE(ok);
     REQUIRE(!args.help);
     REQUIRE(args.version);
@@ -32,7 +32,7 @@ TEST_CASE("flag help", "[ui][cli]") {
     char *argv[] = {const_cast<char *>("scrcpy"),
                     const_cast<char *>("-v")};
 
-    bool ok = args.parse_args(2, argv);
+    bool ok = args.ParseArgs(2, argv);
     REQUIRE(ok);
     REQUIRE(!args.help);
     REQUIRE(args.version);
@@ -70,7 +70,7 @@ TEST_CASE("options", "[ui][cli]") {
             const_cast<char *>("--window-borderless"),
     };
 
-    bool ok = args.parse_args(ARRAY_LEN(argv), argv);
+    bool ok = args.ParseArgs(ARRAY_LEN(argv), argv);
     REQUIRE(ok);
 
     const struct IRobotCore *opts = &args;
@@ -111,7 +111,7 @@ TEST_CASE("options2", "[ui][cli]") {
             const_cast<char *>("file.mp4"), // cannot enable --no-display without recording
     };
 
-    bool ok = args.parse_args(ARRAY_LEN(argv), argv);
+    bool ok = args.ParseArgs(ARRAY_LEN(argv), argv);
     REQUIRE(ok);
 
     const struct IRobotCore *opts = &args;
