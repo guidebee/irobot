@@ -11,7 +11,7 @@
 #include <cstdlib>
 #include <cstring>
 
-#include "common.hpp"
+#include "core/common.hpp"
 #include "util/log.hpp"
 #include "util/str_util.hpp"
 

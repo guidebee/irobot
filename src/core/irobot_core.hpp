@@ -64,15 +64,19 @@ namespace irobot {
 
         bool Init();
 
+        bool ParseArgs(int argc, char **argv);
+
         static ProcessType SetShowTouchesEnabled(const char *serial, bool enabled);
 
         static void WaitShowTouches(ProcessType process);
 
         static SDL_LogPriority SDLPriorityFromAVLevel(int level);
 
-        static void AVLogCallback(void *avcl, int level, const char *fmt, va_list vl);
+        static void AVLogCallback(void *avcl, int level,
+                                  const char *fmt, va_list vl);
 
-        static bool ParseIntegerArg(const char *s, long *out, bool accept_suffix, long min,
+        static bool ParseIntegerArg(const char *s, long *out,
+                                    bool accept_suffix, long min,
                                     long max, const char *name);
 
         static bool ParseBitRate(const char *s, uint32_t *bit_rate);
@@ -87,12 +91,10 @@ namespace irobot {
 
         static bool ParsePort(const char *s, uint16_t *port);
 
-        static bool ParseRecordFormat(const char *opt_arg, enum video::RecordFormat *format);
+        static bool ParseRecordFormat(const char *opt_arg,
+                                      enum video::RecordFormat *format);
 
         static enum video::RecordFormat GuessRecordFormat(const char *filename);
-
-
-        bool ParseArgs(int argc, char **argv);
 
         static void PrintUsage(const char *arg0);
 

@@ -9,11 +9,10 @@
 
 #include "config.hpp"
 
-#include "common.hpp"
-#include "controller.hpp"
+#include "core/common.hpp"
+#include "core/controller.hpp"
 #include "server.hpp"
 
-#include "android/device.hpp"
 #include "android/file_handler.hpp"
 #include "ui/screen.hpp"
 
@@ -145,9 +144,9 @@ namespace irobot {
     }
 
     bool IRobotCore::Init() {
-        const struct IRobotCore *options = this;
+        const IRobotCore *options = this;
         bool record = options->record_filename != nullptr;
-        struct ServerParameters params = {
+        ServerParameters params = {
                 .crop = options->crop,
                 .local_port = options->port,
                 .max_size = options->max_size,
@@ -191,7 +190,8 @@ namespace irobot {
         // screenrecord does not send frames when the screen content does not
         // change therefore, we transmit the screen size before the video stream,
         // to be able to init the window immediately
-        if (!cannot_cont & !ReadDeviceInfomation(server.video_socket, device_name, &frame_size)) {
+        if (!cannot_cont & !Receiver::ReadDeviceInfomation(server.video_socket,
+                                                          device_name, &frame_size)) {
             cannot_cont = true;
         }
 
@@ -886,7 +886,7 @@ namespace irobot {
     }
 
     void IRobotCore::PrintVersion() {
-        fprintf(stderr, "scrcpy %s\n\n", SCRCPY_VERSION);
+        fprintf(stderr, "scrcpy %s\n\n", IROBOT_SERVER_VERSION);
 
         fprintf(stderr, "dependencies:\n");
         fprintf(stderr, " - SDL %d.%d.%d\n", SDL_MAJOR_VERSION, SDL_MINOR_VERSION,
@@ -932,7 +932,7 @@ namespace irobot {
         }
 
         LOGI("scrcpy "
-                     SCRCPY_VERSION
+                     IROBOT_SERVER_VERSION
                      " <https://github.com/Genymobile/scrcpy>");
 
 

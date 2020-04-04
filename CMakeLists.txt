@@ -23,7 +23,6 @@ include_directories(${CMAKE_HOME_DIRECTORY}/src ${PROJECT_BINARY_DIR}/src)
 SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/android/input.hpp
         ${CMAKE_HOME_DIRECTORY}/src/android/keycodes.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/android/device.hpp
         ${CMAKE_HOME_DIRECTORY}/src/android/file_handler.hpp
         ${CMAKE_HOME_DIRECTORY}/src/android/receiver.hpp
         ${CMAKE_HOME_DIRECTORY}/src/message/device_msg.hpp
@@ -43,17 +42,16 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/ui/events.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/input_manager.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/event_converter.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/common.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/controller.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/core/common.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/core/controller.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/core/server.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/core/irobot_core.hpp
         ${CMAKE_HOME_DIRECTORY}/src/platform/command.hpp
         ${CMAKE_HOME_DIRECTORY}/src/platform/net.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/server.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/irobot_core.hpp
         )
 
 SET(COMMON_SOURCES
         ${COMMON_SOURCE_HEADERS}
-        ${CMAKE_HOME_DIRECTORY}/src/android/device.cpp
         ${CMAKE_HOME_DIRECTORY}/src/android/file_handler.cpp
         ${CMAKE_HOME_DIRECTORY}/src/android/receiver.cpp
         ${CMAKE_HOME_DIRECTORY}/src/message/device_msg.cpp
@@ -68,11 +66,12 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/video/video_buffer.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/decoder.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/stream.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/core/controller.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/core/server.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/core/irobot_core.cpp
         ${CMAKE_HOME_DIRECTORY}/src/platform/command.cpp
         ${CMAKE_HOME_DIRECTORY}/src/platform/net.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/controller.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/server.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/irobot_core.cpp)
+        )
 
 
 if (WIN32)

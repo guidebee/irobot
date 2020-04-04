@@ -17,7 +17,7 @@
 #include <cstdint>
 
 #include "config.hpp"
-#include "common.hpp"
+#include "core/common.hpp"
 
 #include "android/input.hpp"
 #include "android/keycodes.hpp"

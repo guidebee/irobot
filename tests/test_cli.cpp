@@ -4,8 +4,8 @@
 //
 
 #include "catch.hpp"
-#include "irobot_core.hpp"
-#include "common.hpp"
+#include "core/irobot_core.hpp"
+#include "core/common.hpp"
 
 using namespace irobot;
 using namespace irobot::ui;

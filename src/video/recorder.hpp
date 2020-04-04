@@ -19,7 +19,7 @@ extern "C" {
 #endif
 
 #include "config.hpp"
-#include "common.hpp"
+#include "core/common.hpp"
 
 #include "util/queue.hpp"
 

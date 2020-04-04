@@ -12,7 +12,6 @@
 
 namespace irobot {
 
-
     bool Controller::Init(socket_t control_socket) {
 
         cbuf_init(&this->queue);
@@ -42,7 +41,7 @@ namespace irobot {
         SDL_DestroyCond(this->msg_cond);
         SDL_DestroyMutex(this->mutex);
 
-        struct message::ControlMessage msg{};
+        message::ControlMessage msg{};
         while (cbuf_take(&this->queue, &msg)) {
             msg.Destroy();
         }
@@ -51,7 +50,7 @@ namespace irobot {
     }
 
     bool Controller::PushMessage(
-            const struct message::ControlMessage *msg) {
+            const message::ControlMessage *msg) {
         util::mutex_lock(this->mutex);
         bool was_empty = cbuf_is_empty(&this->queue);
         bool res = cbuf_push(&this->queue, *msg);
@@ -63,7 +62,7 @@ namespace irobot {
     }
 
     bool Controller::ProcessMessage(
-            struct message::ControlMessage *msg) {
+            message::ControlMessage *msg) {
 
         unsigned char serialized_msg[CONTROL_MSG_SERIALIZED_MAX_SIZE];
         int length = msg->Serialize(serialized_msg);
@@ -71,7 +70,7 @@ namespace irobot {
             return false;
         }
         int w = platform::net_send_all(this->control_socket,
-                serialized_msg, length);
+                                       serialized_msg, length);
         return w == length;
     }
 
@@ -88,7 +87,7 @@ namespace irobot {
                 util::mutex_unlock(controller->mutex);
                 break;
             }
-            struct message::ControlMessage msg{};
+            message::ControlMessage msg{};
             bool non_empty = cbuf_take(&controller->queue, &msg);
             assert(non_empty);
             (void) non_empty;

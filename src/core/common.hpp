@@ -8,8 +8,6 @@
 
 #include <cstdint>
 
-#include "config.hpp"
-
 #define ARRAY_LEN(a) (sizeof(a) / sizeof(a[0]))
 #define MIN(X, Y) (X) < (Y) ? (X) : (Y)
 #define MAX(X, Y) (X) > (Y) ? (X) : (Y)

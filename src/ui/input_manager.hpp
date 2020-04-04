@@ -7,8 +7,8 @@
 #define ANDROID_IROBOT_INPUT_MANAGER_HPP
 
 #include "config.hpp"
-#include "common.hpp"
-#include "controller.hpp"
+#include "core/common.hpp"
+#include "core/controller.hpp"
 
 #include "ui/screen.hpp"
 

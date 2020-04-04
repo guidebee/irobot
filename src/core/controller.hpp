@@ -18,7 +18,6 @@ extern "C" {
 #endif
 
 
-#include "config.hpp"
 #include "android/receiver.hpp"
 #include "message/control_msg.hpp"
 #include "util/cbuf.hpp"
@@ -26,21 +25,18 @@ extern "C" {
 
 namespace irobot {
 
-
-
-    struct ControlMessageQueue CBUF(struct message::ControlMessage, 64);
-
+    struct ControlMessageQueue CBUF(message::ControlMessage, 64);
 
     class Controller {
+
     public:
         socket_t control_socket;
         SDL_Thread *thread;
         SDL_mutex *mutex;
         SDL_cond *msg_cond;
         bool stopped;
-        struct ControlMessageQueue queue;
-
-        class android::Receiver receiver;
+        ControlMessageQueue queue;
+        android::Receiver receiver;
 
         bool Init(socket_t control_socket);
 
@@ -52,12 +48,13 @@ namespace irobot {
 
         void Join();
 
-        bool PushMessage(const struct message::ControlMessage *msg);
+        bool PushMessage(const message::ControlMessage *msg);
 
         static int RunController(void *data);
 
     private:
-        bool ProcessMessage(struct message::ControlMessage *msg);
+
+        bool ProcessMessage(message::ControlMessage *msg);
 
     };
 }

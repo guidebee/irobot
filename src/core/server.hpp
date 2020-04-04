@@ -18,12 +18,11 @@ extern "C" {
 
 #include <cstdint>
 
-#include "config.hpp"
 #include "platform/command.hpp"
 #include "platform/net.hpp"
 
-
 namespace irobot {
+
     struct ServerParameters {
         const char *crop;
         uint16_t local_port;

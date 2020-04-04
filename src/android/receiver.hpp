@@ -17,9 +17,11 @@ extern "C" {
 }
 #endif
 
-#include "config.hpp"
+#include "core/common.hpp"
 #include "message/device_msg.hpp"
 #include "platform/net.hpp"
+
+#define DEVICE_NAME_FIELD_LENGTH 64
 
 namespace irobot::android {
 
@@ -47,6 +49,10 @@ namespace irobot::android {
         static ssize_t ProcessMessages(const unsigned char *buf, size_t len);
 
         static int RunReceiver(void *data);
+
+        // name must be at least DEVICE_NAME_FIELD_LENGTH bytes
+        static bool ReadDeviceInfomation(socket_t device_socket,
+                                         char *device_name, struct Size *size);
     };
 }
 #endif //ANDROID_IROBOT_RECEIVER_HPP

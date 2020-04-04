@@ -36,8 +36,7 @@ namespace irobot {
         }
 
 #ifndef PORTABLE
-        LOGD("Using server: "
-                     DEFAULT_SERVER_PATH);
+        LOGD("Using server: " DEFAULT_SERVER_PATH);
         // the absolute path is hardcoded
         return DEFAULT_SERVER_PATH;
 #else
@@ -139,7 +138,7 @@ namespace irobot {
 #endif
                 "/", // unused
                 "com.genymobile.scrcpy.Server",
-                SCRCPY_VERSION,
+                IROBOT_SERVER_VERSION,
                 max_size_string,
                 bit_rate_string,
                 max_fps_string,
@@ -221,7 +220,7 @@ namespace irobot {
     }
 
     bool Server::Start(const char *serial,
-                       const struct ServerParameters *params) {
+                       const ServerParameters *params) {
         this->local_port = params->local_port;
 
         if (serial) {

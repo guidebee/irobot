@@ -5,7 +5,7 @@
 
 #include "screen.hpp"
 #include <cassert>
-#include "common.hpp"
+#include "core/common.hpp"
 #include "android/file_handler.hpp"
 #include "video/video_buffer.hpp"
 #include "util/lock.hpp"

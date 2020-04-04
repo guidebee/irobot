@@ -17,9 +17,8 @@ extern "C" {
 }
 #endif
 
-#include "config.hpp"
-#include "platform/command.hpp"
 
+#include "platform/command.hpp"
 #include "util/cbuf.hpp"
 
 namespace irobot::android {
@@ -69,13 +68,10 @@ namespace irobot::android {
 
         static int RunFileHandler(void *data);
 
-        static ProcessType InstallApk(const char *serial, const char *file) {
-            return platform::adb_install(serial, file);
-        }
+        static ProcessType InstallApk(const char *serial, const char *file);
 
-        static ProcessType PushFile(const char *serial, const char *file, const char *push_target) {
-            return platform::adb_push(serial, file, push_target);
-        }
+        static ProcessType PushFile(const char *serial, const char *file,
+                                    const char *push_target);
 
     };
 }

@@ -84,7 +84,7 @@ namespace irobot::video {
 
         av_dict_set(&recorder->ctx->metadata, "comment",
                     "Recorded by scrcpy "
-                    SCRCPY_VERSION, 0);
+                    IROBOT_SERVER_VERSION, 0);
 
         AVStream *ostream = avformat_new_stream(recorder->ctx, input_codec);
         if (!ostream) {

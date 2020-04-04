@@ -171,4 +171,13 @@ namespace irobot::android {
         return 0;
     }
 
+    ProcessType FileHandler::InstallApk(const char *serial, const char *file) {
+        return platform::adb_install(serial, file);
+    }
+
+    ProcessType FileHandler::PushFile(const char *serial,
+                                      const char *file, const char *push_target) {
+        return platform::adb_push(serial, file, push_target);
+    }
+
 }

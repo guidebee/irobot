@@ -12,7 +12,6 @@
 
 #define DEFAULT_MAX_SIZE 0
 
-#define SCRCPY_VERSION "1.12.1"
+#define IROBOT_SERVER_VERSION "1.12.1"
 
-#define PREFIX "/usr/local"
 
