@@ -8,7 +8,7 @@
 #include <cassert>
 
 #include "core/common.hpp"
-#include "android/file_handler.hpp"
+
 #include "video/video_buffer.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"
@@ -19,10 +19,8 @@
 
 namespace irobot {
 
-    extern ui::Screen screen;
     extern ui::InputManager input_manager;
     extern video::VideoBuffer video_buffer;
-    extern android::FileHandler file_handler;
 
     namespace ui {
 
@@ -153,6 +151,7 @@ namespace irobot {
             this->window = nullptr;
             this->renderer = nullptr;
             this->texture = nullptr;
+            this->file_handler=nullptr;
             this->frame_size = {
                     .width=0,
                     .height=0
@@ -171,6 +170,9 @@ namespace irobot {
 
         }
 
+        void Screen::InitFileHandler(android::FileHandler* pFile_handler){
+            this->file_handler=pFile_handler;
+        }
 
         bool Screen::InitRendering(const char *window_title,
                                    struct Size frame_size, bool always_on_top,
@@ -475,7 +477,7 @@ namespace irobot {
             if (event->type == SDL_WINDOWEVENT
                 && event->window.event == SDL_WINDOWEVENT_RESIZED) {
                 // called from another thread, not very safe, but it's a workaround!
-                screen.Render();
+                input_manager.screen->Render();
             }
             return 0;
         }
@@ -492,17 +494,17 @@ namespace irobot {
                     LOGD("User requested to quit");
                     return EVENT_RESULT_STOPPED_BY_USER;
                 case EVENT_NEW_FRAME:
-                    if (!screen.has_frame) {
-                        screen.has_frame = true;
+                    if (!input_manager.screen->has_frame) {
+                        input_manager.screen->has_frame = true;
                         // this is the very first frame, show the window
-                        screen.ShowWindow();
+                        input_manager.screen->ShowWindow();
                     }
-                    if (!screen.UpdateFrame(&video_buffer)) {
+                    if (!input_manager.screen->UpdateFrame(&video_buffer)) {
                         return EVENT_RESULT_CONTINUE;
                     }
                     break;
                 case SDL_WINDOWEVENT:
-                    screen.HandleWindowEvent(&event->window);
+                    input_manager.screen->HandleWindowEvent(&event->window);
                     break;
                 case SDL_TEXTINPUT:
                     if (!control) {
@@ -550,7 +552,9 @@ namespace irobot {
                     } else {
                         action = ACTION_PUSH_FILE;
                     }
-                    file_handler.Request(action, event->drop.file);
+                    if(input_manager.screen->file_handler!=nullptr) {
+                        input_manager.screen->file_handler->Request(action, event->drop.file);
+                    }
                     break;
                 }
             }

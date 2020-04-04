@@ -19,6 +19,7 @@ extern "C" {
 }
 #endif
 
+#include "android/file_handler.hpp"
 #include "core/common.hpp"
 #include "video/stream.hpp"
 
@@ -47,6 +48,7 @@ namespace irobot::ui {
         bool maximized;
 
         struct Size device_screen_size;
+        android::FileHandler* file_handler;
 
         // initialize default values
         void Init();
@@ -57,6 +59,8 @@ namespace irobot::ui {
                            int16_t window_x, int16_t window_y, uint16_t window_width,
                            uint16_t window_height, uint16_t screen_width,
                            uint16_t screen_height, bool window_borderless);
+
+        void InitFileHandler(android::FileHandler* file_handler);
 
         // show the window
         void ShowWindow();

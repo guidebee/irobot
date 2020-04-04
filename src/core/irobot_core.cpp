@@ -65,6 +65,7 @@ namespace irobot {
     };
 
 
+
     ProcessType IRobotCore::SetShowTouchesEnabled(const char *serial, bool enabled) {
         const char *value = enabled ? "1" : "0";
         const char *const adb_cmd[] = {
@@ -179,6 +180,7 @@ namespace irobot {
         if (!Screen::InitSDLAndConfigure(options->display)) {
             cannot_cont = true;
         }
+        screen.InitFileHandler(&file_handler);
 #endif
         if (!cannot_cont & !server.ConnectTo()) {
             cannot_cont = true;
