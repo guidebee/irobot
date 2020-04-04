@@ -116,6 +116,15 @@ namespace irobot::ui {
                                       Screen *screen,
                                       struct ControlMessage *to);
 
+        static bool IsApk(const char *file);
+
+        static int EventWatcher(void *data, SDL_Event *event);
+
+        bool EventLoop(bool display, bool control);
+
+        enum EventResult HandleEvent(SDL_Event *event, bool control);
+
+
 
     private:
         bool IsOutsideDeviceScreen(int x, int y);

@@ -15,7 +15,7 @@
 
 #include "android/file_handler.hpp"
 #include "ui/screen.hpp"
-#include "ui/events.hpp"
+
 #include "video/decoder.hpp"
 #include "video/fps_counter.hpp"
 #include "video/recorder.hpp"
@@ -294,10 +294,10 @@ namespace irobot {
             WaitShowTouches(proc_show_touches);
             show_touches_waited = true;
         }
-        bool ret;
+        bool ret = false;
         if (!options->headless) {
-            ret = EventLoop(options->display,
-                            options->control, &input_manager);
+            ret = input_manager.EventLoop(options->display,
+                                          options->control);
             LOGD("quit...");
             screen.Destroy();
         } else {
@@ -964,132 +964,6 @@ namespace irobot {
 #endif
         return res;
     }
-
-    bool IRobotCore::IsApk(const char *file) {
-        const char *ext = strrchr(file, '.');
-        return ext && !strcmp(ext, ".apk");
-    }
-
-#if defined(__APPLE__) || defined(__WINDOWS__)
-# define CONTINUOUS_RESIZING_WORKAROUND
-#endif
-
-#ifdef CONTINUOUS_RESIZING_WORKAROUND
-
-// On Windows and MacOS, resizing blocks the event loop, so resizing events are
-// not triggered. As a workaround, handle them in an event handler.
-//
-// <https://bugzilla.libsdl.org/show_bug.cgi?id=2077>
-// <https://stackoverflow.com/a/40693139/1987178>
-    int IRobotCore::EventWatcher(void *data, SDL_Event *event) {
-        ui::InputManager *input_manager = (ui::InputManager *) data;
-        if (event->type == SDL_WINDOWEVENT
-            && event->window.event == SDL_WINDOWEVENT_RESIZED) {
-            // called from another thread, not very safe, but it's a workaround!
-            input_manager->screen->Render();
-        }
-        return 0;
-    }
-
-    enum EventResult IRobotCore::HandleEvent(SDL_Event *event, bool control, InputManager *input_manager) {
-        switch (event->type) {
-            case EVENT_STREAM_STOPPED:
-                LOGD("Video stream stopped");
-                return EVENT_RESULT_STOPPED_BY_EOS;
-            case SDL_QUIT:
-                LOGD("User requested to quit");
-                return EVENT_RESULT_STOPPED_BY_USER;
-            case EVENT_NEW_FRAME:
-                if (!input_manager->screen->has_frame) {
-                    input_manager->screen->has_frame = true;
-                    // this is the very first frame, show the window
-                    input_manager->screen->ShowWindow();
-                }
-                if (!input_manager->screen->UpdateFrame(input_manager->video_buffer)) {
-                    return EVENT_RESULT_CONTINUE;
-                }
-                break;
-            case SDL_WINDOWEVENT:
-                input_manager->screen->HandleWindowEvent(&event->window);
-                break;
-            case SDL_TEXTINPUT:
-                if (!control) {
-                    break;
-                }
-                input_manager->ProcessTextInput(&event->text);
-                break;
-            case SDL_KEYDOWN:
-            case SDL_KEYUP:
-                // some key events do not interact with the device, so process the
-                // event even if control is disabled
-                input_manager->ProcessKey(&event->key, control);
-                break;
-            case SDL_MOUSEMOTION:
-                if (!control) {
-                    break;
-                }
-                input_manager->ProcessMouseMotion(&event->motion);
-                break;
-            case SDL_MOUSEWHEEL:
-                if (!control) {
-                    break;
-                }
-                input_manager->ProcessMouseWheel(&event->wheel);
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-            case SDL_MOUSEBUTTONUP:
-                // some mouse events do not interact with the device, so process
-                // the event even if control is disabled
-                input_manager->ProcessMouseButton(&event->button,
-                                                  control);
-                break;
-            case SDL_FINGERMOTION:
-            case SDL_FINGERDOWN:
-            case SDL_FINGERUP:
-                input_manager->ProcessTouch(&event->tfinger);
-                break;
-            case SDL_DROPFILE: {
-                if (!control) {
-                    break;
-                }
-                FileHandlerActionType action;
-                if (IsApk(event->drop.file)) {
-                    action = ACTION_INSTALL_APK;
-                } else {
-                    action = ACTION_PUSH_FILE;
-                }
-                if (input_manager->screen->file_handler != nullptr) {
-                    input_manager->screen->file_handler->Request(action, event->drop.file);
-                }
-                break;
-            }
-        }
-        return EVENT_RESULT_CONTINUE;
-    }
-
-    bool IRobotCore::EventLoop(bool display, bool control, InputManager *input_manager) {
-#ifdef CONTINUOUS_RESIZING_WORKAROUND
-        if (display) {
-            SDL_AddEventWatch(EventWatcher, input_manager);
-        }
-#endif
-        SDL_Event event;
-        while (SDL_WaitEvent(&event)) {
-            enum EventResult result = HandleEvent(&event, control, input_manager);
-            switch (result) {
-                case EVENT_RESULT_STOPPED_BY_USER:
-                    return true;
-                case EVENT_RESULT_STOPPED_BY_EOS:
-                    LOGW("Device disconnected");
-                    return false;
-                case EVENT_RESULT_CONTINUE:
-                    break;
-            }
-        }
-        return false;
-    }
-
-#endif
 
 
 }

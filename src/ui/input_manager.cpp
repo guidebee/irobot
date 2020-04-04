@@ -10,6 +10,7 @@
 
 
 #include "ui/event_converter.hpp"
+#include "ui/events.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"
 #include "video/video_buffer.hpp"
@@ -545,6 +546,131 @@ namespace irobot {
             }
         }
 
+        bool InputManager::IsApk(const char *file) {
+            const char *ext = strrchr(file, '.');
+            return ext && !strcmp(ext, ".apk");
+        }
+
+#if defined(__APPLE__) || defined(__WINDOWS__)
+# define CONTINUOUS_RESIZING_WORKAROUND
+#endif
+
+#ifdef CONTINUOUS_RESIZING_WORKAROUND
+
+// On Windows and MacOS, resizing blocks the event loop, so resizing events are
+// not triggered. As a workaround, handle them in an event handler.
+//
+// <https://bugzilla.libsdl.org/show_bug.cgi?id=2077>
+// <https://stackoverflow.com/a/40693139/1987178>
+        int InputManager::EventWatcher(void *data, SDL_Event *event) {
+            ui::InputManager *input_manager = (ui::InputManager *) data;
+            if (event->type == SDL_WINDOWEVENT
+                && event->window.event == SDL_WINDOWEVENT_RESIZED) {
+                // called from another thread, not very safe, but it's a workaround!
+                input_manager->screen->Render();
+            }
+            return 0;
+        }
+
+#endif
+
+        enum EventResult InputManager::HandleEvent(SDL_Event *event, bool control) {
+            switch (event->type) {
+                case EVENT_STREAM_STOPPED:
+                    LOGD("Video stream stopped");
+                    return EVENT_RESULT_STOPPED_BY_EOS;
+                case SDL_QUIT:
+                    LOGD("User requested to quit");
+                    return EVENT_RESULT_STOPPED_BY_USER;
+                case EVENT_NEW_FRAME:
+                    if (!this->screen->has_frame) {
+                        this->screen->has_frame = true;
+                        // this is the very first frame, show the window
+                        this->screen->ShowWindow();
+                    }
+                    if (!this->screen->UpdateFrame(this->video_buffer)) {
+                        return EVENT_RESULT_CONTINUE;
+                    }
+                    break;
+                case SDL_WINDOWEVENT:
+                    this->screen->HandleWindowEvent(&event->window);
+                    break;
+                case SDL_TEXTINPUT:
+                    if (!control) {
+                        break;
+                    }
+                    this->ProcessTextInput(&event->text);
+                    break;
+                case SDL_KEYDOWN:
+                case SDL_KEYUP:
+                    // some key events do not interact with the device, so process the
+                    // event even if control is disabled
+                    this->ProcessKey(&event->key, control);
+                    break;
+                case SDL_MOUSEMOTION:
+                    if (!control) {
+                        break;
+                    }
+                    this->ProcessMouseMotion(&event->motion);
+                    break;
+                case SDL_MOUSEWHEEL:
+                    if (!control) {
+                        break;
+                    }
+                    this->ProcessMouseWheel(&event->wheel);
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                case SDL_MOUSEBUTTONUP:
+                    // some mouse events do not interact with the device, so process
+                    // the event even if control is disabled
+                    this->ProcessMouseButton(&event->button,
+                                                      control);
+                    break;
+                case SDL_FINGERMOTION:
+                case SDL_FINGERDOWN:
+                case SDL_FINGERUP:
+                    this->ProcessTouch(&event->tfinger);
+                    break;
+                case SDL_DROPFILE: {
+                    if (!control) {
+                        break;
+                    }
+                    FileHandlerActionType action;
+                    if (IsApk(event->drop.file)) {
+                        action = ACTION_INSTALL_APK;
+                    } else {
+                        action = ACTION_PUSH_FILE;
+                    }
+                    if (this->screen->file_handler != nullptr) {
+                        this->screen->file_handler->Request(action, event->drop.file);
+                    }
+                    break;
+                }
+            }
+            return EVENT_RESULT_CONTINUE;
+        }
+
+        bool InputManager::EventLoop(bool display, bool control) {
+#ifdef CONTINUOUS_RESIZING_WORKAROUND
+            if (display) {
+                SDL_AddEventWatch(EventWatcher, this);
+            }
+#endif
+            SDL_Event event;
+            while (SDL_WaitEvent(&event)) {
+                enum EventResult result = this->HandleEvent(&event, control);
+                switch (result) {
+                    case EVENT_RESULT_STOPPED_BY_USER:
+                        return true;
+                    case EVENT_RESULT_STOPPED_BY_EOS:
+                        LOGW("Device disconnected");
+                        return false;
+                    case EVENT_RESULT_CONTINUE:
+                        break;
+                }
+            }
+            return false;
+        }
 
 
     }

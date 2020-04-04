@@ -29,8 +29,6 @@ extern "C" {
 namespace irobot {
 
 
-    using namespace ui;
-
     class IRobotCore {
 
     public:
@@ -103,13 +101,6 @@ namespace irobot {
 
         static void PrintVersion();
 
-        static bool IsApk(const char *file);
-
-        static int EventWatcher(void *data, SDL_Event *event);
-
-        static bool EventLoop(bool display, bool control, InputManager *input_manager);
-
-        static enum EventResult HandleEvent(SDL_Event *event, bool control,InputManager *input_manager);
 
         static int iRobotMain(int argc, char **argv);
     };
