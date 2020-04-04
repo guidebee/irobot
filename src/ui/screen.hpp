@@ -19,7 +19,6 @@ extern "C" {
 }
 #endif
 
-#include "config.hpp"
 #include "core/common.hpp"
 #include "video/stream.hpp"
 

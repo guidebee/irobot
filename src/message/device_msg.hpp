@@ -19,8 +19,6 @@ extern "C" {
 #include <cstdint>
 #include <cstring>
 
-#include "config.hpp"
-
 #define DEVICE_MSG_TEXT_MAX_LENGTH 4093
 #define DEVICE_MSG_SERIALIZED_MAX_SIZE (3 + DEVICE_MSG_TEXT_MAX_LENGTH)
 

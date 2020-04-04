@@ -15,8 +15,6 @@
 
 namespace irobot::video {
 
-
-
     bool VideoStream::ReceivePacket(AVPacket *packet) {
         // The video stream contains raw packets, without time information. When we
         // record, we retrieve the timestamps separately, from a "meta" header
@@ -53,7 +51,6 @@ namespace irobot::video {
         }
 
         packet->pts = pts != NO_PTS ? (int64_t) pts : AV_NOPTS_VALUE;
-
         return true;
     }
 
@@ -62,7 +59,6 @@ namespace irobot::video {
         stop_event.type = EVENT_STREAM_STOPPED;
         SDL_PushEvent(&stop_event);
     }
-
     bool VideoStream::ProcessConfigPacket(AVPacket *packet) {
         if (this->recorder && !this->recorder->Push(packet)) {
             LOGE("Could not send config packet to recorder");

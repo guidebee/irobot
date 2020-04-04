@@ -47,8 +47,7 @@ namespace irobot::video {
         // set the decoded frame as ready for rendering
         // this function locks frames->mutex during its execution
         // the output flag is set to report whether the previous frame has been skipped
-        void OfferDecodedFrame(
-                bool *previous_frame_skipped);
+        void OfferDecodedFrame(bool *previous_frame_skipped);
 
         // mark the rendering frame as consumed and return it
         // MUST be called with frames->mutex locked!!!

@@ -6,17 +6,13 @@
 #ifndef ANDROID_IROBOT_INPUT_MANAGER_HPP
 #define ANDROID_IROBOT_INPUT_MANAGER_HPP
 
-#include "config.hpp"
 #include "core/common.hpp"
 #include "core/controller.hpp"
-
 #include "ui/screen.hpp"
-
 #include "video/fps_counter.hpp"
 #include "video/video_buffer.hpp"
 
 namespace irobot::ui {
-
 
     using namespace android;
     using namespace message;

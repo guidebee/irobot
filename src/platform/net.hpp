@@ -38,6 +38,7 @@ typedef int socket_t;
 #include <cstdint>
 
 namespace irobot::platform {
+
     bool net_init();
 
     void net_cleanup();

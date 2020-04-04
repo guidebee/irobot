@@ -16,12 +16,9 @@
 #include <cstddef>
 #include <cstdint>
 
-#include "config.hpp"
 #include "core/common.hpp"
-
 #include "android/input.hpp"
 #include "android/keycodes.hpp"
-
 
 namespace irobot::message {
 

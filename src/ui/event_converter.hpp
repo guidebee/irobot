@@ -16,10 +16,8 @@ extern "C" {
 }
 #endif
 
-#include "config.hpp"
 
 #include "message/control_msg.hpp"
-
 
 namespace irobot::ui {
 
