@@ -649,7 +649,6 @@ namespace irobot {
         }
 
         bool InputManager::EventLoop(bool display, bool control) {
-            (void) display;
 #ifdef CONTINUOUS_RESIZING_WORKAROUND
             if (display) {
                 SDL_AddEventWatch(EventWatcher, this);

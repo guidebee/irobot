@@ -45,7 +45,6 @@
 namespace irobot {
 
     using namespace video;
-    using namespace ui;
     using namespace util;
 
     Server server;
@@ -54,10 +53,10 @@ namespace irobot {
     VideoStream stream;
     Recorder recorder;
     Controller controller;
-    FileHandler file_handler;
+    android::FileHandler file_handler;
     Decoder decoder;
-    Screen screen;
-    InputManager input_manager = {
+    ui::Screen screen;
+    ui::InputManager input_manager = {
             .controller = &controller,
             .video_buffer = &video_buffer,
             .screen = &screen,
@@ -177,7 +176,7 @@ namespace irobot {
         bool cannot_cont = false;
 
 #ifdef UI_SCREEN
-        if (!Screen::InitSDLAndConfigure(options->display)) {
+        if (!ui::Screen::InitSDLAndConfigure(options->display)) {
             cannot_cont = true;
         }
         screen.InitFileHandler(&file_handler);
@@ -192,7 +191,7 @@ namespace irobot {
         // screenrecord does not send frames when the screen content does not
         // change therefore, we transmit the screen size before the video stream,
         // to be able to init the window immediately
-        if (!cannot_cont & !Receiver::ReadDeviceInfomation(server.video_socket,
+        if (!cannot_cont & !android::Receiver::ReadDeviceInfomation(server.video_socket,
                                                           device_name, &frame_size)) {
             cannot_cont = true;
         }
