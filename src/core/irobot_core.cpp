@@ -64,7 +64,6 @@ namespace irobot {
     };
 
 
-
     ProcessType IRobotCore::SetShowTouchesEnabled(const char *serial, bool enabled) {
         const char *value = enabled ? "1" : "0";
         const char *const adb_cmd[] = {
@@ -192,7 +191,7 @@ namespace irobot {
         // change therefore, we transmit the screen size before the video stream,
         // to be able to init the window immediately
         if (!cannot_cont & !android::Receiver::ReadDeviceInfomation(server.video_socket,
-                                                          device_name, &frame_size)) {
+                                                                    device_name, &frame_size)) {
             cannot_cont = true;
         }
 
@@ -294,7 +293,8 @@ namespace irobot {
         }
         bool ret;
 #ifdef UI_SCREEN
-        ret = input_manager.EventLoop(options->display, options->control);
+        ret = ui::InputManager::EventLoop(options->display,
+                                          options->control, &input_manager);
         LOGD("quit...");
         screen.Destroy();
 #else

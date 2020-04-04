@@ -648,15 +648,15 @@ namespace irobot {
             return EVENT_RESULT_CONTINUE;
         }
 
-        bool InputManager::EventLoop(bool display, bool control) {
+        bool InputManager::EventLoop(bool display, bool control,InputManager *input_manager) {
 #ifdef CONTINUOUS_RESIZING_WORKAROUND
             if (display) {
-                SDL_AddEventWatch(EventWatcher, this);
+                SDL_AddEventWatch(EventWatcher, input_manager);
             }
 #endif
             SDL_Event event;
             while (SDL_WaitEvent(&event)) {
-                enum EventResult result = HandleEvent(&event, control);
+                enum EventResult result = input_manager->HandleEvent(&event, control);
                 switch (result) {
                     case EVENT_RESULT_STOPPED_BY_USER:
                         return true;

@@ -39,7 +39,7 @@ namespace irobot::ui {
 
         void ProcessMouseWheel(const SDL_MouseWheelEvent *event);
 
-        bool EventLoop(bool display, bool control);
+        static bool EventLoop(bool display, bool control,InputManager *input_manager);
 
         enum EventResult HandleEvent(SDL_Event *event, bool control);
 
