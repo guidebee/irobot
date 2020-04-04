@@ -8,23 +8,19 @@
 #include <cstring>
 
 #include "config.hpp"
-
+#include "server.hpp"
+#include "android/file_handler.hpp"
 #include "core/common.hpp"
 #include "core/controller.hpp"
-#include "server.hpp"
-
-#include "android/file_handler.hpp"
+#include "platform/net.hpp"
 #include "ui/screen.hpp"
-
 #include "video/decoder.hpp"
 #include "video/fps_counter.hpp"
 #include "video/recorder.hpp"
 #include "video/stream.hpp"
 #include "video/video_buffer.hpp"
 #include "util/log.hpp"
-#include "platform/net.hpp"
 #include "util/str_util.hpp"
-
 
 #define OPT_RENDER_EXPIRED_FRAMES 1000
 #define OPT_WINDOW_TITLE          1001
@@ -47,6 +43,8 @@ namespace irobot {
 
     using namespace video;
     using namespace util;
+    using namespace android;
+    using namespace ui;
 
     Server server;
     FpsCounter fps_counter;
@@ -54,63 +52,16 @@ namespace irobot {
     VideoStream stream;
     Recorder recorder;
     Controller controller;
-    android::FileHandler file_handler;
+    FileHandler file_handler;
     Decoder decoder;
-    ui::Screen screen;
-    ui::InputManager input_manager = {
+    Screen screen;
+    InputManager input_manager = {
             .controller = &controller,
             .video_buffer = &video_buffer,
             .screen = &screen,
             .prefer_text = false, // initialized later
     };
 
-
-    ProcessType IRobotCore::SetShowTouchesEnabled(const char *serial, bool enabled) {
-        const char *value = enabled ? "1" : "0";
-        const char *const adb_cmd[] = {
-                "shell", "settings", "put", "system", "show_touches", value
-        };
-        return platform::adb_execute(serial, adb_cmd, ARRAY_LEN(adb_cmd));
-    }
-
-    void IRobotCore::WaitShowTouches(ProcessType process) {
-        // reap the process, ignore the result
-        platform::process_check_success(process, "show_touches");
-    }
-
-    SDL_LogPriority IRobotCore::SDLPriorityFromAVLevel(int level) {
-        switch (level) {
-            case AV_LOG_PANIC:
-            case AV_LOG_FATAL:
-                return SDL_LOG_PRIORITY_CRITICAL;
-            case AV_LOG_ERROR:
-                return SDL_LOG_PRIORITY_ERROR;
-            case AV_LOG_WARNING:
-                return SDL_LOG_PRIORITY_WARN;
-            case AV_LOG_INFO:
-                return SDL_LOG_PRIORITY_INFO;
-            default:
-                return static_cast<SDL_LogPriority>(0);
-        }
-    }
-
-    void IRobotCore::AVLogCallback(void *avcl, int level, const char *fmt, va_list vl) {
-        (void) avcl;
-        SDL_LogPriority priority = SDLPriorityFromAVLevel(level);
-        if (priority == 0) {
-            return;
-        }
-        char *local_fmt = static_cast<char *>(SDL_malloc(strlen(fmt) + 10));
-        if (!local_fmt) {
-            LOGC("Could not allocate string");
-            return;
-        }
-        // strcpy is safe here, the destination is large enough
-        strcpy(local_fmt, "[FFmpeg] ");
-        strcpy(local_fmt + 9, fmt);
-        SDL_LogMessageV(SDL_LOG_CATEGORY_VIDEO, priority, local_fmt, vl);
-        SDL_free(local_fmt);
-    }
 
     IRobotCore::IRobotCore() {
         this->serial = nullptr;
@@ -159,7 +110,7 @@ namespace irobot {
             return false;
         }
 
-        ProcessType proc_show_touches = PROCESS_NONE;
+        auto proc_show_touches = PROCESS_NONE;
         bool show_touches_waited = false;
         if (options->show_touches) {
             LOGI("Enable show_touches");
@@ -177,7 +128,7 @@ namespace irobot {
         bool cannot_cont = false;
 
         if (!options->headless) {
-            if (!ui::Screen::InitSDLAndConfigure(options->display)) {
+            if (!Screen::InitSDLAndConfigure(options->display)) {
                 cannot_cont = true;
             }
             screen.InitFileHandler(&file_handler);
@@ -193,8 +144,8 @@ namespace irobot {
         // screenrecord does not send frames when the screen content does not
         // change therefore, we transmit the screen size before the video stream,
         // to be able to init the window immediately
-        if (!cannot_cont & !android::Receiver::ReadDeviceInfomation(server.video_socket,
-                                                                    device_name, &frame_size)) {
+        if (!cannot_cont & !Receiver::ReadDeviceInfomation(server.video_socket,
+                                                           device_name, &frame_size)) {
             cannot_cont = true;
         }
 
@@ -301,7 +252,7 @@ namespace irobot {
             LOGD("quit...");
             screen.Destroy();
         } else {
-            char c = '0';
+            int c = '0';
             printf("Press Q to exit\n");
             while (!(c == 'Q' || c == 'q')) {
                 c = getchar();
@@ -369,6 +320,54 @@ namespace irobot {
         server.Destroy();
 
         return ret;
+    }
+
+
+    ProcessType IRobotCore::SetShowTouchesEnabled(const char *serial, bool enabled) {
+        const char *value = enabled ? "1" : "0";
+        const char *const adb_cmd[] = {
+                "shell", "settings", "put", "system", "show_touches", value
+        };
+        return platform::adb_execute(serial, adb_cmd, ARRAY_LEN(adb_cmd));
+    }
+
+    void IRobotCore::WaitShowTouches(ProcessType process) {
+        // reap the process, ignore the result
+        platform::process_check_success(process, "show_touches");
+    }
+
+    SDL_LogPriority IRobotCore::SDLPriorityFromAVLevel(int level) {
+        switch (level) {
+            case AV_LOG_PANIC:
+            case AV_LOG_FATAL:
+                return SDL_LOG_PRIORITY_CRITICAL;
+            case AV_LOG_ERROR:
+                return SDL_LOG_PRIORITY_ERROR;
+            case AV_LOG_WARNING:
+                return SDL_LOG_PRIORITY_WARN;
+            case AV_LOG_INFO:
+                return SDL_LOG_PRIORITY_INFO;
+            default:
+                return static_cast<SDL_LogPriority>(0);
+        }
+    }
+
+    void IRobotCore::AVLogCallback(void *avcl, int level, const char *fmt, va_list vl) {
+        (void) avcl;
+        SDL_LogPriority priority = SDLPriorityFromAVLevel(level);
+        if (priority == 0) {
+            return;
+        }
+        char *local_fmt = static_cast<char *>(SDL_malloc(strlen(fmt) + 10));
+        if (!local_fmt) {
+            LOGC("Could not allocate string");
+            return;
+        }
+        // strcpy is safe here, the destination is large enough
+        strcpy(local_fmt, "[FFmpeg] ");
+        strcpy(local_fmt + 9, fmt);
+        SDL_LogMessageV(SDL_LOG_CATEGORY_VIDEO, priority, local_fmt, vl);
+        SDL_free(local_fmt);
     }
 
 

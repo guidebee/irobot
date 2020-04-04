@@ -101,7 +101,6 @@ namespace irobot {
 
         static void PrintVersion();
 
-
         static int iRobotMain(int argc, char **argv);
     };
 
