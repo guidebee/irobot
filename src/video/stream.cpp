@@ -221,14 +221,15 @@ namespace irobot::video {
             }
 
             ok = stream->PushPacket(&packet);
+#ifndef UI_SCREEN
+            LOGI("Receiving package (size): %" PRIu32 , packet.size);
+#endif
             av_packet_unref(&packet);
             if (!ok) {
                 // cannot process packet (error already logged)
                 break;
             }
-#ifndef UI_SCREEN
-            LOGI("Receiving package ...");
-#endif
+
         }
 
         LOGD("End of frames");
