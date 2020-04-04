@@ -39,9 +39,6 @@ namespace irobot::ui {
 
         void ProcessMouseWheel(const SDL_MouseWheelEvent *event);
 
-        static bool EventLoop(bool display, bool control,InputManager *input_manager);
-
-        enum EventResult HandleEvent(SDL_Event *event, bool control);
 
         static void ConvertToRendererCoordinates(SDL_Renderer *renderer,
                                                  int *x, int *y);
@@ -118,11 +115,6 @@ namespace irobot::ui {
         static bool ConvertMouseWheel(const SDL_MouseWheelEvent *from,
                                       Screen *screen,
                                       struct ControlMessage *to);
-
-
-        static bool IsApk(const char *file);
-
-        static int EventWatcher(void *data, SDL_Event *event);
 
 
     private:
