@@ -59,6 +59,7 @@ namespace irobot::video {
         stop_event.type = EVENT_STREAM_STOPPED;
         SDL_PushEvent(&stop_event);
     }
+
     bool VideoStream::ProcessConfigPacket(AVPacket *packet) {
         if (this->recorder && !this->recorder->Push(packet)) {
             LOGE("Could not send config packet to recorder");
@@ -215,11 +216,10 @@ namespace irobot::video {
                 // end of stream
                 break;
             }
-
             ok = stream->PushPacket(&packet);
-#ifndef UI_SCREEN
-            LOGI("Receiving package (size): %" PRIu32 , packet.size);
-#endif
+            if (stream->headless) {
+                LOGI("Receiving package (size): %" PRIu32, packet.size);
+            }
             av_packet_unref(&packet);
             if (!ok) {
                 // cannot process packet (error already logged)
@@ -257,11 +257,12 @@ namespace irobot::video {
     }
 
     void VideoStream::Init(socket_t socket,
-                           struct Decoder *decoder, struct Recorder *recorder) {
+                           struct Decoder *decoder, struct Recorder *recorder, bool headless) {
         this->socket = socket;
         this->decoder = decoder,
                 this->recorder = recorder;
         this->has_pending = false;
+        this->headless = headless;
     }
 
     bool VideoStream::Start() {

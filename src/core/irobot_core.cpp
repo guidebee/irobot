@@ -41,6 +41,7 @@
 #define OPT_MAX_FPS               1012
 #define OPT_SCREEN_WIDTH          1013
 #define OPT_SCREEN_HEIGHT         1014
+#define OPT_HEADLESS              1015
 
 namespace irobot {
 
@@ -139,6 +140,7 @@ namespace irobot {
         this->window_borderless = false;
         this->help = false;
         this->version = false;
+        this->headless = false;
 
     }
 
@@ -174,12 +176,13 @@ namespace irobot {
 
         bool cannot_cont = false;
 
-#ifdef UI_SCREEN
-        if (!ui::Screen::InitSDLAndConfigure(options->display)) {
-            cannot_cont = true;
+        if (!options->headless) {
+            if (!ui::Screen::InitSDLAndConfigure(options->display)) {
+                cannot_cont = true;
+            }
+            screen.InitFileHandler(&file_handler);
         }
-        screen.InitFileHandler(&file_handler);
-#endif
+
         if (!cannot_cont & !server.ConnectTo()) {
             cannot_cont = true;
         }
@@ -234,7 +237,7 @@ namespace irobot {
 
         av_log_set_callback(AVLogCallback);
 
-        stream.Init(server.video_socket, dec, rec);
+        stream.Init(server.video_socket, dec, rec, options->headless);
 
 
         // now we consumed the header values, the socket receives the video stream
@@ -257,20 +260,20 @@ namespace irobot {
                 controller_started = true;
             }
 
-#ifdef UI_SCREEN
-            input_manager.prefer_text = options->prefer_text;
-            const char *_window_title =
-                    options->window_title ? options->window_title : device_name;
+            if (!options->headless) {
+                input_manager.prefer_text = options->prefer_text;
+                const char *_window_title =
+                        options->window_title ? options->window_title : device_name;
 
-            if (!cannot_cont & !screen.InitRendering(_window_title, frame_size,
-                                                     options->always_on_top, options->window_x,
-                                                     options->window_y, options->window_width,
-                                                     options->window_height, options->screen_width,
-                                                     options->screen_height,
-                                                     options->window_borderless)) {
-                cannot_cont = true;
+                if (!cannot_cont & !screen.InitRendering(_window_title, frame_size,
+                                                         options->always_on_top, options->window_x,
+                                                         options->window_y, options->window_width,
+                                                         options->window_height, options->screen_width,
+                                                         options->screen_height,
+                                                         options->window_borderless)) {
+                    cannot_cont = true;
+                }
             }
-#endif
             if (!cannot_cont & options->turn_screen_off) {
                 struct message::ControlMessage msg{};
                 msg.type = message::CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
@@ -280,11 +283,11 @@ namespace irobot {
                     LOGW("Could not request 'set screen power mode'");
                 }
             }
-#ifdef UI_SCREEN
-            if (options->fullscreen) {
-                screen.SwitchFullscreen();
+            if (!options->headless) {
+                if (options->fullscreen) {
+                    screen.SwitchFullscreen();
+                }
             }
-#endif
         }
 
         if (options->show_touches) {
@@ -292,19 +295,19 @@ namespace irobot {
             show_touches_waited = true;
         }
         bool ret;
-#ifdef UI_SCREEN
-        ret = EventLoop(options->display,
-                        options->control, &input_manager);
-        LOGD("quit...");
-        screen.Destroy();
-#else
-        char c='0';
-        printf("Press Q to exit\n");
-        while (!(c == 'Q' || c == 'q')) {
-            c = getchar();
+        if (!options->headless) {
+            ret = EventLoop(options->display,
+                            options->control, &input_manager);
+            LOGD("quit...");
+            screen.Destroy();
+        } else {
+            char c = '0';
+            printf("Press Q to exit\n");
+            while (!(c == 'Q' || c == 'q')) {
+                c = getchar();
+            }
+            printf("Exting ...\n");
         }
-        printf("Exting ...\n");
-#endif
 
         // stop stream and controller so that they don't continue once their socket
         // is shutdown
@@ -463,6 +466,9 @@ namespace irobot {
                 "\n"
                 "    --window-borderless\n"
                 "        Disable window decorations (display borderless window).\n"
+                "\n"
+                "    --headless\n"
+                "        Headless ui.\n"
                 "\n"
                 "    --window-title text\n"
                 "        Set a custom window title.\n"
@@ -719,6 +725,8 @@ namespace irobot {
                 {"screen-height",         required_argument, nullptr, OPT_SCREEN_HEIGHT},
                 {"window-borderless",     no_argument,       nullptr,
                                                                       OPT_WINDOW_BORDERLESS},
+                {"headless",              no_argument,       nullptr,
+                                                                      OPT_HEADLESS},
                 {nullptr, 0,                                 nullptr, 0},
         };
 
@@ -835,6 +843,9 @@ namespace irobot {
                     break;
                 case OPT_WINDOW_BORDERLESS:
                     opts->window_borderless = true;
+                    break;
+                case OPT_HEADLESS:
+                    opts->headless = true;
                     break;
                 case OPT_PUSH_TARGET:
                     opts->push_target = optarg;
