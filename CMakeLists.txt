@@ -14,7 +14,8 @@ set(CMAKE_CXX_FLAGS "-D__STDC_CONSTANT_MACROS")
 # -------------------------------------------------------------
 # library dependencies
 find_package(SDL2 CONFIG REQUIRED)
-find_package(OpenCV REQUIRED)
+find_package(nlohmann_json CONFIG REQUIRED)
+find_package(OpenCV CONFIG REQUIRED)
 add_subdirectory(libs)
 
 # -------------------------------------------------------------
@@ -86,6 +87,8 @@ configure_file(
         "${PROJECT_SOURCE_DIR}/config.in"
         "${PROJECT_BINARY_DIR}/src/config.hpp"
 )
+
+message(${OpenCV_LIBS})
 # -------------------------------------------------------------
 # utility functions
 function(APP name)
@@ -95,6 +98,7 @@ function(APP name)
     target_link_libraries(${APP_TARGET} PRIVATE FFmpeg)
     target_link_libraries(${APP_TARGET} PRIVATE SDL2::SDL2 SDL2::SDL2main)
     target_link_libraries(${APP_TARGET} PRIVATE ${OpenCV_LIBS})
+    target_link_libraries(${APP_TARGET} PRIVATE nlohmann_json nlohmann_json::nlohmann_json)
 
     if (WIN32)
         target_link_libraries(${APP_TARGET} PRIVATE wsock32 ws2_32)
