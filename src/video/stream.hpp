@@ -44,10 +44,10 @@ namespace irobot::video {
         // packet is available
         bool has_pending;
         AVPacket pending;
-        bool headless;
+
 
         void Init(socket_t socket,
-                  struct Decoder *decoder, Recorder *recorder, bool headless);
+                  struct Decoder *decoder, Recorder *recorder);
 
         bool Start();
 

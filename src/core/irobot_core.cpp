@@ -6,6 +6,8 @@
 #include "irobot_core.hpp"
 
 #include <cstring>
+#include <util/lock.hpp>
+
 
 #include "config.hpp"
 #include "server.hpp"
@@ -14,11 +16,13 @@
 #include "core/controller.hpp"
 #include "platform/net.hpp"
 #include "ui/screen.hpp"
+#include "ui/events.hpp"
 #include "video/decoder.hpp"
 #include "video/fps_counter.hpp"
 #include "video/recorder.hpp"
 #include "video/stream.hpp"
 #include "video/video_buffer.hpp"
+#include "video/utils.hpp"
 #include "util/log.hpp"
 #include "util/str_util.hpp"
 
@@ -188,7 +192,7 @@ namespace irobot {
 
         av_log_set_callback(AVLogCallback);
 
-        stream.Init(server.video_socket, dec, rec, options->headless);
+        stream.Init(server.video_socket, dec, rec);
 
 
         // now we consumed the header values, the socket receives the video stream
@@ -252,10 +256,29 @@ namespace irobot {
             LOGD("quit...");
             screen.Destroy();
         } else {
-            int c = '0';
-            printf("Press Q to exit\n");
-            while (!(c == 'Q' || c == 'q')) {
-                c = getchar();
+            SDL_Event event;
+            bool quit = false;
+            while (!quit) {
+                while (SDL_PollEvent(&event)) {
+                    switch (event.type) {
+                        case EVENT_NEW_FRAME: {
+                            video::VideoBuffer *vb = &video_buffer;
+                            util::mutex_lock(vb->mutex);
+                            const AVFrame *frame = vb->ConsumeRenderedFrame();
+                            struct Size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
+                            printf("new frame %d,%d\n", new_frame_size.width, new_frame_size.height);
+                            util::mutex_unlock(vb->mutex);
+                        }
+                            break;
+                        case SDL_QUIT:
+                            quit = true;
+                            break;
+                        default:
+                            break;
+
+                    }
+
+                }
             }
             printf("Exting ...\n");
         }

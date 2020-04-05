@@ -217,9 +217,7 @@ namespace irobot::video {
                 break;
             }
             ok = stream->PushPacket(&packet);
-            if (stream->headless) {
-                LOGI("Receiving package (size): %" PRIu32, packet.size);
-            }
+
             av_packet_unref(&packet);
             if (!ok) {
                 // cannot process packet (error already logged)
@@ -257,12 +255,12 @@ namespace irobot::video {
     }
 
     void VideoStream::Init(socket_t socket,
-                           struct Decoder *decoder, struct Recorder *recorder, bool headless) {
+                           struct Decoder *decoder, struct Recorder *recorder) {
         this->socket = socket;
         this->decoder = decoder,
                 this->recorder = recorder;
         this->has_pending = false;
-        this->headless = headless;
+
     }
 
     bool VideoStream::Start() {
