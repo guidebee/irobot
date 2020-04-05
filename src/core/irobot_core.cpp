@@ -265,13 +265,18 @@ namespace irobot {
                             util::mutex_lock(vb->mutex);
                             const AVFrame *frame = vb->ConsumeRenderedFrame();
                             struct Size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
-                            printf("receive new frame %d,%d\n", new_frame_size.width, new_frame_size.height);
+                            LOGI("receive new frame %d,%d\n", new_frame_size.width, new_frame_size.height);
                             util::mutex_unlock(vb->mutex);
                         }
                             break;
                         case SDL_QUIT:
                             quit = true;
                             break;
+                        case EVENT_STREAM_STOPPED:
+                            LOGI("Device disconnected, exiting");
+                            quit = true;
+                            break;
+
                         default:
                             break;
 
