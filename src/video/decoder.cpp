@@ -35,6 +35,11 @@ namespace irobot::video {
             LOGC("Could not allocate decoder context");
             return false;
         }
+        this->codec_cv_ctx = avcodec_alloc_context3(codec);
+        if (!this->codec_cv_ctx) {
+            LOGC("Could not allocate decoder context");
+            return false;
+        }
 
         if (avcodec_open2(this->codec_ctx, codec, nullptr) < 0) {
             LOGE("Could not open codec");
@@ -42,12 +47,52 @@ namespace irobot::video {
             return false;
         }
 
+        if (avcodec_open2(this->codec_cv_ctx, codec, nullptr) < 0) {
+            LOGE("Could not open codec");
+            avcodec_free_context(&this->codec_ctx);
+            avcodec_free_context(&this->codec_cv_ctx);
+            return false;
+        }
+
+        // initialize SWS context for software scaling
+        this->sws_cv_ctx = sws_getContext(this->codec_ctx->width,
+                                          this->codec_ctx->height,
+                                          this->codec_ctx->pix_fmt,
+                                          this->codec_ctx->width,
+                                          this->codec_ctx->height,
+                                          AV_PIX_FMT_BGR24,
+                                          SWS_BILINEAR,
+                                          nullptr,
+                                          nullptr,
+                                          nullptr
+        );
+
+        if (this->sws_cv_ctx == nullptr) {
+            LOGE("Could not open codec");
+            avcodec_free_context(&this->codec_ctx);
+            avcodec_free_context(&this->codec_cv_ctx);
+            return false;
+        }
+
+        int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGB24, this->codec_cv_ctx->width,
+                                                this->codec_cv_ctx->height, IMAGE_ALIGN);
+
+        this->video_buffer->buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
+
+        av_image_fill_arrays(this->video_buffer->rgb_frame->data, this->video_buffer->rgb_frame->linesize,
+                             this->video_buffer->buffer, AV_PIX_FMT_RGB24,
+                             this->codec_cv_ctx->width, this->codec_cv_ctx->height, IMAGE_ALIGN);
+
         return true;
     }
 
     void Decoder::Close() {
         avcodec_close(this->codec_ctx);
         avcodec_free_context(&this->codec_ctx);
+        avcodec_close(this->codec_cv_ctx);
+        avcodec_free_context(&this->codec_cv_ctx);
+        sws_freeContext(this->sws_cv_ctx);
+        av_free(this->video_buffer->buffer);
     }
 
     bool Decoder::Push(const AVPacket *packet) {
@@ -61,8 +106,22 @@ namespace irobot::video {
         ret = avcodec_receive_frame(this->codec_ctx,
                                     this->video_buffer->decoding_frame);
         if (!ret) {
+            // Convert the image from its native format to RGB
+            sws_scale
+                    (
+                            this->sws_cv_ctx,
+                            (uint8_t const *const *) this->video_buffer->decoding_frame->data,
+                            this->video_buffer->decoding_frame->linesize,
+                            0,
+                            this->codec_cv_ctx->height,
+                            this->video_buffer->rgb_frame->data,
+                            this->video_buffer->rgb_frame->linesize
+                    );
+            SaveFrame(this->video_buffer->rgb_frame,this->codec_cv_ctx->width,
+                      this->codec_cv_ctx->height,this->codec_cv_ctx->frame_number);
             // a frame was received
             this->PushFrame();
+
         } else if (ret != AVERROR(EAGAIN)) {
             LOGE("Could not receive video frame: %d", ret);
             return false;
@@ -73,6 +132,26 @@ namespace irobot::video {
 
     void Decoder::Interrupt() {
         this->video_buffer->Interrupt();
+    }
+
+
+    void Decoder::SaveFrame(AVFrame *pFrameRGB,
+                            int width, int height, int iFrame) {
+        FILE *pFile;
+        char szFilename[32];
+        int y;
+        // Open file
+        sprintf(szFilename, "frame%d.ppm", iFrame);
+        pFile = fopen(szFilename, "wb");
+        if (pFile == nullptr)
+            return;
+        // Write header
+        fprintf(pFile, "P6\n%d %d\n255\n", width, height);
+        // Write pixel data
+        for (y = 0; y < height; y++)
+            fwrite(pFrameRGB->data[0] + y * pFrameRGB->linesize[0], 1, width * 3, pFile);
+        // Close file
+        fclose(pFile);
     }
 
 }

@@ -11,12 +11,15 @@ extern "C" {
 #endif
 #include <SDL2/SDL_events.h>
 #include <libavformat/avformat.h>
-
+#include <libswscale/swscale.h>
+#include <libavutil/imgutils.h>
 #if defined (__cplusplus)
 }
 #endif
 
 #include "config.hpp"
+
+#define IMAGE_ALIGN 1
 
 namespace irobot::video {
 
@@ -27,6 +30,9 @@ namespace irobot::video {
     public:
         VideoBuffer *video_buffer;
         AVCodecContext *codec_ctx;
+        AVCodecContext *codec_cv_ctx;
+        SwsContext *sws_cv_ctx;
+
 
         void Init(VideoBuffer *vb);
 
@@ -37,6 +43,10 @@ namespace irobot::video {
         bool Push(const AVPacket *packet);
 
         void Interrupt();
+
+
+        static void SaveFrame(AVFrame *pFrameRGB,
+                              int width, int height, int iFrame);
 
     private:
         void PushFrame();

@@ -22,8 +22,12 @@ namespace irobot::video {
             goto error_1;
         }
 
-        if (!(this->mutex = SDL_CreateMutex())) {
+        if (!(this->rgb_frame = av_frame_alloc())) {
             goto error_2;
+        }
+
+        if (!(this->mutex = SDL_CreateMutex())) {
+            goto error_3;
         }
 
         this->render_expired_frames = render_expired_frames;
@@ -43,6 +47,8 @@ namespace irobot::video {
 
         return true;
 
+        error_3:
+        av_frame_free(&this->rgb_frame);
         error_2:
         av_frame_free(&this->rendering_frame);
         error_1:
@@ -58,6 +64,7 @@ namespace irobot::video {
         SDL_DestroyMutex(this->mutex);
         av_frame_free(&this->rendering_frame);
         av_frame_free(&this->decoding_frame);
+        av_frame_free(&this->rgb_frame);
     }
 
     void VideoBuffer::SwapFrames() {

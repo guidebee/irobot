@@ -38,6 +38,9 @@ namespace irobot::video {
         bool rendering_frame_consumed;
         struct FpsCounter *fps_counter;
 
+        AVFrame *rgb_frame;
+        uint8_t *buffer;
+
         bool Init(struct FpsCounter *fps_counter,
                   bool render_expired_frames);
 
