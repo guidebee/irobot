@@ -10,7 +10,7 @@
 
 
 #include "config.hpp"
-#include "server.hpp"
+#include "device_server.hpp"
 #include "android/file_handler.hpp"
 #include "core/common.hpp"
 #include "core/controller.hpp"
@@ -49,7 +49,7 @@ namespace irobot {
     using namespace android;
     using namespace ui;
 
-    Server server;
+    DeviceServer server;
     FpsCounter fps_counter;
     VideoBuffer video_buffer;
     VideoStream stream;

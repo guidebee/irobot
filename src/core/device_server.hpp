@@ -33,7 +33,7 @@ namespace irobot {
     };
 
 
-    class Server {
+    class DeviceServer {
 
     public:
         char *serial;
