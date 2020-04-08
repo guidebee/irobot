@@ -23,6 +23,10 @@ namespace irobot::video {
                 .type = EVENT_NEW_FRAME,
         };
         SDL_PushEvent(&new_frame_event);
+        static SDL_Event new_opencv_frame_event = {
+                .type = EVENT_NEW_OPENCV_FRAME,
+        };
+        SDL_PushEvent(&new_opencv_frame_event);
     }
 
     void Decoder::Init(VideoBuffer *vb) {
@@ -102,7 +106,7 @@ namespace irobot::video {
                 );
 
                 if (this->sws_cv_ctx == nullptr) {
-                    LOGE("Could not open codec");
+                    LOGE("Could not open sws_cv_ctx");
                     avcodec_free_context(&this->codec_ctx);
                     avcodec_free_context(&this->codec_cv_ctx);
                     return false;
@@ -110,6 +114,10 @@ namespace irobot::video {
 
                 int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGB24, this->codec_cv_ctx->width,
                                                         this->codec_cv_ctx->height, IMAGE_ALIGN);
+
+                this->video_buffer->rgb_frame->width=this->codec_cv_ctx->width;
+                this->video_buffer->rgb_frame->height=this->codec_cv_ctx->height;
+                this->video_buffer->rgb_frame->format=AV_PIX_FMT_RGB24;
 
                 this->video_buffer->buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
 
@@ -119,18 +127,16 @@ namespace irobot::video {
             }
 
             // Convert the image from its native format to RGB
-            sws_scale
-                    (
-                            this->sws_cv_ctx,
-                            (uint8_t const *const *) this->video_buffer->decoding_frame->data,
-                            this->video_buffer->decoding_frame->linesize,
-                            0,
-                            this->codec_cv_ctx->height,
-                            this->video_buffer->rgb_frame->data,
-                            this->video_buffer->rgb_frame->linesize
-                    );
-            SaveFrame(this->video_buffer->rgb_frame, this->codec_cv_ctx->width,
-                      this->codec_cv_ctx->height, this->codec_ctx->frame_number);
+            sws_scale(this->sws_cv_ctx,
+                      (uint8_t const *const *) this->video_buffer->decoding_frame->data,
+                      this->video_buffer->decoding_frame->linesize,
+                      0,
+                      this->codec_cv_ctx->height,
+                      this->video_buffer->rgb_frame->data,
+                      this->video_buffer->rgb_frame->linesize
+            );
+//            SaveFrame(this->video_buffer->rgb_frame, this->codec_cv_ctx->width,
+//                      this->codec_cv_ctx->height, this->codec_ctx->frame_number);
             // a frame was received
             this->PushFrame();
 
@@ -146,6 +152,8 @@ namespace irobot::video {
         this->video_buffer->Interrupt();
     }
 
+
+#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 
     void Decoder::SaveFrame(AVFrame *pFrameRGB,
                             int width, int height, int iFrame) {
@@ -166,5 +174,6 @@ namespace irobot::video {
         // Close file
         fclose(pFile);
     }
+
 
 }
