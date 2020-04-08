@@ -8,7 +8,7 @@
 
 #include <cassert>
 
-
+#include "ai/brain.hpp"
 #include "ui/event_converter.hpp"
 #include "ui/events.hpp"
 #include "util/lock.hpp"
@@ -591,6 +591,9 @@ namespace irobot {
                     if (!this->screen->UpdateFrame(this->video_buffer)) {
                         return EVENT_RESULT_CONTINUE;
                     }
+                    break;
+                case EVENT_NEW_OPENCV_FRAME:
+                    ai::ProcessFrame(*this->video_buffer);
                     break;
                 case SDL_WINDOWEVENT:
                     this->screen->HandleWindowEvent(&event->window);

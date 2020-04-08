@@ -6,11 +6,10 @@
 #include "irobot_core.hpp"
 
 #include <cstring>
-#include <util/lock.hpp>
-
 
 #include "config.hpp"
 #include "device_server.hpp"
+#include "ai/brain.hpp"
 #include "android/file_handler.hpp"
 #include "core/common.hpp"
 #include "core/controller.hpp"
@@ -24,6 +23,7 @@
 #include "video/video_buffer.hpp"
 #include "util/log.hpp"
 #include "util/str_util.hpp"
+#include "util/lock.hpp"
 
 #define OPT_RENDER_EXPIRED_FRAMES 1000
 #define OPT_WINDOW_TITLE          1001
@@ -269,16 +269,9 @@ namespace irobot {
                             util::mutex_unlock(vb->mutex);
                         }
                             break;
-                        case EVENT_NEW_OPENCV_FRAME:{
-                            video::VideoBuffer *vb = &video_buffer;
-                            util::mutex_lock(vb->mutex);
-                            AVFrame *frame = vb->rgb_frame;
-                            struct Size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
-                            LOGI("receive new cv frame %d,%d\n", new_frame_size.width, new_frame_size.height);
-                            video::Decoder::SaveFrame(frame,new_frame_size.width, new_frame_size.height,0);
-                            util::mutex_unlock(vb->mutex);
-                        }
-                        break;
+                        case EVENT_NEW_OPENCV_FRAME:
+                            ai::ProcessFrame(video_buffer);
+                            break;
                         case SDL_QUIT:
                             quit = true;
                             break;
