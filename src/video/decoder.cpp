@@ -27,6 +27,8 @@ namespace irobot::video {
 
     void Decoder::Init(VideoBuffer *vb) {
         this->video_buffer = vb;
+        this->sws_cv_ctx = nullptr;
+
     }
 
     bool Decoder::Open(const AVCodec *codec) {
@@ -54,35 +56,6 @@ namespace irobot::video {
             return false;
         }
 
-        // initialize SWS context for software scaling
-        this->sws_cv_ctx = sws_getContext(this->codec_ctx->width,
-                                          this->codec_ctx->height,
-                                          this->codec_ctx->pix_fmt,
-                                          this->codec_ctx->width,
-                                          this->codec_ctx->height,
-                                          AV_PIX_FMT_BGR24,
-                                          SWS_BILINEAR,
-                                          nullptr,
-                                          nullptr,
-                                          nullptr
-        );
-
-        if (this->sws_cv_ctx == nullptr) {
-            LOGE("Could not open codec");
-            avcodec_free_context(&this->codec_ctx);
-            avcodec_free_context(&this->codec_cv_ctx);
-            return false;
-        }
-
-        int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGB24, this->codec_cv_ctx->width,
-                                                this->codec_cv_ctx->height, IMAGE_ALIGN);
-
-        this->video_buffer->buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
-
-        av_image_fill_arrays(this->video_buffer->rgb_frame->data, this->video_buffer->rgb_frame->linesize,
-                             this->video_buffer->buffer, AV_PIX_FMT_RGB24,
-                             this->codec_cv_ctx->width, this->codec_cv_ctx->height, IMAGE_ALIGN);
-
         return true;
     }
 
@@ -93,6 +66,7 @@ namespace irobot::video {
         avcodec_free_context(&this->codec_cv_ctx);
         sws_freeContext(this->sws_cv_ctx);
         av_free(this->video_buffer->buffer);
+        this->sws_cv_ctx = nullptr;
     }
 
     bool Decoder::Push(const AVPacket *packet) {
@@ -106,6 +80,44 @@ namespace irobot::video {
         ret = avcodec_receive_frame(this->codec_ctx,
                                     this->video_buffer->decoding_frame);
         if (!ret) {
+
+            if (this->sws_cv_ctx == nullptr) {
+                this->codec_cv_ctx->height = this->video_buffer->decoding_frame->height;
+                this->codec_cv_ctx->width = video_buffer->decoding_frame->width;
+                this->codec_cv_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
+                this->codec_cv_ctx->coded_height = this->codec_cv_ctx->height;
+                this->codec_cv_ctx->coded_width = this->codec_cv_ctx->width;
+
+                // initialize SWS context for software scaling
+                this->sws_cv_ctx = sws_getContext(this->codec_cv_ctx->width,
+                                                  this->codec_cv_ctx->height,
+                                                  this->codec_cv_ctx->pix_fmt,
+                                                  this->codec_cv_ctx->width,
+                                                  this->codec_cv_ctx->height,
+                                                  AV_PIX_FMT_BGR24,
+                                                  SWS_BILINEAR,
+                                                  nullptr,
+                                                  nullptr,
+                                                  nullptr
+                );
+
+                if (this->sws_cv_ctx == nullptr) {
+                    LOGE("Could not open codec");
+                    avcodec_free_context(&this->codec_ctx);
+                    avcodec_free_context(&this->codec_cv_ctx);
+                    return false;
+                }
+
+                int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGB24, this->codec_cv_ctx->width,
+                                                        this->codec_cv_ctx->height, IMAGE_ALIGN);
+
+                this->video_buffer->buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
+
+                av_image_fill_arrays(this->video_buffer->rgb_frame->data, this->video_buffer->rgb_frame->linesize,
+                                     this->video_buffer->buffer, AV_PIX_FMT_RGB24,
+                                     this->codec_cv_ctx->width, this->codec_cv_ctx->height, IMAGE_ALIGN);
+            }
+
             // Convert the image from its native format to RGB
             sws_scale
                     (
@@ -117,8 +129,8 @@ namespace irobot::video {
                             this->video_buffer->rgb_frame->data,
                             this->video_buffer->rgb_frame->linesize
                     );
-            SaveFrame(this->video_buffer->rgb_frame,this->codec_cv_ctx->width,
-                      this->codec_cv_ctx->height,this->codec_cv_ctx->frame_number);
+            SaveFrame(this->video_buffer->rgb_frame, this->codec_cv_ctx->width,
+                      this->codec_cv_ctx->height, this->codec_ctx->frame_number);
             // a frame was received
             this->PushFrame();
 
@@ -146,6 +158,7 @@ namespace irobot::video {
         if (pFile == nullptr)
             return;
         // Write header
+
         fprintf(pFile, "P6\n%d %d\n255\n", width, height);
         // Write pixel data
         for (y = 0; y < height; y++)
