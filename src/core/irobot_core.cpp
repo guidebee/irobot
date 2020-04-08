@@ -101,7 +101,7 @@ namespace irobot {
     bool IRobotCore::Init() {
         const IRobotCore *options = this;
         bool record = options->record_filename != nullptr;
-        ServerParameters params = {
+        DeviceServerParameters params = {
                 .crop = options->crop,
                 .local_port = options->port,
                 .max_size = options->max_size,

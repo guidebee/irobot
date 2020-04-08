@@ -23,7 +23,7 @@ extern "C" {
 
 namespace irobot {
 
-    struct ServerParameters {
+    struct DeviceServerParameters {
         const char *crop;
         uint16_t local_port;
         uint16_t max_size;
@@ -50,7 +50,7 @@ namespace irobot {
 
         // push, enable tunnel et start the server
         bool Start(const char *serial,
-                   const struct ServerParameters *params);
+                   const struct DeviceServerParameters *params);
 
         // block until the communication with the server is established
         bool ConnectTo();
@@ -87,7 +87,7 @@ namespace irobot {
 
         bool DisableTunnel();
 
-        ProcessType ExecuteServer(const struct ServerParameters *params);
+        ProcessType ExecuteServer(const struct DeviceServerParameters *params);
 
     };
 }

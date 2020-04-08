@@ -120,7 +120,7 @@ namespace irobot {
         return DisableTunnelReverse(this->serial);
     }
 
-    ProcessType DeviceServer::ExecuteServer(const struct ServerParameters *params) {
+    ProcessType DeviceServer::ExecuteServer(const struct DeviceServerParameters *params) {
         char max_size_string[6];
         char bit_rate_string[11];
         char max_fps_string[6];
@@ -220,7 +220,7 @@ namespace irobot {
     }
 
     bool DeviceServer::Start(const char *serial,
-                             const ServerParameters *params) {
+                             const DeviceServerParameters *params) {
         this->local_port = params->local_port;
 
         if (serial) {
