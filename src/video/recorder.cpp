@@ -13,7 +13,7 @@
 
 namespace irobot::video {
 
-    static const AVRational SCRCPY_TIME_BASE = {1, 1000000}; // timestamps in us
+    static const AVRational IROBOT_TIME_BASE = {1, 1000000}; // timestamps in us
 
     bool Recorder::Init(
             const char *filename,
@@ -166,7 +166,7 @@ namespace irobot::video {
     void Recorder::RescalePacket(AVPacket *packet) {
         Recorder *recorder = this;
         AVStream *ostream = recorder->ctx->streams[0];
-        av_packet_rescale_ts(packet, SCRCPY_TIME_BASE, ostream->time_base);
+        av_packet_rescale_ts(packet, IROBOT_TIME_BASE, ostream->time_base);
     }
 
     bool Recorder::Write(AVPacket *packet) {

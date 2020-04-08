@@ -79,12 +79,12 @@ namespace irobot::video {
         bool Write(AVPacket *packet);
 
         static inline const AVOutputFormat *FindMuxer(const char *name) {
-#ifdef SCRCPY_LAVF_HAS_NEW_MUXER_ITERATOR_API
+#ifdef IROBOT_LAVF_HAS_NEW_MUXER_ITERATOR_API
             void *opaque = nullptr;
 #endif
             const AVOutputFormat *oformat = nullptr;
             do {
-#ifdef SCRCPY_LAVF_HAS_NEW_MUXER_ITERATOR_API
+#ifdef IROBOT_LAVF_HAS_NEW_MUXER_ITERATOR_API
                 oformat = av_muxer_iterate(&opaque);
 #else
                 oformat = av_oformat_next(oformat);

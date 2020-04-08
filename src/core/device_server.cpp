@@ -28,9 +28,9 @@ namespace irobot {
     using namespace irobot::platform;
 
     const char *DeviceServer::GetServerPath() {
-        const char *server_path_env = getenv("SCRCPY_SERVER_PATH");
+        const char *server_path_env = getenv("IROBOT_SERVER_PATH");
         if (server_path_env) {
-            LOGD("Using SCRCPY_SERVER_PATH: %s", server_path_env);
+            LOGD("Using IROBOT_SERVER_PATH: %s", server_path_env);
             // if the envvar is set, use it
             return server_path_env;
         }
