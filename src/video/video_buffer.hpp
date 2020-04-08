@@ -37,6 +37,7 @@ namespace irobot::video {
         SDL_cond *rendering_frame_consumed_cond;
         bool rendering_frame_consumed;
         struct FpsCounter *fps_counter;
+        int frame_number;
 
         AVFrame *rgb_frame;
         uint8_t *buffer;

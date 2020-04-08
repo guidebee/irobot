@@ -45,8 +45,7 @@ namespace irobot::video {
         void Interrupt();
 
 
-        static void SaveFrame(AVFrame *pFrameRGB,
-                              int width, int height, int iFrame);
+        static void SaveFrame(AVFrame *pFrameRGB, int iFrame);
 
     private:
         void PushFrame();

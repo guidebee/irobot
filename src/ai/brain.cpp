@@ -22,7 +22,7 @@ namespace irobot::ai {
         AVFrame *frame = vb->rgb_frame;
         struct Size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
         LOGI("receive new cv frame %d,%d\n", new_frame_size.width, new_frame_size.height);
-        video::Decoder::SaveFrame(frame, new_frame_size.width, new_frame_size.height, 0);
+        video::Decoder::SaveFrame(frame, vb->frame_number);
         util::mutex_unlock(vb->mutex);
     }
 }

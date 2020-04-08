@@ -115,9 +115,9 @@ namespace irobot::video {
                 int numBytes = av_image_get_buffer_size(AV_PIX_FMT_RGB24, this->codec_cv_ctx->width,
                                                         this->codec_cv_ctx->height, IMAGE_ALIGN);
 
-                this->video_buffer->rgb_frame->width=this->codec_cv_ctx->width;
-                this->video_buffer->rgb_frame->height=this->codec_cv_ctx->height;
-                this->video_buffer->rgb_frame->format=AV_PIX_FMT_RGB24;
+                this->video_buffer->rgb_frame->width = this->codec_cv_ctx->width;
+                this->video_buffer->rgb_frame->height = this->codec_cv_ctx->height;
+                this->video_buffer->rgb_frame->format = AV_PIX_FMT_RGB24;
 
                 this->video_buffer->buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
 
@@ -135,6 +135,7 @@ namespace irobot::video {
                       this->video_buffer->rgb_frame->data,
                       this->video_buffer->rgb_frame->linesize
             );
+            this->video_buffer->frame_number = this->codec_ctx->frame_number;
 //            SaveFrame(this->video_buffer->rgb_frame, this->codec_cv_ctx->width,
 //                      this->codec_cv_ctx->height, this->codec_ctx->frame_number);
             // a frame was received
@@ -156,9 +157,11 @@ namespace irobot::video {
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 
     void Decoder::SaveFrame(AVFrame *pFrameRGB,
-                            int width, int height, int iFrame) {
+                            int iFrame) {
         FILE *pFile;
         char szFilename[32];
+        int width = pFrameRGB->width;
+        int height = pFrameRGB->height;
         int y;
         // Open file
         sprintf(szFilename, "frame%d.ppm", iFrame);
