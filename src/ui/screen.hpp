@@ -25,11 +25,6 @@ extern "C" {
 
 namespace irobot::ui {
 
-    enum EventResult {
-        EVENT_RESULT_CONTINUE,
-        EVENT_RESULT_STOPPED_BY_USER,
-        EVENT_RESULT_STOPPED_BY_EOS,
-    };
 
     class Screen {
     public:

@@ -16,6 +16,7 @@
 #include "platform/net.hpp"
 #include "ui/screen.hpp"
 #include "ui/events.hpp"
+#include "ui/null_input_manager.hpp"
 #include "video/decoder.hpp"
 #include "video/fps_counter.hpp"
 #include "video/recorder.hpp"
@@ -58,9 +59,13 @@ namespace irobot {
     FileHandler file_handler;
     Decoder decoder;
     Screen screen;
-    InputManager input_manager = {
+    NullInputManager null_input_manager = {
             .controller = &controller,
             .video_buffer = &video_buffer,
+
+    };
+    InputManager input_manager = {
+            .null_input_manager=&null_input_manager,
             .screen = &screen,
             .prefer_text = false, // initialized later
     };
@@ -259,31 +264,19 @@ namespace irobot {
             bool quit = false;
             while (!quit) {
                 while (SDL_PollEvent(&event)) {
-                    switch (event.type) {
-                        case EVENT_NEW_FRAME: {
-                            video::VideoBuffer *vb = &video_buffer;
-                            util::mutex_lock(vb->mutex);
-                            const AVFrame *frame = vb->ConsumeRenderedFrame();
-                            struct Size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
-                            LOGI("receive new frame %d,%d\n", new_frame_size.width, new_frame_size.height);
-                            util::mutex_unlock(vb->mutex);
-                        }
-                            break;
-                        case EVENT_NEW_OPENCV_FRAME:
-                            ai::ProcessFrame(video_buffer);
-                            break;
-                        case SDL_QUIT:
+                    enum EventResult result = null_input_manager.HandleEvent(&event, false);
+                    switch (result) {
+                        case EVENT_RESULT_STOPPED_BY_USER:
                             quit = true;
                             break;
-                        case EVENT_STREAM_STOPPED:
-                            LOGI("Device disconnected, exiting");
+                        case EVENT_RESULT_STOPPED_BY_EOS:
+                            LOGW("Device disconnected");
                             quit = true;
                             break;
-
-                        default:
+                        case EVENT_RESULT_CONTINUE:
                             break;
-
                     }
+
 
                 }
             }
