@@ -44,6 +44,7 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/ui/input_manager.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/null_input_manager.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/event_converter.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/core/actor.hpp
         ${CMAKE_HOME_DIRECTORY}/src/core/common.hpp
         ${CMAKE_HOME_DIRECTORY}/src/core/controller.hpp
         ${CMAKE_HOME_DIRECTORY}/src/core/device_server.hpp
@@ -69,6 +70,7 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/video/video_buffer.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/decoder.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/stream.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/core/actor.cpp
         ${CMAKE_HOME_DIRECTORY}/src/core/controller.cpp
         ${CMAKE_HOME_DIRECTORY}/src/core/device_server.cpp
         ${CMAKE_HOME_DIRECTORY}/src/core/irobot_core.cpp
