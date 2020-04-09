@@ -19,12 +19,9 @@ namespace irobot::android {
                            const char *push_target) {
 
         cbuf_init(&this->queue);
-        if (!(this->mutex = SDL_CreateMutex())) {
-            return false;
-        }
 
-        if (!(this->event_cond = SDL_CreateCond())) {
-            SDL_DestroyMutex(this->mutex);
+        bool initialized = Actor::Init();
+        if (!initialized) {
             return false;
         }
 
@@ -32,7 +29,7 @@ namespace irobot::android {
             this->serial = SDL_strdup(serial);
             if (!this->serial) {
                 LOGW("Could not strdup serial");
-                SDL_DestroyCond(this->event_cond);
+                SDL_DestroyCond(this->thread_cond);
                 SDL_DestroyMutex(this->mutex);
                 return false;
             }
@@ -43,15 +40,14 @@ namespace irobot::android {
         // lazy initialization
         this->initialized = false;
 
-        this->stopped = false;
+
         this->current_process = PROCESS_NONE;
         this->push_target = push_target ? push_target : DEFAULT_PUSH_TARGET;
         return true;
     }
 
     void FileHandler::Destroy() {
-        SDL_DestroyCond(this->event_cond);
-        SDL_DestroyMutex(this->mutex);
+        Actor::Destroy();
         SDL_free(this->serial);
 
         struct FileHandlerRequest req{};
@@ -59,7 +55,6 @@ namespace irobot::android {
             req.destroy();
         }
     }
-
 
     bool FileHandler::Request(
             FileHandlerActionType action, char *file) {
@@ -83,7 +78,7 @@ namespace irobot::android {
         bool was_empty = cbuf_is_empty(&this->queue);
         bool res = cbuf_push(&this->queue, req);
         if (was_empty) {
-            util::cond_signal(this->event_cond);
+            util::cond_signal(this->thread_cond);
         }
         util::mutex_unlock(this->mutex);
         return res;
@@ -104,7 +99,7 @@ namespace irobot::android {
     void FileHandler::Stop() {
         util::mutex_lock(this->mutex);
         this->stopped = true;
-        util::cond_signal(this->event_cond);
+        util::cond_signal(this->thread_cond);
         if (this->current_process != PROCESS_NONE) {
             if (!irobot::platform::cmd_terminate(this->current_process)) {
                 LOGW("Could not terminate install process");
@@ -115,9 +110,6 @@ namespace irobot::android {
         util::mutex_unlock(this->mutex);
     }
 
-    void FileHandler::Join() {
-        SDL_WaitThread(this->thread, nullptr);
-    }
 
     int FileHandler::RunFileHandler(void *data) {
         auto *file_handler = (FileHandler *) data;
@@ -126,7 +118,7 @@ namespace irobot::android {
             util::mutex_lock(file_handler->mutex);
             file_handler->current_process = PROCESS_NONE;
             while (!file_handler->stopped && cbuf_is_empty(&file_handler->queue)) {
-                util::cond_wait(file_handler->event_cond, file_handler->mutex);
+                util::cond_wait(file_handler->thread_cond, file_handler->mutex);
             }
             if (file_handler->stopped) {
                 // stop immediately, do not process further events

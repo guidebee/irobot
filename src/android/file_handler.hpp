@@ -6,18 +6,7 @@
 #ifndef ANDROID_IROBOT_FILE_HANDLER_HPP
 #define ANDROID_IROBOT_FILE_HANDLER_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
-#include <SDL2/SDL_mutex.h>
-#include <SDL2/SDL_thread.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
-
+#include "core/actor.hpp"
 #include "platform/command.hpp"
 #include "util/cbuf.hpp"
 
@@ -39,28 +28,24 @@ namespace irobot::android {
 
     struct FileHandlerRequestQueue CBUF(struct FileHandlerRequest, 16);
 
-    class FileHandler {
+    class FileHandler : public Actor {
 
     public:
         char *serial;
         const char *push_target;
-        SDL_Thread *thread;
-        SDL_mutex *mutex;
-        SDL_cond *event_cond;
-        bool stopped;
+
         bool initialized;
         ProcessType current_process;
         struct FileHandlerRequestQueue queue;
 
         bool Init(const char *serial, const char *push_target);
 
-        void Destroy();
+        void Destroy() override;
 
-        bool Start();
+        bool Start() override;
 
-        void Stop();
+        void Stop() override;
 
-        void Join();
 
         // take ownership of file, and will SDL_free() it
         bool Request(FileHandlerActionType action, char *file);

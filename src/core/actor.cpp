@@ -13,7 +13,7 @@ namespace irobot {
         if (!(this->mutex = SDL_CreateMutex())) {
             return false;
         }
-        if (!(this->msg_cond = SDL_CreateCond())) {
+        if (!(this->thread_cond = SDL_CreateCond())) {
             SDL_DestroyMutex(this->mutex);
             return false;
         }
@@ -23,7 +23,7 @@ namespace irobot {
 
 
     void Actor::Destroy() {
-        SDL_DestroyCond(this->msg_cond);
+        SDL_DestroyCond(this->thread_cond);
         SDL_DestroyMutex(this->mutex);
 
     }
@@ -31,7 +31,7 @@ namespace irobot {
     void Actor::Stop() {
         util::mutex_lock(this->mutex);
         this->stopped = true;
-        util::cond_signal(this->msg_cond);
+        util::cond_signal(this->thread_cond);
         util::mutex_unlock(this->mutex);
     }
 

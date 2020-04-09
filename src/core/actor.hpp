@@ -25,7 +25,7 @@ namespace irobot {
 
         SDL_Thread *thread;
         SDL_mutex *mutex;
-        SDL_cond *msg_cond;
+        SDL_cond *thread_cond;
         bool stopped;
 
         virtual bool Init();

@@ -42,7 +42,7 @@ namespace irobot {
         bool was_empty = cbuf_is_empty(&this->queue);
         bool res = cbuf_push(&this->queue, *msg);
         if (was_empty) {
-            util::cond_signal(this->msg_cond);
+            util::cond_signal(this->thread_cond);
         }
         util::mutex_unlock(this->mutex);
         return res;
@@ -66,7 +66,7 @@ namespace irobot {
         for (;;) {
             util::mutex_lock(controller->mutex);
             while (!controller->stopped && cbuf_is_empty(&controller->queue)) {
-                util::cond_wait(controller->msg_cond, controller->mutex);
+                util::cond_wait(controller->thread_cond, controller->mutex);
             }
             if (controller->stopped) {
                 // stop immediately, do not process further msgs
