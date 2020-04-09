@@ -18,6 +18,7 @@ namespace irobot {
             return false;
         }
         this->stopped = false;
+        this->thread= nullptr;
         return true;
     }
 

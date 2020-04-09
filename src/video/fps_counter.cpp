@@ -15,28 +15,17 @@ namespace irobot::video {
 
 
     bool FpsCounter::Init() {
-        this->mutex = SDL_CreateMutex();
-        if (!this->mutex) {
+        bool initialzed=Actor::Init();
+        if (!initialzed) {
             return false;
         }
 
-        this->state_cond = SDL_CreateCond();
-        if (!this->state_cond) {
-            SDL_DestroyMutex(this->mutex);
-            return false;
-        }
-
-        this->thread = nullptr;
         SDL_AtomicSet(&this->started, 0);
         // no need to initialize the other fields, they are unused until started
-
         return true;
     }
 
-    void FpsCounter::Destroy() {
-        SDL_DestroyCond(this->state_cond);
-        SDL_DestroyMutex(this->mutex);
-    }
+
 
 // must be called with mutex locked
     void FpsCounter::display_fps() {
@@ -71,7 +60,7 @@ namespace irobot::video {
         util::mutex_lock(counter->mutex);
         while (!counter->interrupted) {
             while (!counter->interrupted && !SDL_AtomicGet(&counter->started)) {
-                util::cond_wait(counter->state_cond, counter->mutex);
+                util::cond_wait(counter->thread_cond, counter->mutex);
             }
             while (!counter->interrupted && SDL_AtomicGet(&counter->started)) {
                 uint32_t now = SDL_GetTicks();
@@ -81,7 +70,7 @@ namespace irobot::video {
                 uint32_t remaining = counter->next_timestamp - now;
 
                 // ignore the reason (timeout or signaled), we just loop anyway
-                util::cond_wait_timeout(counter->state_cond, counter->mutex, remaining);
+                util::cond_wait_timeout(counter->thread_cond, counter->mutex, remaining);
             }
         }
         util::mutex_unlock(counter->mutex);
@@ -95,7 +84,7 @@ namespace irobot::video {
         this->nr_skipped = 0;
         util::mutex_unlock(this->mutex);
         SDL_AtomicSet(&this->started, 1);
-        util::cond_signal(this->state_cond);
+        util::cond_signal(this->thread_cond);
 
         // this->thread is always accessed from the same thread, no need to lock
         if (!this->thread) {
@@ -112,7 +101,7 @@ namespace irobot::video {
 
     void FpsCounter::Stop() {
         SDL_AtomicSet(&this->started, 0);
-        util::cond_signal(this->state_cond);
+        Actor::Stop();
     }
 
     bool FpsCounter::IsStarted() {
@@ -123,18 +112,11 @@ namespace irobot::video {
         if (!this->thread) {
             return;
         }
-
         util::mutex_lock(this->mutex);
         this->interrupted = true;
         util::mutex_unlock(this->mutex);
         // wake up blocking wait
-        util::cond_signal(this->state_cond);
-    }
-
-    void FpsCounter::Join() {
-        if (this->thread) {
-            SDL_WaitThread(this->thread, nullptr);
-        }
+        util::cond_signal(this->thread_cond);
     }
 
     void FpsCounter::AddRenderedFrame() {

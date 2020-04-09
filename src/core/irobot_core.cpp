@@ -8,14 +8,12 @@
 #include <cstring>
 
 #include "config.hpp"
-#include "device_server.hpp"
-#include "ai/brain.hpp"
 #include "android/file_handler.hpp"
 #include "core/common.hpp"
 #include "core/controller.hpp"
+#include "device_server.hpp"
 #include "platform/net.hpp"
 #include "ui/screen.hpp"
-#include "ui/events.hpp"
 #include "ui/null_input_manager.hpp"
 #include "video/decoder.hpp"
 #include "video/fps_counter.hpp"
@@ -24,7 +22,6 @@
 #include "video/video_buffer.hpp"
 #include "util/log.hpp"
 #include "util/str_util.hpp"
-#include "util/lock.hpp"
 
 #define OPT_RENDER_EXPIRED_FRAMES 1000
 #define OPT_WINDOW_TITLE          1001

@@ -13,42 +13,34 @@ extern "C" {
 #endif
 
 #include <SDL2/SDL_atomic.h>
-#include <SDL2/SDL_mutex.h>
-#include <SDL2/SDL_thread.h>
 #include <SDL2/SDL_timer.h>
 
 #if defined (__cplusplus)
 }
 #endif
 
-
 #include "config.hpp"
+#include "core/actor.hpp"
 
 namespace irobot::video {
-    class FpsCounter {
+    class FpsCounter : public Actor {
     public:
-        SDL_Thread *thread;
-        SDL_mutex *mutex;
-        SDL_cond *state_cond;
 
         // atomic so that we can check without locking the mutex
         // if the FPS counter is disabled, we don't want to lock unnecessarily
-        SDL_atomic_t started;
+        SDL_atomic_t started{};
 
         // the following fields are protected by the mutex
-        bool interrupted;
-        unsigned nr_rendered;
-        unsigned nr_skipped;
-        uint32_t next_timestamp;
+        bool interrupted = false;
+        unsigned nr_rendered = 0;
+        unsigned nr_skipped = 0;
+        uint32_t next_timestamp = 0;
 
+        bool Init() override;
 
-        bool Init();
+        bool Start() override;
 
-        void Destroy();
-
-        bool Start();
-
-        void Stop();
+        void Stop() override;
 
         bool IsStarted();
 
@@ -56,7 +48,6 @@ namespace irobot::video {
         // must be called before fps_counter_join()
         void Interrupt();
 
-        void Join();
 
         void AddRenderedFrame();
 

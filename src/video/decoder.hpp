@@ -33,7 +33,6 @@ namespace irobot::video {
         AVCodecContext *codec_cv_ctx;
         SwsContext *sws_cv_ctx;
 
-
         void Init(VideoBuffer *vb);
 
         bool Open(const AVCodec *codec);
@@ -43,7 +42,6 @@ namespace irobot::video {
         bool Push(const AVPacket *packet);
 
         void Interrupt();
-
 
         static void SaveFrame(AVFrame *pFrameRGB, int iFrame);
 
