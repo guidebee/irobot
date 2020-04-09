@@ -31,14 +31,13 @@ namespace irobot::android {
     class FileHandler : public Actor {
 
     public:
-        char *serial;
-        const char *push_target;
+        char *serial = nullptr;
+        const char *push_target = nullptr;
+        bool initialized = false;
+        ProcessType current_process{};
+        FileHandlerRequestQueue queue{};
 
-        bool initialized;
-        ProcessType current_process;
-        struct FileHandlerRequestQueue queue;
-
-        bool Init(const char *serial, const char *push_target);
+        bool Init(const char *pSerial, const char *pPush_target);
 
         void Destroy() override;
 
@@ -46,10 +45,8 @@ namespace irobot::android {
 
         void Stop() override;
 
-
         // take ownership of file, and will SDL_free() it
         bool Request(FileHandlerActionType action, char *file);
-
 
         static int RunFileHandler(void *data);
 

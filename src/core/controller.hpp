@@ -28,6 +28,8 @@ namespace irobot {
 
         void Destroy() override;
 
+        void Stop() override;
+
         bool Start() override;
 
         void Join() override;

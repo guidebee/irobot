@@ -15,8 +15,8 @@
 
 namespace irobot::android {
 
-    bool FileHandler::Init(const char *serial,
-                           const char *push_target) {
+    bool FileHandler::Init(const char *pSerial,
+                           const char *pPush_target) {
 
         cbuf_init(&this->queue);
 
@@ -25,8 +25,8 @@ namespace irobot::android {
             return false;
         }
 
-        if (serial) {
-            this->serial = SDL_strdup(serial);
+        if (pSerial) {
+            this->serial = SDL_strdup(pSerial);
             if (!this->serial) {
                 LOGW("Could not strdup serial");
                 SDL_DestroyCond(this->thread_cond);
@@ -39,18 +39,15 @@ namespace irobot::android {
 
         // lazy initialization
         this->initialized = false;
-
-
         this->current_process = PROCESS_NONE;
-        this->push_target = push_target ? push_target : DEFAULT_PUSH_TARGET;
+        this->push_target = pPush_target ? pPush_target : DEFAULT_PUSH_TARGET;
         return true;
     }
 
     void FileHandler::Destroy() {
         Actor::Destroy();
         SDL_free(this->serial);
-
-        struct FileHandlerRequest req{};
+        FileHandlerRequest req{};
         while (cbuf_take(&this->queue, &req)) {
             req.destroy();
         }
@@ -58,7 +55,6 @@ namespace irobot::android {
 
     bool FileHandler::Request(
             FileHandlerActionType action, char *file) {
-
         // start file_handler if it's used for the first time
         if (!this->initialized) {
             if (!this->Start()) {
@@ -66,7 +62,6 @@ namespace irobot::android {
             }
             this->initialized = true;
         }
-
         LOGI("Request to %s %s", action == ACTION_INSTALL_APK ? "install" : "push",
              file);
         struct FileHandlerRequest req = {
@@ -125,7 +120,7 @@ namespace irobot::android {
                 util::mutex_unlock(file_handler->mutex);
                 break;
             }
-            struct FileHandlerRequest req{};
+            FileHandlerRequest req{};
             bool non_empty = cbuf_take(&file_handler->queue, &req);
             assert(non_empty);
             (void) non_empty;

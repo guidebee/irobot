@@ -27,6 +27,11 @@ namespace irobot {
         return true;
     }
 
+    void Controller::Stop() {
+        Actor::Stop();
+        this->receiver.Stop();
+    }
+
     void Controller::Destroy() {
         Actor::Destroy();
         message::ControlMessage msg{};

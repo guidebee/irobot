@@ -17,21 +17,15 @@ extern "C" {
 #include <cassert>
 #include "util/log.hpp"
 
-
 namespace irobot::android {
 
     bool Receiver::Init(socket_t control_socket) {
-        Receiver *receiver = this;
-        if (!(receiver->mutex = SDL_CreateMutex())) {
+        bool initialized = Actor::Init();
+        if (!initialized) {
             return false;
         }
-        receiver->control_socket = control_socket;
+        this->control_socket = control_socket;
         return true;
-    }
-
-    void Receiver::Destroy() {
-        Receiver *receiver = this;
-        SDL_DestroyMutex(receiver->mutex);
     }
 
     void Receiver::ProcessMessage(struct message::DeviceMessage *msg) {
@@ -44,22 +38,15 @@ namespace irobot::android {
     }
 
     bool Receiver::Start() {
-        Receiver *receiver = this;
-        LOGD("Starting receiver thread");
 
-        receiver->thread = SDL_CreateThread(Receiver::RunReceiver,
-                                            "receiver", receiver);
-        if (!receiver->thread) {
+        LOGD("Starting receiver thread");
+        this->thread = SDL_CreateThread(Receiver::RunReceiver,
+                                        "receiver", this);
+        if (!this->thread) {
             LOGC("Could not start receiver thread");
             return false;
         }
-
         return true;
-    }
-
-    void Receiver::Join() {
-        Receiver *receiver = this;
-        SDL_WaitThread(receiver->thread, nullptr);
     }
 
 
@@ -88,7 +75,6 @@ namespace irobot::android {
 
     int Receiver::RunReceiver(void *data) {
         auto *receiver = (Receiver *) data;
-
         unsigned char buf[DEVICE_MSG_SERIALIZED_MAX_SIZE];
         size_t head = 0;
 
@@ -118,7 +104,7 @@ namespace irobot::android {
     }
 
     bool Receiver::ReadDeviceInfomation(socket_t device_socket,
-                              char *device_name, struct Size *size) {
+                                        char *device_name, struct Size *size) {
         unsigned char buf[DEVICE_NAME_FIELD_LENGTH + 4];
         int r = platform::net_recv_all(device_socket, buf, sizeof(buf));
         if (r < DEVICE_NAME_FIELD_LENGTH + 4) {
