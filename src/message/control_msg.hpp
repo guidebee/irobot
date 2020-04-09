@@ -15,6 +15,8 @@
 
 #include <cstddef>
 #include <cstdint>
+#include <string>
+
 
 #include "core/common.hpp"
 #include "android/input.hpp"
@@ -81,6 +83,10 @@ namespace irobot::message {
         size_t Serialize(unsigned char *buf);
 
         void Destroy();
+
+        std::string JsonSerialize();
+
+        size_t JsonDeserialize(const unsigned char *buf, size_t len);
 
         static void WritePosition(uint8_t *buf, const struct Position *position);
 

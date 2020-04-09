@@ -5,9 +5,13 @@
 
 #include "catch.hpp"
 #include <cstring>
+#include <SDL2/SDL_types.h>
 #include "message/control_msg.hpp"
 #include "message/device_msg.hpp"
+#include <nlohmann/json.hpp>
+#include <iostream>
 
+using nlohmann::json;
 using namespace irobot::message;
 
 TEST_CASE("serialize inject keycode", "[message][ControlMessage]") {
@@ -113,6 +117,40 @@ TEST_CASE("serialize inject touch event", "[message][ControlMessage]") {
     };
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
+
+
+TEST_CASE("json serialize inject touch event", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
+            .type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT,
+            .inject_touch_event = {
+                    .action = AMOTION_EVENT_ACTION_DOWN,
+                    .buttons = AMOTION_EVENT_BUTTON_PRIMARY,
+                    .pointer_id = 0x1234567887654321L,
+                    .position = {
+                            .screen_size = {
+                                    .width = 1080,
+                                    .height = 1920,
+                            },
+                            .point = {
+                                    .x = 100,
+                                    .y = 200,
+                            },
+
+                    },
+                    .pressure = 1.0f,
+
+            },
+    };
+
+    auto json_str = msg.JsonSerialize();
+    REQUIRE(json::accept(json_str));
+    json j = json::parse(json_str);
+    auto msg_type =j["msg_type"];
+    std::cout << msg_type;
+    REQUIRE(msg_type=="CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT");
+
+}
+
 
 TEST_CASE("serialize inject scroll event", "[message][ControlMessage]") {
     struct ControlMessage msg = {
