@@ -14,7 +14,7 @@
 #include "device_server.hpp"
 #include "platform/net.hpp"
 #include "ui/screen.hpp"
-#include "ui/null_input_manager.hpp"
+#include "agent/agent_manager.hpp"
 #include "video/decoder.hpp"
 #include "video/fps_counter.hpp"
 #include "video/recorder.hpp"
@@ -56,7 +56,7 @@ namespace irobot {
     FileHandler file_handler;
     Decoder decoder;
     Screen screen;
-    NullInputManager null_input_manager = {
+    agent::AgentManager null_input_manager = {
             .controller = &controller,
             .video_buffer = &video_buffer,
 

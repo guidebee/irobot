@@ -9,20 +9,20 @@
 #include "core/common.hpp"
 #include "core/controller.hpp"
 #include "ui/screen.hpp"
-#include "ui/null_input_manager.hpp"
+#include "ui/events.hpp"
+#include "agent/agent_manager.hpp"
 #include "video/fps_counter.hpp"
 #include "video/video_buffer.hpp"
 
 
 namespace irobot::ui {
 
-
     using namespace android;
     using namespace message;
 
     class InputManager {
     public:
-        NullInputManager *null_input_manager;
+        agent::AgentManager *null_input_manager;
         Screen *screen;
         bool prefer_text;
 

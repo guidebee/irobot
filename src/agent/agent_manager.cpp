@@ -3,25 +3,27 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#include "null_input_manager.hpp"
-#include "events.hpp"
+#include "agent_manager.hpp"
+#include "ui/events.hpp"
+
 #include "util/log.hpp"
 #include "util/lock.hpp"
 #include "ai/brain.hpp"
 
-namespace irobot::ui {
+namespace irobot::agent {
 
-    enum EventResult NullInputManager::HandleEvent(SDL_Event *event, bool has_screen) {
+
+    enum ui::EventResult AgentManager::HandleEvent(SDL_Event *event, bool has_screen) {
         switch (event->type) {
             case EVENT_STREAM_STOPPED:
                 LOGD("Video stream stopped");
-                return EVENT_RESULT_STOPPED_BY_EOS;
+                return ui::EVENT_RESULT_STOPPED_BY_EOS;
             case SDL_QUIT:
                 LOGD("User requested to quit");
-                return EVENT_RESULT_STOPPED_BY_USER;
+                return ui::EVENT_RESULT_STOPPED_BY_USER;
             case EVENT_NEW_OPENCV_FRAME:
                 ai::ProcessFrame(*this->video_buffer);
-                return EVENT_RESULT_CONTINUE;
+                return ui::EVENT_RESULT_CONTINUE;
             case EVENT_NEW_FRAME:
                 if (!has_screen) {
                     util::mutex_lock(this->video_buffer->mutex);
@@ -30,9 +32,9 @@ namespace irobot::ui {
                     LOGI("receive new frame %d,%d\n", new_frame_size.width, new_frame_size.height);
                     util::mutex_unlock(this->video_buffer->mutex);
                 }
-                return EVENT_RESULT_CONTINUE;
+                return ui::EVENT_RESULT_CONTINUE;
             default:
-                return EVENT_RESULT_CONTINUE;
+                return ui::EVENT_RESULT_CONTINUE;
         }
     }
 }

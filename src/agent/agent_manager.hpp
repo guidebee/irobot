@@ -15,24 +15,19 @@ extern "C" {
 }
 #endif
 
-
+#include "ui/events.hpp"
 #include "core/controller.hpp"
 #include "video/video_buffer.hpp"
 
-namespace irobot::ui {
+namespace irobot::agent {
 
-    enum EventResult {
-        EVENT_RESULT_CONTINUE,
-        EVENT_RESULT_STOPPED_BY_USER,
-        EVENT_RESULT_STOPPED_BY_EOS,
-    };
+    class AgentManager {
 
-    class NullInputManager {
     public:
         Controller *controller;
         video::VideoBuffer *video_buffer;
 
-        enum EventResult HandleEvent(SDL_Event *event, bool has_screen);
+        enum ui::EventResult HandleEvent(SDL_Event *event, bool has_screen);
     };
 
 }

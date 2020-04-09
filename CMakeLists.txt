@@ -22,6 +22,7 @@ add_subdirectory(libs)
 include_directories(${CMAKE_HOME_DIRECTORY}/src ${PROJECT_BINARY_DIR}/src)
 
 SET(COMMON_SOURCE_HEADERS
+        ${CMAKE_HOME_DIRECTORY}/src/agent/agent_manager.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ai/brain.hpp
         ${CMAKE_HOME_DIRECTORY}/src/android/input.hpp
         ${CMAKE_HOME_DIRECTORY}/src/android/keycodes.hpp
@@ -42,7 +43,6 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/video/stream.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/events.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/input_manager.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/ui/null_input_manager.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/event_converter.hpp
         ${CMAKE_HOME_DIRECTORY}/src/core/actor.hpp
         ${CMAKE_HOME_DIRECTORY}/src/core/common.hpp
@@ -55,6 +55,7 @@ SET(COMMON_SOURCE_HEADERS
 
 SET(COMMON_SOURCES
         ${COMMON_SOURCE_HEADERS}
+        ${CMAKE_HOME_DIRECTORY}/src/agent/agent_manager.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ai/brain.cpp
         ${CMAKE_HOME_DIRECTORY}/src/android/file_handler.cpp
         ${CMAKE_HOME_DIRECTORY}/src/android/receiver.cpp
@@ -63,7 +64,6 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/ui/event_converter.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/screen.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/input_manager.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/ui/null_input_manager.cpp
         ${CMAKE_HOME_DIRECTORY}/src/util/str_util.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/fps_counter.cpp
         ${CMAKE_HOME_DIRECTORY}/src/video/recorder.cpp

@@ -8,9 +8,8 @@
 
 #include <cassert>
 
-#include "ai/brain.hpp"
 #include "ui/event_converter.hpp"
-#include "ui/events.hpp"
+
 #include "util/lock.hpp"
 #include "util/log.hpp"
 #include "video/video_buffer.hpp"
@@ -560,7 +559,7 @@ namespace irobot::ui {
 // <https://bugzilla.libsdl.org/show_bug.cgi?id=2077>
 // <https://stackoverflow.com/a/40693139/1987178>
     int InputManager::EventWatcher(void *data, SDL_Event *event) {
-        ui::InputManager *input_manager = (ui::InputManager *) data;
+        auto *input_manager = (ui::InputManager *) data;
         if (event->type == SDL_WINDOWEVENT
             && event->window.event == SDL_WINDOWEVENT_RESIZED) {
             // called from another thread, not very safe, but it's a workaround!
