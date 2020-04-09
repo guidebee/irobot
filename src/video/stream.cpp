@@ -29,7 +29,7 @@ namespace irobot::video {
         // It is followed by <packet_size> bytes containing the packet/frame.
 
         uint8_t header[HEADER_SIZE];
-        ssize_t r = platform::net_recv_all(this->socket, header, HEADER_SIZE);
+        ssize_t r = platform::net_recv_all(this->video_socket, header, HEADER_SIZE);
         if (r < HEADER_SIZE) {
             return false;
         }
@@ -44,7 +44,7 @@ namespace irobot::video {
             return false;
         }
 
-        r = platform::net_recv_all(this->socket, packet->data, len);
+        r = platform::net_recv_all(this->video_socket, packet->data, len);
         if (r < 0 || ((uint32_t) r) < len) {
             av_packet_unref(packet);
             return false;
@@ -255,10 +255,10 @@ namespace irobot::video {
     }
 
     void VideoStream::Init(socket_t socket,
-                           struct Decoder *decoder, struct Recorder *recorder) {
-        this->socket = socket;
-        this->decoder = decoder,
-                this->recorder = recorder;
+                           struct Decoder *pDecoder, struct Recorder *pRecorder) {
+        this->video_socket = socket;
+        this->decoder = pDecoder,
+                this->recorder = pRecorder;
         this->has_pending = false;
 
     }
@@ -279,9 +279,6 @@ namespace irobot::video {
         }
     }
 
-    void VideoStream::Join() {
 
-        SDL_WaitThread(this->thread, nullptr);
-    }
 
 }

@@ -13,10 +13,8 @@ extern "C" {
 #include <unistd.h>
 #include <libavformat/avformat.h>
 #include <SDL2/SDL_events.h>
-#include <SDL2/SDL_mutex.h>
 #include <SDL2/SDL_thread.h>
 #include <SDL2/SDL_atomic.h>
-#include <SDL2/SDL_thread.h>
 
 #if defined (__cplusplus)
 }
@@ -26,34 +24,31 @@ extern "C" {
 #include <cstdint>
 
 #include "config.hpp"
-
+#include "core/actor.hpp"
 #include "platform/net.hpp"
 #include "video/decoder.hpp"
 
 namespace irobot::video {
-    class VideoStream {
+
+    class VideoStream : public Actor {
 
     public:
-        socket_t socket;
-        SDL_Thread *thread;
-        struct Decoder *decoder;
-        struct Recorder *recorder;
-        AVCodecContext *codec_ctx;
-        AVCodecParserContext *parser;
+        socket_t video_socket = 0;
+        struct Decoder *decoder = nullptr;
+        struct Recorder *recorder = nullptr;
+        AVCodecContext *codec_ctx = nullptr;
+        AVCodecParserContext *parser = nullptr;
         // successive packets may need to be concatenated, until a non-config
         // packet is available
-        bool has_pending;
-        AVPacket pending;
-
+        bool has_pending = false;
+        AVPacket pending{};
 
         void Init(socket_t socket,
-                  struct Decoder *decoder, Recorder *recorder);
+                  struct Decoder *pDecoder, Recorder *pRecorder);
 
-        bool Start();
+        bool Start() override;
 
-        void Stop();
-
-        void Join();
+        void Stop() override;
 
         bool ReceivePacket(AVPacket *packet);
 
@@ -65,13 +60,11 @@ namespace irobot::video {
 
     private:
 
-
         bool ProcessConfigPacket(AVPacket *packet);
 
         bool ProcessFrame(AVPacket *packet);
 
         bool Parse(AVPacket *packet);
-
 
     };
 
