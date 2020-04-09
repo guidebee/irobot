@@ -65,7 +65,6 @@ namespace irobot::video {
         av_frame_free(&this->rendering_frame);
         av_frame_free(&this->decoding_frame);
         av_frame_free(&this->rgb_frame);
-        this->fps_counter->Destroy();
     }
 
     void VideoBuffer::SwapFrames() {

@@ -26,7 +26,7 @@ namespace irobot::android {
         }
     };
 
-    struct FileHandlerRequestQueue CBUF(struct FileHandlerRequest, 16);
+    struct FileHandlerRequestQueue CBUF(FileHandlerRequest, 16);
 
     class FileHandler : public Actor {
 
