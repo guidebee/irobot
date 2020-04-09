@@ -20,6 +20,9 @@ extern "C" {
 namespace irobot {
 
     class Actor {
+
+    public:
+
         SDL_Thread *thread;
         SDL_mutex *mutex;
         SDL_cond *msg_cond;

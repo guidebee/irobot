@@ -6,18 +6,8 @@
 #ifndef ANDROID_IROBOT_CONTROLLER_HPP
 #define ANDROID_IROBOT_CONTROLLER_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
 
-#include <SDL2/SDL_mutex.h>
-#include <SDL2/SDL_thread.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
-
+#include "actor.hpp"
 #include "android/receiver.hpp"
 #include "message/control_msg.hpp"
 #include "util/cbuf.hpp"
@@ -27,26 +17,20 @@ namespace irobot {
 
     struct ControlMessageQueue CBUF(message::ControlMessage, 64);
 
-    class Controller {
+    class Controller : public Actor {
 
     public:
-        socket_t control_socket;
-        SDL_Thread *thread;
-        SDL_mutex *mutex;
-        SDL_cond *msg_cond;
-        bool stopped;
-        ControlMessageQueue queue;
-        android::Receiver receiver;
+        socket_t control_socket = 0;
+        ControlMessageQueue queue{};
+        android::Receiver receiver{};
 
         bool Init(socket_t control_socket);
 
-        void Destroy();
+        void Destroy() override;
 
-        bool Start();
+        bool Start() override;
 
-        void Stop();
-
-        void Join();
+        void Join() override;
 
         bool PushMessage(const message::ControlMessage *msg);
 

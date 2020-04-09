@@ -13,39 +13,26 @@
 namespace irobot {
 
     bool Controller::Init(socket_t control_socket) {
-
         cbuf_init(&this->queue);
-
         if (!this->receiver.Init(control_socket)) {
             return false;
         }
-
-        if (!(this->mutex = SDL_CreateMutex())) {
+        bool initialized = Actor::Init();
+        if (!initialized) {
             this->receiver.Destroy();
             return false;
         }
-
-        if (!(this->msg_cond = SDL_CreateCond())) {
-            this->receiver.Destroy();
-            SDL_DestroyMutex(this->mutex);
-            return false;
-        }
-
         this->control_socket = control_socket;
         this->stopped = false;
-
         return true;
     }
 
     void Controller::Destroy() {
-        SDL_DestroyCond(this->msg_cond);
-        SDL_DestroyMutex(this->mutex);
-
+        Actor::Destroy();
         message::ControlMessage msg{};
         while (cbuf_take(&this->queue, &msg)) {
             msg.Destroy();
         }
-
         this->receiver.Destroy();
     }
 
@@ -76,7 +63,6 @@ namespace irobot {
 
     int Controller::RunController(void *data) {
         auto *controller = static_cast<Controller *>(data);
-
         for (;;) {
             util::mutex_lock(controller->mutex);
             while (!controller->stopped && cbuf_is_empty(&controller->queue)) {
@@ -92,7 +78,6 @@ namespace irobot {
             assert(non_empty);
             (void) non_empty;
             util::mutex_unlock(controller->mutex);
-
             bool ok = controller->ProcessMessage(&msg);
             msg.Destroy();
             if (!ok) {
@@ -104,34 +89,24 @@ namespace irobot {
     }
 
     bool Controller::Start() {
-
         LOGD("Starting controller thread");
-
         this->thread = SDL_CreateThread(RunController, "controller",
                                         this);
         if (!this->thread) {
             LOGC("Could not start controller thread");
             return false;
         }
-
         if (!this->receiver.Start()) {
             this->Stop();
             SDL_WaitThread(this->thread, nullptr);
             return false;
         }
-
         return true;
     }
 
-    void Controller::Stop() {
-        util::mutex_lock(this->mutex);
-        this->stopped = true;
-        util::cond_signal(this->msg_cond);
-        util::mutex_unlock(this->mutex);
-    }
 
     void Controller::Join() {
-        SDL_WaitThread(this->thread, nullptr);
+        Actor::Join();
         this->receiver.Join();
     }
 
