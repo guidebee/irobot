@@ -11,8 +11,8 @@
 #include "util/log.hpp"
 
 #define FPS_COUNTER_INTERVAL_MS 1000
-namespace irobot::video {
 
+namespace irobot::video {
 
     bool FpsCounter::Init() {
         bool initialzed=Actor::Init();
@@ -25,9 +25,7 @@ namespace irobot::video {
         return true;
     }
 
-
-
-// must be called with mutex locked
+    // must be called with mutex locked
     void FpsCounter::display_fps() {
         unsigned rendered_per_second =
                 this->nr_rendered * 1000 / FPS_COUNTER_INTERVAL_MS;
@@ -39,7 +37,7 @@ namespace irobot::video {
         }
     }
 
-// must be called with mutex locked
+    // must be called with mutex locked
     void FpsCounter::CheckIntervalExpired(uint32_t now) {
         if (now < this->next_timestamp) {
             return;

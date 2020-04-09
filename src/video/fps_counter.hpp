@@ -6,8 +6,6 @@
 #ifndef ANDROID_IROBOT_FPS_COUNTER_HPP
 #define ANDROID_IROBOT_FPS_COUNTER_HPP
 
-#include <cstdint>
-
 #if defined (__cplusplus)
 extern "C" {
 #endif
@@ -19,11 +17,14 @@ extern "C" {
 }
 #endif
 
+#include <cstdint>
 #include "config.hpp"
 #include "core/actor.hpp"
 
 namespace irobot::video {
+
     class FpsCounter : public Actor {
+
     public:
 
         // atomic so that we can check without locking the mutex
@@ -48,7 +49,6 @@ namespace irobot::video {
         // must be called before fps_counter_join()
         void Interrupt();
 
-
         void AddRenderedFrame();
 
         void AddSkippedFrame();
@@ -59,7 +59,6 @@ namespace irobot::video {
 
     private:
         void display_fps();
-
 
     };
 

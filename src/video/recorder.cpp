@@ -19,50 +19,104 @@ namespace irobot::video {
             const char *filename,
             enum RecordFormat format,
             struct Size declared_frame_size) {
-        Recorder *recorder = this;
-        recorder->filename = SDL_strdup(filename);
-        if (!recorder->filename) {
+
+        this->filename = SDL_strdup(filename);
+        if (!this->filename) {
             LOGE("Could not strdup filename");
             return false;
         }
 
-        recorder->mutex = SDL_CreateMutex();
-        if (!recorder->mutex) {
+        this->mutex = SDL_CreateMutex();
+        if (!this->mutex) {
             LOGC("Could not create mutex");
-            SDL_free(recorder->filename);
+            SDL_free(this->filename);
             return false;
         }
 
-        recorder->queue_cond = SDL_CreateCond();
-        if (!recorder->queue_cond) {
+        this->thread_cond = SDL_CreateCond();
+        if (!this->thread_cond) {
             LOGC("Could not create cond");
-            SDL_DestroyMutex(recorder->mutex);
-            SDL_free(recorder->filename);
+            SDL_DestroyMutex(this->mutex);
+            SDL_free(this->filename);
             return false;
         }
 
-        queue_init(&recorder->queue);
-        recorder->stopped = false;
-        recorder->failed = false;
-        recorder->format = format;
-        recorder->declared_frame_size = declared_frame_size;
-        recorder->header_written = false;
-        recorder->previous = nullptr;
+        queue_init(&this->queue);
+        this->stopped = false;
+        this->failed = false;
+        this->format = format;
+        this->declared_frame_size = declared_frame_size;
+        this->header_written = false;
+        this->previous = nullptr;
 
         return true;
     }
 
     void Recorder::Destroy() {
-        Recorder *recorder = this;
-        SDL_DestroyCond(recorder->queue_cond);
-        SDL_DestroyMutex(recorder->mutex);
-        SDL_free(recorder->filename);
+        Actor::Destroy();
+        SDL_free(this->filename);
     }
 
+    void Recorder::RecordPacketDelete(struct RecordPacket *rec) {
+        av_packet_unref(&rec->packet);
+        SDL_free(rec);
+    }
+
+    void Recorder::RecorderQueueClear(struct RecordQueue *queue) {
+        while (!queue_is_empty(queue)) {
+            struct RecordPacket *rec;
+            queue_take(queue, next, &rec);
+            RecordPacketDelete(rec);
+        }
+    }
+
+    const char *Recorder::RecorderGetFormatName(enum RecordFormat format) {
+        switch (format) {
+            case RECORDER_FORMAT_MP4:
+                return "mp4";
+            case RECORDER_FORMAT_MKV:
+                return "matroska";
+            default:
+                return nullptr;
+        }
+    }
+
+    RecordPacket *Recorder::RecordPacketNew(const AVPacket *packet) {
+        auto rec = (struct RecordPacket *) SDL_malloc(sizeof(struct RecordPacket));
+        if (!rec) {
+            return nullptr;
+        }
+
+        // av_packet_ref() does not initialize all fields in old FFmpeg versions
+        // See <https://github.com/Genymobile/scrcpy/issues/707>
+        av_init_packet(&rec->packet);
+
+        if (av_packet_ref(&rec->packet, packet)) {
+            SDL_free(rec);
+            return nullptr;
+        }
+        return rec;
+    }
+
+    const AVOutputFormat *Recorder::FindMuxer(const char *name) {
+#ifdef IROBOT_LAVF_HAS_NEW_MUXER_ITERATOR_API
+        void *opaque = nullptr;
+#endif
+        const AVOutputFormat *oformat = nullptr;
+        do {
+#ifdef IROBOT_LAVF_HAS_NEW_MUXER_ITERATOR_API
+            oformat = av_muxer_iterate(&opaque);
+#else
+            oformat = av_oformat_next(oformat);
+#endif
+            // until null or with name "mp4"
+        } while (oformat && strcmp(oformat->name, name));
+        return oformat;
+    }
 
     bool Recorder::Open(const AVCodec *input_codec) {
-        Recorder *recorder = this;
-        const char *format_name = RecorderGetFormatName(recorder->format);
+
+        const char *format_name = RecorderGetFormatName(this->format);
         assert(format_name);
         const AVOutputFormat *format = FindMuxer(format_name);
         if (!format) {
@@ -70,8 +124,8 @@ namespace irobot::video {
             return false;
         }
 
-        recorder->ctx = avformat_alloc_context();
-        if (!recorder->ctx) {
+        this->ctx = avformat_alloc_context();
+        if (!this->ctx) {
             LOGE("Could not allocate output context");
             return false;
         }
@@ -80,15 +134,15 @@ namespace irobot::video {
         // returns (on purpose) a pointer-to-const, but AVFormatContext.oformat
         // still expects a pointer-to-non-const (it has not be updated accordingly)
         // <https://github.com/FFmpeg/FFmpeg/commit/0694d8702421e7aff1340038559c438b61bb30dd>
-        recorder->ctx->oformat = (AVOutputFormat *) format;
+        this->ctx->oformat = (AVOutputFormat *) format;
 
-        av_dict_set(&recorder->ctx->metadata, "comment",
+        av_dict_set(&this->ctx->metadata, "comment",
                     "Recorded by scrcpy "
                     IROBOT_SERVER_VERSION, 0);
 
-        AVStream *ostream = avformat_new_stream(recorder->ctx, input_codec);
+        AVStream *ostream = avformat_new_stream(this->ctx, input_codec);
         if (!ostream) {
-            avformat_free_context(recorder->ctx);
+            avformat_free_context(this->ctx);
             return false;
         }
 
@@ -96,50 +150,50 @@ namespace irobot::video {
         ostream->codecpar->codec_type = AVMEDIA_TYPE_VIDEO;
         ostream->codecpar->codec_id = input_codec->id;
         ostream->codecpar->format = AV_PIX_FMT_YUV420P;
-        ostream->codecpar->width = recorder->declared_frame_size.width;
-        ostream->codecpar->height = recorder->declared_frame_size.height;
+        ostream->codecpar->width = this->declared_frame_size.width;
+        ostream->codecpar->height = this->declared_frame_size.height;
 
 
-        int ret = avio_open(&recorder->ctx->pb, recorder->filename,
+        int ret = avio_open(&this->ctx->pb, this->filename,
                             AVIO_FLAG_WRITE);
         if (ret < 0) {
-            LOGE("Failed to open output file: %s", recorder->filename);
+            LOGE("Failed to open output file: %s", this->filename);
             // ostream will be cleaned up during context cleaning
-            avformat_free_context(recorder->ctx);
+            avformat_free_context(this->ctx);
             return false;
         }
 
-        LOGI("Recording started to %s file: %s", format_name, recorder->filename);
+        LOGI("Recording started to %s file: %s", format_name, this->filename);
 
         return true;
     }
 
     void Recorder::Close() {
-        Recorder *recorder = this;
-        if (recorder->header_written) {
-            int ret = av_write_trailer(recorder->ctx);
+
+        if (this->header_written) {
+            int ret = av_write_trailer(this->ctx);
             if (ret < 0) {
-                LOGE("Failed to write trailer to %s", recorder->filename);
-                recorder->failed = true;
+                LOGE("Failed to write trailer to %s", this->filename);
+                this->failed = true;
             }
         } else {
             // the recorded file is empty
-            recorder->failed = true;
+            this->failed = true;
         }
-        avio_close(recorder->ctx->pb);
-        avformat_free_context(recorder->ctx);
+        avio_close(this->ctx->pb);
+        avformat_free_context(this->ctx);
 
-        if (recorder->failed) {
-            LOGE("Recording failed to %s", recorder->filename);
+        if (this->failed) {
+            LOGE("Recording failed to %s", this->filename);
         } else {
-            const char *format_name = RecorderGetFormatName(recorder->format);
-            LOGI("Recording complete to %s file: %s", format_name, recorder->filename);
+            const char *format_name = RecorderGetFormatName(this->format);
+            LOGI("Recording complete to %s file: %s", format_name, this->filename);
         }
     }
 
     bool Recorder::WriteHeader(const AVPacket *packet) {
-        Recorder *recorder = this;
-        AVStream *ostream = recorder->ctx->streams[0];
+
+        AVStream *ostream = this->ctx->streams[0];
 
         auto *extradata = static_cast<uint8_t *>(av_malloc(packet->size * sizeof(uint8_t)));
         if (!extradata) {
@@ -154,9 +208,9 @@ namespace irobot::video {
         ostream->codecpar->extradata_size = packet->size;
 
 
-        int ret = avformat_write_header(recorder->ctx, nullptr);
+        int ret = avformat_write_header(this->ctx, nullptr);
         if (ret < 0) {
-            LOGE("Failed to write header to %s", recorder->filename);
+            LOGE("Failed to write header to %s", this->filename);
             return false;
         }
 
@@ -164,23 +218,23 @@ namespace irobot::video {
     }
 
     void Recorder::RescalePacket(AVPacket *packet) {
-        Recorder *recorder = this;
-        AVStream *ostream = recorder->ctx->streams[0];
+
+        AVStream *ostream = this->ctx->streams[0];
         av_packet_rescale_ts(packet, IROBOT_TIME_BASE, ostream->time_base);
     }
 
     bool Recorder::Write(AVPacket *packet) {
-        Recorder *recorder = this;
-        if (!recorder->header_written) {
+
+        if (!this->header_written) {
             if (packet->pts != AV_NOPTS_VALUE) {
                 LOGE("The first packet is not a config packet");
                 return false;
             }
-            bool ok = recorder->WriteHeader(packet);
+            bool ok = this->WriteHeader(packet);
             if (!ok) {
                 return false;
             }
-            recorder->header_written = true;
+            this->header_written = true;
             return true;
         }
 
@@ -189,8 +243,8 @@ namespace irobot::video {
             return true;
         }
 
-        recorder->RescalePacket(packet);
-        return av_write_frame(recorder->ctx, packet) >= 0;
+        this->RescalePacket(packet);
+        return av_write_frame(this->ctx, packet) >= 0;
     }
 
     int Recorder::RunRecorder(void *data) {
@@ -200,7 +254,7 @@ namespace irobot::video {
             util::mutex_lock(recorder->mutex);
 
             while (!recorder->stopped && queue_is_empty(&recorder->queue)) {
-                util::cond_wait(recorder->queue_cond, recorder->mutex);
+                util::cond_wait(recorder->thread_cond, recorder->mutex);
             }
 
             // if stopped is set, continue to process the remaining events (to
@@ -267,9 +321,9 @@ namespace irobot::video {
 
     bool Recorder::Start() {
         LOGD("Starting recorder thread");
-        Recorder *recorder = this;
-        recorder->thread = SDL_CreateThread(RunRecorder, "recorder", recorder);
-        if (!recorder->thread) {
+
+        this->thread = SDL_CreateThread(RunRecorder, "recorder", this);
+        if (!this->thread) {
             LOGC("Could not start recorder thread");
             return false;
         }
@@ -277,25 +331,13 @@ namespace irobot::video {
         return true;
     }
 
-    void Recorder::Stop() {
-        Recorder *recorder = this;
-        util::mutex_lock(recorder->mutex);
-        recorder->stopped = true;
-        util::cond_signal(recorder->queue_cond);
-        util::mutex_unlock(recorder->mutex);
-    }
-
-    void Recorder::Join() {
-        Recorder *recorder = this;
-        SDL_WaitThread(recorder->thread, nullptr);
-    }
 
     bool Recorder::Push(const AVPacket *packet) {
-        Recorder *recorder = this;
-        util::mutex_lock(recorder->mutex);
-        assert(!recorder->stopped);
 
-        if (recorder->failed) {
+        util::mutex_lock(this->mutex);
+        assert(!this->stopped);
+
+        if (this->failed) {
             // reject any new packet (this will stop the stream)
             return false;
         }
@@ -306,10 +348,10 @@ namespace irobot::video {
             return false;
         }
 
-        queue_push(&recorder->queue, next, rec);
-        util::cond_signal(recorder->queue_cond);
+        queue_push(&this->queue, next, rec);
+        util::cond_signal(this->thread_cond);
 
-        util::mutex_unlock(recorder->mutex);
+        util::mutex_unlock(this->mutex);
         return true;
     }
 
