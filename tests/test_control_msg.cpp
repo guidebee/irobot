@@ -5,11 +5,12 @@
 
 #include "catch.hpp"
 #include <cstring>
-#include <SDL2/SDL_types.h>
+
 #include "message/control_msg.hpp"
 #include "message/device_msg.hpp"
 #include <nlohmann/json.hpp>
 #include <iostream>
+
 
 using nlohmann::json;
 using namespace irobot::message;
@@ -37,6 +38,35 @@ TEST_CASE("serialize inject keycode", "[message][ControlMessage]") {
     };
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
+
+TEST_CASE("json serialize inject keycode", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
+            .type = CONTROL_MSG_TYPE_INJECT_KEYCODE,
+            .inject_keycode = {
+                    .action = AKEY_EVENT_ACTION_UP,
+                    .keycode = AKEYCODE_ENTER,
+                    .metastate = static_cast<enum AndroidMetaState>(AMETA_SHIFT_ON
+                                                                    | AMETA_SHIFT_LEFT_ON),
+            },
+    };
+
+    auto json_str = msg.JsonSerialize();
+    REQUIRE(json::accept(json_str));
+    json j = json::parse(json_str);
+    auto msg_type = j["msg_type"];
+
+    REQUIRE(msg_type == "CONTROL_MSG_TYPE_INJECT_KEYCODE");
+    char cstr[json_str.size() + 1];
+    strcpy(cstr, json_str.c_str());
+    struct ControlMessage msg1{};
+    msg1.JsonDeserialize((const unsigned char *) cstr, strlen(cstr));
+    REQUIRE(msg1.type == CONTROL_MSG_TYPE_INJECT_KEYCODE);
+    REQUIRE(msg1.inject_keycode.action == AKEY_EVENT_ACTION_UP);
+    REQUIRE(msg1.inject_keycode.keycode == AKEYCODE_ENTER);
+    REQUIRE(msg1.inject_keycode.metastate == static_cast<enum AndroidMetaState>(AMETA_SHIFT_ON
+                                                                                | AMETA_SHIFT_LEFT_ON));
+}
+
 
 TEST_CASE("serialize inject text", "[message][ControlMessage]") {
     struct ControlMessage msg = {
@@ -145,9 +175,45 @@ TEST_CASE("json serialize inject touch event", "[message][ControlMessage]") {
     auto json_str = msg.JsonSerialize();
     REQUIRE(json::accept(json_str));
     json j = json::parse(json_str);
-    auto msg_type =j["msg_type"];
-    std::cout << msg_type;
-    REQUIRE(msg_type=="CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT");
+    auto msg_type = j["msg_type"];
+    REQUIRE(msg_type == "CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT");
+
+}
+
+TEST_CASE("json serialize inject scroll event", "[message][ControlMessage]") {
+    struct ControlMessage msg = {
+            .type = CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT,
+            .inject_scroll_event = {
+                    .position = {
+                            .screen_size = {
+                                    .width = 1080,
+                                    .height = 1920,
+                            },
+                            .point = {
+                                    .x = 260,
+                                    .y = 1026,
+                            },
+
+                    },
+                    .hscroll = 1,
+                    .vscroll = -1,
+            },
+    };
+
+    auto json_str = msg.JsonSerialize();
+    REQUIRE(json::accept(json_str));
+    json j = json::parse(json_str);
+    std::string msg_type = j["msg_type"];
+    REQUIRE(msg_type == "CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT");
+    char cstr[json_str.size() + 1];
+    strcpy(cstr, json_str.c_str());
+    struct ControlMessage msg1{};
+    msg1.JsonDeserialize((const unsigned char *) cstr, strlen(cstr));
+    REQUIRE(msg1.type == CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT);
+    REQUIRE(msg1.inject_scroll_event.position.point.x == 260);
+    REQUIRE(msg1.inject_scroll_event.position.point.y == 1026);
+    REQUIRE(msg1.inject_scroll_event.position.screen_size.width == 1080);
+    REQUIRE(msg1.inject_scroll_event.position.screen_size.height == 1920);
 
 }
 
