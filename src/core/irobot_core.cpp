@@ -403,7 +403,7 @@ namespace irobot {
                 "Options:\n"
                 "\n"
                 "    --always-on-top\n"
-                "        Make scrcpy window always on top (above other windows).\n"
+                "        Make irobot window always on top (above other windows).\n"
                 "\n"
                 "    -b, --bit-rate value\n"
                 "        Encode the video at the given bit-rate, expressed in bits/s.\n"
@@ -464,7 +464,7 @@ namespace irobot {
                 "        Force recording format (either mp4 or mkv).\n"
                 "\n"
                 "    --render-expired-frames\n"
-                "        By default, to minimize latency, scrcpy always renders the\n"
+                "        By default, to minimize latency, irobot always renders the\n"
                 "        last available decoded frame, and drops any previous ones.\n"
                 "        This flag forces to render all frames, at a cost of a\n"
                 "        possible increased latency.\n"
@@ -478,10 +478,10 @@ namespace irobot {
                 "\n"
                 "    -t, --show-touches\n"
                 "        Enable \"show touches\" on start, disable on quit.\n"
-                "        It only shows physical touches (not clicks from scrcpy).\n"
+                "        It only shows physical touches (not clicks from irobot).\n"
                 "\n"
                 "    -v, --version\n"
-                "        Print the version of scrcpy.\n"
+                "        Print the version of irobot.\n"
                 "\n"
                 "    --window-borderless\n"
                 "        Disable window decorations (display borderless window).\n"
@@ -917,7 +917,7 @@ namespace irobot {
     }
 
     void IRobotCore::PrintVersion() {
-        fprintf(stderr, "scrcpy %s\n\n", IROBOT_SERVER_VERSION);
+        fprintf(stderr, "irobot %s\n\n", IROBOT_SERVER_VERSION);
 
         fprintf(stderr, "dependencies:\n");
         fprintf(stderr, " - SDL %d.%d.%d\n", SDL_MAJOR_VERSION, SDL_MINOR_VERSION,
@@ -962,9 +962,9 @@ namespace irobot {
             return 0;
         }
 
-        LOGI("scrcpy "
+        LOGI("irobot "
                      IROBOT_SERVER_VERSION
-                     " <https://github.com/Genymobile/scrcpy>");
+                     " <https://github.com/guidebee/irobot>");
 
 
         if (avformat_network_init()) {

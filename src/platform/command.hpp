@@ -105,7 +105,7 @@ namespace irobot::platform {
 // automatically log process errors with the provided process name
     bool process_check_success(ProcessType proc, const char *name);
 
-// return the absolute path of the executable (the scrcpy binary)
+// return the absolute path of the executable (the irobot binary)
 // may be NULL on error; to be freed by SDL_free
     char *get_executable_path();
 

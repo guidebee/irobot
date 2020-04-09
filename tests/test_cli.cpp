@@ -15,7 +15,7 @@ TEST_CASE("flag version", "[ui][cli]") {
 
     };
 
-    char *argv[] = {const_cast<char *>("scrcpy"),
+    char *argv[] = {const_cast<char *>("irobot"),
                     const_cast<char *>("-v")};
 
     bool ok = args.ParseArgs(2, argv);
@@ -29,7 +29,7 @@ TEST_CASE("flag help", "[ui][cli]") {
 
     };
 
-    char *argv[] = {const_cast<char *>("scrcpy"),
+    char *argv[] = {const_cast<char *>("irobot"),
                     const_cast<char *>("-v")};
 
     bool ok = args.ParseArgs(2, argv);
@@ -44,7 +44,7 @@ TEST_CASE("options", "[ui][cli]") {
     };
 
     char *argv[] = {
-            const_cast<char *>("scrcpy"),
+            const_cast<char *>("irobot"),
             const_cast<char *>("--always-on-top"),
             const_cast<char *>("--bit-rate"), const_cast<char *>("5M"),
             const_cast<char *>("--crop"), const_cast<char *>("100:200:300:400"),
@@ -104,7 +104,7 @@ TEST_CASE("options2", "[ui][cli]") {
     };
 
     char *argv[] = {
-            const_cast<char *>("scrcpy"),
+            const_cast<char *>("irobot"),
             const_cast<char *>("--no-control"),
             const_cast<char *>("--no-display"),
             const_cast<char *>("--record"),

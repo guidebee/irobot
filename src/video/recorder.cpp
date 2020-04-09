@@ -88,7 +88,6 @@ namespace irobot::video {
         }
 
         // av_packet_ref() does not initialize all fields in old FFmpeg versions
-        // See <https://github.com/Genymobile/scrcpy/issues/707>
         av_init_packet(&rec->packet);
 
         if (av_packet_ref(&rec->packet, packet)) {
@@ -137,7 +136,7 @@ namespace irobot::video {
         this->ctx->oformat = (AVOutputFormat *) format;
 
         av_dict_set(&this->ctx->metadata, "comment",
-                    "Recorded by scrcpy "
+                    "Recorded by irobot "
                     IROBOT_SERVER_VERSION, 0);
 
         AVStream *ostream = avformat_new_stream(this->ctx, input_codec);

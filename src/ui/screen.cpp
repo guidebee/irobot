@@ -446,7 +446,7 @@ namespace irobot::ui {
             LOGW("Could not disable minimize on focus loss");
         }
 
-        // Do not disable the screensaver when scrcpy is running
+        // Do not disable the screensaver when irobot is running
         SDL_EnableScreenSaver();
         return true;
     }
