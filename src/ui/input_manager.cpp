@@ -56,7 +56,7 @@ namespace irobot::ui {
 
         if (actions & ACTION_DOWN) {
             msg.inject_keycode.action = AKEY_EVENT_ACTION_DOWN;
-            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+            if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject %s (DOWN)'", name);
                 return;
             }
@@ -64,7 +64,7 @@ namespace irobot::ui {
 
         if (actions & ACTION_UP) {
             msg.inject_keycode.action = AKEY_EVENT_ACTION_UP;
-            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+            if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject %s (UP)'", name);
             }
         }
@@ -76,7 +76,7 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON;
 
-        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+        if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request 'press back or turn screen on'");
         }
     }
@@ -85,7 +85,7 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL;
 
-        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+        if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request 'expand notification panel'");
         }
     }
@@ -94,7 +94,7 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL;
 
-        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+        if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request 'collapse notification panel'");
         }
     }
@@ -103,7 +103,7 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_GET_CLIPBOARD;
 
-        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+        if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request device clipboard");
         }
     }
@@ -124,7 +124,7 @@ namespace irobot::ui {
         msg.type = CONTROL_MSG_TYPE_SET_CLIPBOARD;
         msg.set_clipboard.text = text;
 
-        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+        if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
             SDL_free(text);
             LOGW("Could not request 'set device clipboard'");
         }
@@ -136,7 +136,7 @@ namespace irobot::ui {
         msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
         msg.set_screen_power_mode.mode = mode;
 
-        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+        if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request 'set screen power mode'");
         }
     }
@@ -171,7 +171,7 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_INJECT_TEXT;
         msg.inject_text.text = text;
-        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+        if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
             SDL_free(text);
             LOGW("Could not request 'paste clipboard'");
         }
@@ -181,7 +181,7 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_ROTATE_DEVICE;
 
-        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+        if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request device rotation");
         }
     }
@@ -204,7 +204,7 @@ namespace irobot::ui {
             LOGW("Could not strdup input text");
             return;
         }
-        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+        if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
             SDL_free(msg.inject_text.text);
             LOGW("Could not request 'inject text'");
         }
@@ -346,7 +346,7 @@ namespace irobot::ui {
                 case SDLK_i:
                     if (!shift && cmd && !repeat && down) {
                         struct video::FpsCounter *fps_counter =
-                                this->null_input_manager->video_buffer->fps_counter;
+                                this->agent_manager->video_buffer->fps_counter;
                         SwitchFpsCounterState(fps_counter);
                     }
                     return;
@@ -377,7 +377,7 @@ namespace irobot::ui {
 
         struct ControlMessage msg{};
         if (ConvertInputKey(event, &msg, this->prefer_text)) {
-            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+            if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject keycode'");
             }
         }
@@ -410,7 +410,7 @@ namespace irobot::ui {
         }
         struct ControlMessage msg{};
         if (ConvertMouseMotion(event, this->screen, &msg)) {
-            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+            if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject mouse motion event'");
             }
         }
@@ -440,7 +440,7 @@ namespace irobot::ui {
             const SDL_TouchFingerEvent *event) {
         struct ControlMessage msg{};
         if (ConvertTouch(event, this->screen, &msg)) {
-            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+            if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject touch event'");
             }
         }
@@ -506,7 +506,7 @@ namespace irobot::ui {
 
         struct ControlMessage msg{};
         if (ConvertMouseButton(event, this->screen, &msg)) {
-            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+            if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject mouse button event'");
             }
         }
@@ -533,7 +533,7 @@ namespace irobot::ui {
             const SDL_MouseWheelEvent *event) {
         struct ControlMessage msg{};
         if (ConvertMouseWheel(event, this->screen, &msg)) {
-            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
+            if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject mouse wheel event'");
             }
         }
@@ -568,79 +568,78 @@ namespace irobot::ui {
 #endif
 
     enum EventResult InputManager::HandleEvent(SDL_Event *event, bool control) {
-        switch (event->type) {
-            case EVENT_STREAM_STOPPED:
-            case SDL_QUIT:
-            case EVENT_NEW_OPENCV_FRAME:
-                return this->null_input_manager->HandleEvent(event, true);
-                break;
-            case EVENT_NEW_FRAME:
-                if (!this->screen->has_frame) {
-                    this->screen->has_frame = true;
-                    // this is the very first frame, show the window
-                    this->screen->ShowWindow();
-                }
-                if (!this->screen->UpdateFrame(this->null_input_manager->video_buffer)) {
-                    return EVENT_RESULT_CONTINUE;
-                }
-                break;
+        auto result = this->agent_manager->HandleEvent(event, true);
+        if (result == ui::EVENT_RESULT_CONTINUE) {
+            switch (event->type) {
+                case EVENT_NEW_FRAME:
+                    if (!this->screen->has_frame) {
+                        this->screen->has_frame = true;
+                        // this is the very first frame, show the window
+                        this->screen->ShowWindow();
+                    }
+                    if (!this->screen->UpdateFrame(this->agent_manager->video_buffer)) {
+                        return EVENT_RESULT_CONTINUE;
+                    }
+                    break;
 
-            case SDL_WINDOWEVENT:
-                this->screen->HandleWindowEvent(&event->window);
-                break;
-            case SDL_TEXTINPUT:
-                if (!control) {
+                case SDL_WINDOWEVENT:
+                    this->screen->HandleWindowEvent(&event->window);
+                    break;
+                case SDL_TEXTINPUT:
+                    if (!control) {
+                        break;
+                    }
+                    this->ProcessTextInput(&event->text);
+                    break;
+                case SDL_KEYDOWN:
+                case SDL_KEYUP:
+                    // some key events do not interact with the device, so process the
+                    // event even if control is disabled
+                    this->ProcessKey(&event->key, control);
+                    break;
+                case SDL_MOUSEMOTION:
+                    if (!control) {
+                        break;
+                    }
+                    this->ProcessMouseMotion(&event->motion);
+                    break;
+                case SDL_MOUSEWHEEL:
+                    if (!control) {
+                        break;
+                    }
+                    this->ProcessMouseWheel(&event->wheel);
+                    break;
+                case SDL_MOUSEBUTTONDOWN:
+                case SDL_MOUSEBUTTONUP:
+                    // some mouse events do not interact with the device, so process
+                    // the event even if control is disabled
+                    this->ProcessMouseButton(&event->button,
+                                             control);
+                    break;
+                case SDL_FINGERMOTION:
+                case SDL_FINGERDOWN:
+                case SDL_FINGERUP:
+                    this->ProcessTouch(&event->tfinger);
+                    break;
+                case SDL_DROPFILE: {
+                    if (!control) {
+                        break;
+                    }
+                    FileHandlerActionType action;
+                    if (IsApk(event->drop.file)) {
+                        action = ACTION_INSTALL_APK;
+                    } else {
+                        action = ACTION_PUSH_FILE;
+                    }
+                    if (this->screen->file_handler != nullptr) {
+                        this->screen->file_handler->Request(action, event->drop.file);
+                    }
                     break;
                 }
-                this->ProcessTextInput(&event->text);
-                break;
-            case SDL_KEYDOWN:
-            case SDL_KEYUP:
-                // some key events do not interact with the device, so process the
-                // event even if control is disabled
-                this->ProcessKey(&event->key, control);
-                break;
-            case SDL_MOUSEMOTION:
-                if (!control) {
-                    break;
-                }
-                this->ProcessMouseMotion(&event->motion);
-                break;
-            case SDL_MOUSEWHEEL:
-                if (!control) {
-                    break;
-                }
-                this->ProcessMouseWheel(&event->wheel);
-                break;
-            case SDL_MOUSEBUTTONDOWN:
-            case SDL_MOUSEBUTTONUP:
-                // some mouse events do not interact with the device, so process
-                // the event even if control is disabled
-                this->ProcessMouseButton(&event->button,
-                                         control);
-                break;
-            case SDL_FINGERMOTION:
-            case SDL_FINGERDOWN:
-            case SDL_FINGERUP:
-                this->ProcessTouch(&event->tfinger);
-                break;
-            case SDL_DROPFILE: {
-                if (!control) {
-                    break;
-                }
-                FileHandlerActionType action;
-                if (IsApk(event->drop.file)) {
-                    action = ACTION_INSTALL_APK;
-                } else {
-                    action = ACTION_PUSH_FILE;
-                }
-                if (this->screen->file_handler != nullptr) {
-                    this->screen->file_handler->Request(action, event->drop.file);
-                }
-                break;
             }
         }
-        return EVENT_RESULT_CONTINUE;
+        return result;
+
     }
 
     bool InputManager::EventLoop(bool display, bool control) {

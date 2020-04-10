@@ -6,13 +6,12 @@
 #ifndef ANDROID_IROBOT_INPUT_MANAGER_HPP
 #define ANDROID_IROBOT_INPUT_MANAGER_HPP
 
+#include "agent/agent_manager.hpp"
 #include "core/common.hpp"
 #include "ui/screen.hpp"
 #include "ui/events.hpp"
-#include "agent/agent_manager.hpp"
 #include "video/fps_counter.hpp"
 #include "video/video_buffer.hpp"
-
 
 namespace irobot::ui {
 
@@ -21,7 +20,7 @@ namespace irobot::ui {
 
     class InputManager {
     public:
-        agent::AgentManager *null_input_manager;
+        agent::AgentManager *agent_manager;
         Screen *screen;
         bool prefer_text;
 
@@ -42,15 +41,24 @@ namespace irobot::ui {
 
         void ProcessMouseWheel(const SDL_MouseWheelEvent *event);
 
+        void PressBackOrTurnScreenOn();
 
-        static void ConvertToRendererCoordinates(SDL_Renderer *renderer,
-                                                 int *x, int *y);
+        void ExpandNotificationPanel();
 
-        static struct Point GetMousePoint(Screen *screen);
+        void CollapseNotificationPanel();
 
-        void SendKeycode(
-                enum AndroidKeycode keycode,
-                int actions, const char *name);
+        void RequestDeviceClipboard();
+
+        void SetDeviceClipboard();
+
+        void SetScreenPowerMode(enum ScreenPowerMode mode);
+
+        void PasteClipboard();
+
+        void RotateDevice();
+
+        void SendKeycode(enum AndroidKeycode keycode,
+                         int actions, const char *name);
 
         inline void ActionHome(int actions) {
             SendKeycode(AKEYCODE_HOME, actions, "HOME");
@@ -80,23 +88,13 @@ namespace irobot::ui {
             SendKeycode(AKEYCODE_MENU, actions, "MENU");
         }
 
-        void PressBackOrTurnScreenOn();
-
-        void ExpandNotificationPanel();
-
-        void CollapseNotificationPanel();
-
-        void RequestDeviceClipboard();
-
-        void SetDeviceClipboard();
-
-        void SetScreenPowerMode(enum ScreenPowerMode mode);
 
         static void SwitchFpsCounterState(video::FpsCounter *fps_counter);
 
-        void PasteClipboard();
+        static void ConvertToRendererCoordinates(SDL_Renderer *renderer,
+                                                 int *x, int *y);
 
-        void RotateDevice();
+        static struct Point GetMousePoint(Screen *screen);
 
         static bool ConvertInputKey(const SDL_KeyboardEvent *from,
                                     ControlMessage *to,

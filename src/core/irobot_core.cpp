@@ -62,7 +62,7 @@ namespace irobot {
 
     };
     InputManager input_manager = {
-            .null_input_manager=&null_input_manager,
+            .agent_manager=&null_input_manager,
             .screen = &screen,
             .prefer_text = false, // initialized later
     };
