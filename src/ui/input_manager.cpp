@@ -9,7 +9,6 @@
 #include <cassert>
 
 #include "ui/event_converter.hpp"
-
 #include "util/lock.hpp"
 #include "util/log.hpp"
 #include "video/video_buffer.hpp"
@@ -47,7 +46,7 @@ namespace irobot::ui {
     }
 
 
-    void InputManager::SendKeycode(Controller *controller, enum AndroidKeycode keycode,
+    void InputManager::SendKeycode(enum AndroidKeycode keycode,
                                    int actions, const char *name) {
         // send DOWN event
         struct ControlMessage msg{};
@@ -57,7 +56,7 @@ namespace irobot::ui {
 
         if (actions & ACTION_DOWN) {
             msg.inject_keycode.action = AKEY_EVENT_ACTION_DOWN;
-            if (!controller->PushMessage(&msg)) {
+            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject %s (DOWN)'", name);
                 return;
             }
@@ -65,7 +64,7 @@ namespace irobot::ui {
 
         if (actions & ACTION_UP) {
             msg.inject_keycode.action = AKEY_EVENT_ACTION_UP;
-            if (!controller->PushMessage(&msg)) {
+            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject %s (UP)'", name);
             }
         }
@@ -73,43 +72,43 @@ namespace irobot::ui {
 
 
 // turn the screen on if it was off, press BACK otherwise
-    void InputManager::PressBackOrTurnScreenOn(Controller *controller) {
+    void InputManager::PressBackOrTurnScreenOn() {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON;
 
-        if (!controller->PushMessage(&msg)) {
+        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request 'press back or turn screen on'");
         }
     }
 
-    void InputManager::ExpandNotificationPanel(Controller *controller) {
+    void InputManager::ExpandNotificationPanel() {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL;
 
-        if (!controller->PushMessage(&msg)) {
+        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request 'expand notification panel'");
         }
     }
 
-    void InputManager::CollapseNotificationPanel(Controller *controller) {
+    void InputManager::CollapseNotificationPanel() {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL;
 
-        if (!controller->PushMessage(&msg)) {
+        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request 'collapse notification panel'");
         }
     }
 
-    void InputManager::RequestDeviceClipboard(Controller *controller) {
+    void InputManager::RequestDeviceClipboard() {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_GET_CLIPBOARD;
 
-        if (!controller->PushMessage(&msg)) {
+        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request device clipboard");
         }
     }
 
-    void InputManager::SetDeviceClipboard(Controller *controller) {
+    void InputManager::SetDeviceClipboard() {
         char *text = SDL_GetClipboardText();
         if (!text) {
             LOGW("Could not get clipboard text: %s", SDL_GetError());
@@ -125,19 +124,19 @@ namespace irobot::ui {
         msg.type = CONTROL_MSG_TYPE_SET_CLIPBOARD;
         msg.set_clipboard.text = text;
 
-        if (!controller->PushMessage(&msg)) {
+        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
             SDL_free(text);
             LOGW("Could not request 'set device clipboard'");
         }
     }
 
-    void InputManager::SetScreenPowerMode(Controller *controller,
-                                          enum ScreenPowerMode mode) {
+    void InputManager::SetScreenPowerMode(
+            enum ScreenPowerMode mode) {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
         msg.set_screen_power_mode.mode = mode;
 
-        if (!controller->PushMessage(&msg)) {
+        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request 'set screen power mode'");
         }
     }
@@ -157,7 +156,7 @@ namespace irobot::ui {
         }
     }
 
-    void InputManager::PasteClipboard(Controller *controller) {
+    void InputManager::PasteClipboard() {
         char *text = SDL_GetClipboardText();
         if (!text) {
             LOGW("Could not get clipboard text: %s", SDL_GetError());
@@ -172,17 +171,17 @@ namespace irobot::ui {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_INJECT_TEXT;
         msg.inject_text.text = text;
-        if (!controller->PushMessage(&msg)) {
+        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
             SDL_free(text);
             LOGW("Could not request 'paste clipboard'");
         }
     }
 
-    void InputManager::RotateDevice(Controller *controller) {
+    void InputManager::RotateDevice() {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_ROTATE_DEVICE;
 
-        if (!controller->PushMessage(&msg)) {
+        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request device rotation");
         }
     }
@@ -205,7 +204,7 @@ namespace irobot::ui {
             LOGW("Could not strdup input text");
             return;
         }
-        if (!this->null_input_manager->controller->PushMessage(&msg)) {
+        if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
             SDL_free(msg.inject_text.text);
             LOGW("Could not request 'inject text'");
         }
@@ -258,8 +257,6 @@ namespace irobot::ui {
             return;
         }
 
-        Controller *controller = this->null_input_manager->controller;
-
         // capture all Ctrl events
         if (ctrl || cmd) {
             SDL_Keycode keycode = event->keysym.sym;
@@ -272,62 +269,62 @@ namespace irobot::ui {
                     // Ctrl+h on all platform, since Cmd+h is already captured by
                     // the system on macOS to hide the window
                     if (control && ctrl && !meta && !shift && !repeat) {
-                        ActionHome(controller, action);
+                        ActionHome(action);
                     }
                     return;
                 case SDLK_b: // fall-through
                 case SDLK_BACKSPACE:
                     if (control && cmd && !shift && !repeat) {
-                        ActionBack(controller, action);
+                        ActionBack(action);
                     }
                     return;
                 case SDLK_s:
                     if (control && cmd && !shift && !repeat) {
-                        ActionAppSwitch(controller, action);
+                        ActionAppSwitch(action);
                     }
                     return;
                 case SDLK_m:
                     // Ctrl+m on all platform, since Cmd+m is already captured by
                     // the system on macOS to minimize the window
                     if (control && ctrl && !meta && !shift && !repeat) {
-                        ActionMenu(controller, action);
+                        ActionMenu(action);
                     }
                     return;
                 case SDLK_p:
                     if (control && cmd && !shift && !repeat) {
-                        ActionPower(controller, action);
+                        ActionPower(action);
                     }
                     return;
                 case SDLK_o:
                     if (control && cmd && !shift && down) {
-                        SetScreenPowerMode(controller, SCREEN_POWER_MODE_OFF);
+                        SetScreenPowerMode(SCREEN_POWER_MODE_OFF);
                     }
                     return;
                 case SDLK_DOWN:
                     if (control && cmd && !shift) {
                         // forward repeated events
-                        ActionVolumeDown(controller, action);
+                        ActionVolumeDown(action);
                     }
                     return;
                 case SDLK_UP:
                     if (control && cmd && !shift) {
                         // forward repeated events
-                        ActionVolumeUp(controller, action);
+                        ActionVolumeUp(action);
                     }
                     return;
                 case SDLK_c:
                     if (control && cmd && !shift && !repeat && down) {
-                        RequestDeviceClipboard(controller);
+                        RequestDeviceClipboard();
                     }
                     return;
                 case SDLK_v:
                     if (control && cmd && !repeat && down) {
                         if (shift) {
                             // store the text in the device clipboard
-                            SetDeviceClipboard(controller);
+                            SetDeviceClipboard();
                         } else {
                             // inject the text as input events
-                            PasteClipboard(controller);
+                            PasteClipboard();
                         }
                     }
                     return;
@@ -356,15 +353,15 @@ namespace irobot::ui {
                 case SDLK_n:
                     if (control && cmd && !repeat && down) {
                         if (shift) {
-                            CollapseNotificationPanel(controller);
+                            CollapseNotificationPanel();
                         } else {
-                            ExpandNotificationPanel(controller);
+                            ExpandNotificationPanel();
                         }
                     }
                     return;
                 case SDLK_r:
                     if (control && cmd && !shift && !repeat && down) {
-                        RotateDevice(controller);
+                        RotateDevice();
                     }
                     return;
                 default:
@@ -380,7 +377,7 @@ namespace irobot::ui {
 
         struct ControlMessage msg{};
         if (ConvertInputKey(event, &msg, this->prefer_text)) {
-            if (!controller->PushMessage(&msg)) {
+            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject keycode'");
             }
         }
@@ -413,7 +410,7 @@ namespace irobot::ui {
         }
         struct ControlMessage msg{};
         if (ConvertMouseMotion(event, this->screen, &msg)) {
-            if (!this->null_input_manager->controller->PushMessage(&msg)) {
+            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject mouse motion event'");
             }
         }
@@ -443,7 +440,7 @@ namespace irobot::ui {
             const SDL_TouchFingerEvent *event) {
         struct ControlMessage msg{};
         if (ConvertTouch(event, this->screen, &msg)) {
-            if (!this->null_input_manager->controller->PushMessage(&msg)) {
+            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject touch event'");
             }
         }
@@ -484,11 +481,11 @@ namespace irobot::ui {
         }
         if (event->type == SDL_MOUSEBUTTONDOWN) {
             if (control && event->button == SDL_BUTTON_RIGHT) {
-                PressBackOrTurnScreenOn(this->null_input_manager->controller);
+                PressBackOrTurnScreenOn();
                 return;
             }
             if (control && event->button == SDL_BUTTON_MIDDLE) {
-                ActionHome(this->null_input_manager->controller, ACTION_DOWN | ACTION_UP);
+                ActionHome(ACTION_DOWN | ACTION_UP);
                 return;
             }
             // double-click on black borders resize to fit the device screen
@@ -509,7 +506,7 @@ namespace irobot::ui {
 
         struct ControlMessage msg{};
         if (ConvertMouseButton(event, this->screen, &msg)) {
-            if (!this->null_input_manager->controller->PushMessage(&msg)) {
+            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject mouse button event'");
             }
         }
@@ -536,7 +533,7 @@ namespace irobot::ui {
             const SDL_MouseWheelEvent *event) {
         struct ControlMessage msg{};
         if (ConvertMouseWheel(event, this->screen, &msg)) {
-            if (!this->null_input_manager->controller->PushMessage(&msg)) {
+            if (!this->null_input_manager->PushDeviceControlMessage(&msg)) {
                 LOGW("Could not request 'inject mouse wheel event'");
             }
         }

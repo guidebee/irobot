@@ -28,7 +28,10 @@ namespace irobot::agent {
         video::VideoBuffer *video_buffer;
 
         ui::EventResult HandleEvent(SDL_Event *event, bool has_screen);
+
+        bool PushDeviceControlMessage(const message::ControlMessage *msg);
     };
+
 
 }
 #endif //ANDROID_IROBOT_NULL_INPUT_MANAGER_HPP

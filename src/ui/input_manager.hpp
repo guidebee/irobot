@@ -7,7 +7,6 @@
 #define ANDROID_IROBOT_INPUT_MANAGER_HPP
 
 #include "core/common.hpp"
-#include "core/controller.hpp"
 #include "ui/screen.hpp"
 #include "ui/events.hpp"
 #include "agent/agent_manager.hpp"
@@ -49,56 +48,55 @@ namespace irobot::ui {
 
         static struct Point GetMousePoint(Screen *screen);
 
-        static void SendKeycode(Controller *controller,
-                                enum AndroidKeycode keycode,
-                                int actions, const char *name);
+        void SendKeycode(
+                enum AndroidKeycode keycode,
+                int actions, const char *name);
 
-        static inline void ActionHome(Controller *controller, int actions) {
-            SendKeycode(controller, AKEYCODE_HOME, actions, "HOME");
+        inline void ActionHome(int actions) {
+            SendKeycode(AKEYCODE_HOME, actions, "HOME");
         }
 
-        static inline void ActionBack(Controller *controller, int actions) {
-            SendKeycode(controller, AKEYCODE_BACK, actions, "BACK");
+        inline void ActionBack(int actions) {
+            SendKeycode(AKEYCODE_BACK, actions, "BACK");
         }
 
-        static inline void ActionAppSwitch(Controller *controller, int actions) {
-            SendKeycode(controller, AKEYCODE_APP_SWITCH, actions, "APP_SWITCH");
+        inline void ActionAppSwitch(int actions) {
+            SendKeycode(AKEYCODE_APP_SWITCH, actions, "APP_SWITCH");
         }
 
-        static inline void ActionPower(Controller *controller, int actions) {
-            SendKeycode(controller, AKEYCODE_POWER, actions, "POWER");
+        inline void ActionPower(int actions) {
+            SendKeycode(AKEYCODE_POWER, actions, "POWER");
         }
 
-        static inline void ActionVolumeUp(Controller *controller, int actions) {
-            SendKeycode(controller, AKEYCODE_VOLUME_UP, actions, "VOLUME_UP");
+        inline void ActionVolumeUp(int actions) {
+            SendKeycode(AKEYCODE_VOLUME_UP, actions, "VOLUME_UP");
         }
 
-        static inline void ActionVolumeDown(Controller *controller, int actions) {
-            SendKeycode(controller, AKEYCODE_VOLUME_DOWN, actions, "VOLUME_DOWN");
+        inline void ActionVolumeDown(int actions) {
+            SendKeycode(AKEYCODE_VOLUME_DOWN, actions, "VOLUME_DOWN");
         }
 
-        static inline void ActionMenu(Controller *controller, int actions) {
-            SendKeycode(controller, AKEYCODE_MENU, actions, "MENU");
+        inline void ActionMenu(int actions) {
+            SendKeycode(AKEYCODE_MENU, actions, "MENU");
         }
 
-        static void PressBackOrTurnScreenOn(Controller *controller);
+        void PressBackOrTurnScreenOn();
 
-        static void ExpandNotificationPanel(Controller *controller);
+        void ExpandNotificationPanel();
 
-        static void CollapseNotificationPanel(Controller *controller);
+        void CollapseNotificationPanel();
 
-        static void RequestDeviceClipboard(Controller *controller);
+        void RequestDeviceClipboard();
 
-        static void SetDeviceClipboard(Controller *controller);
+        void SetDeviceClipboard();
 
-        static void SetScreenPowerMode(Controller *controller,
-                                       enum ScreenPowerMode mode);
+        void SetScreenPowerMode(enum ScreenPowerMode mode);
 
         static void SwitchFpsCounterState(video::FpsCounter *fps_counter);
 
-        static void PasteClipboard(Controller *controller);
+        void PasteClipboard();
 
-        static void RotateDevice(Controller *controller);
+        void RotateDevice();
 
         static bool ConvertInputKey(const SDL_KeyboardEvent *from,
                                     ControlMessage *to,

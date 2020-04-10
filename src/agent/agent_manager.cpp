@@ -37,4 +37,8 @@ namespace irobot::agent {
                 return ui::EVENT_RESULT_CONTINUE;
         }
     }
+
+    bool AgentManager::PushDeviceControlMessage(const message::ControlMessage *msg){
+        return this->controller->PushMessage(msg);
+    }
 }
