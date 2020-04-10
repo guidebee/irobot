@@ -164,7 +164,7 @@ namespace irobot::video {
         int height = pFrameRGB->height;
         int y;
         // Open file
-        sprintf(szFilename, "frame%d.ppm", iFrame);
+        sprintf(szFilename, "capture%d.ppm", iFrame);
         pFile = fopen(szFilename, "wb");
         if (pFile == nullptr)
             return;

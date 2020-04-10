@@ -14,14 +14,12 @@
 
 namespace irobot::ai {
 
-
     void ProcessFrame(video::VideoBuffer video_buffer) {
-
         video::VideoBuffer *vb = &video_buffer;
         util::mutex_lock(vb->mutex);
         AVFrame *frame = vb->rgb_frame;
         struct Size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
-        LOGI("receive new cv frame %d,%d\n", new_frame_size.width, new_frame_size.height);
+        LOGI("Screen capture in opencv BGR format %d,%d\n", new_frame_size.width, new_frame_size.height);
         video::Decoder::SaveFrame(frame, vb->frame_number);
         util::mutex_unlock(vb->mutex);
     }
