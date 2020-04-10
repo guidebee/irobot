@@ -48,7 +48,22 @@ namespace irobot::agent {
             switch (keycode) {
                 case SDLK_e:
                     if (cmd && !shift && !repeat && down) {
-                        printf("SDLK_e");
+                        if(this->fp_events== nullptr){
+                            LOGI("Start event recording...");
+                            this->fp_events = SDL_RWFromFile(EVENT_FILE_NAME, "w");
+                            std::string json_str="[\n";
+                            char cstr[json_str.size() + 1];
+                            strcpy(cstr, json_str.c_str());
+                            SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
+                        }else{
+                            LOGI("stop event recording...");
+                            std::string json_str="{\"event_time\": \"2020-04-10 20:23:58.667\",\n\"msg_type\": \"CONTROL_MSG_TYPE_UNKNOWN\"\n}\n]";
+                            char cstr[json_str.size() + 1];
+                            strcpy(cstr, json_str.c_str());
+                            SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
+                            SDL_RWclose(this->fp_events);
+                            this->fp_events= nullptr;
+                        }
                     }
                     break;
                 case SDLK_k:
@@ -95,6 +110,14 @@ namespace irobot::agent {
     }
 
     bool AgentManager::PushDeviceControlMessage(const message::ControlMessage *msg) {
+        if(this->fp_events){
+            auto json_str= ((message::ControlMessage *)msg)->JsonSerialize();
+            json_str+=",\n";
+            char cstr[json_str.size() + 1];
+            strcpy(cstr, json_str.c_str());
+            SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
+
+        }
         return this->controller->PushMessage(msg);
     }
 }

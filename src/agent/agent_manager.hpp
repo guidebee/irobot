@@ -19,6 +19,8 @@ extern "C" {
 #include "core/controller.hpp"
 #include "video/video_buffer.hpp"
 
+#define EVENT_FILE_NAME "events.json"
+
 namespace irobot::agent {
 
     class AgentManager {

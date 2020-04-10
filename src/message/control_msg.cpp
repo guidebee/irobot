@@ -212,7 +212,7 @@ namespace irobot::message {
                 break;
 
         }
-        strcat(buffer, "}\n");
+        strcat(buffer, "}");
         return buffer;
 
     }
