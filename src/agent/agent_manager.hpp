@@ -24,10 +24,13 @@ namespace irobot::agent {
     class AgentManager {
 
     public:
-        Controller *controller;
-        video::VideoBuffer *video_buffer;
+        Controller *controller= nullptr;
+        video::VideoBuffer *video_buffer=nullptr;
+        SDL_RWops *fp_events=nullptr;
 
         ui::EventResult HandleEvent(SDL_Event *event, bool has_screen);
+
+        void ProcessKey(const SDL_KeyboardEvent *event);
 
         bool PushDeviceControlMessage(const message::ControlMessage *msg);
     };
