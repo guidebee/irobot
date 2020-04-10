@@ -11,8 +11,6 @@
 #include "ai/brain.hpp"
 
 namespace irobot::agent {
-
-
     void AgentManager::ProcessKey(const SDL_KeyboardEvent *event) {
         // control: indicates the state of the command-line option --no-control
         // ctrl: the Ctrl key
@@ -48,21 +46,21 @@ namespace irobot::agent {
             switch (keycode) {
                 case SDLK_e:
                     if (cmd && !shift && !repeat && down) {
-                        if(this->fp_events== nullptr){
+                        if (this->fp_events == nullptr) {
                             LOGI("Start event recording...");
                             this->fp_events = SDL_RWFromFile(EVENT_FILE_NAME, "w");
-                            std::string json_str="[\n";
+                            std::string json_str = "[\n";
                             char cstr[json_str.size() + 1];
                             strcpy(cstr, json_str.c_str());
                             SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
-                        }else{
+                        } else {
                             LOGI("stop event recording...");
-                            std::string json_str="{\"event_time\": \"2020-12-12 20:20:20.200\",\n\"msg_type\": \"CONTROL_MSG_TYPE_UNKNOWN\"\n}\n]";
+                            std::string json_str = "{\"event_time\": \"2020-12-12 20:20:20.200\",\n\"msg_type\": \"CONTROL_MSG_TYPE_UNKNOWN\"\n}\n]";
                             char cstr[json_str.size() + 1];
                             strcpy(cstr, json_str.c_str());
                             SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
                             SDL_RWclose(this->fp_events);
-                            this->fp_events= nullptr;
+                            this->fp_events = nullptr;
                         }
                     }
                     break;
@@ -110,9 +108,9 @@ namespace irobot::agent {
     }
 
     bool AgentManager::PushDeviceControlMessage(const message::ControlMessage *msg) {
-        if(this->fp_events){
-            auto json_str= ((message::ControlMessage *)msg)->JsonSerialize();
-            json_str+=",\n";
+        if (this->fp_events) {
+            auto json_str = ((message::ControlMessage *) msg)->JsonSerialize();
+            json_str += ",\n";
             char cstr[json_str.size() + 1];
             strcpy(cstr, json_str.c_str());
             SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
