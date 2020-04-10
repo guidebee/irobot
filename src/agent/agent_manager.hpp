@@ -27,7 +27,7 @@ namespace irobot::agent {
         Controller *controller;
         video::VideoBuffer *video_buffer;
 
-        enum ui::EventResult HandleEvent(SDL_Event *event, bool has_screen);
+        ui::EventResult HandleEvent(SDL_Event *event, bool has_screen);
     };
 
 }

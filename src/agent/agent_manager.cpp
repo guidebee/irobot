@@ -13,7 +13,7 @@
 namespace irobot::agent {
 
 
-    enum ui::EventResult AgentManager::HandleEvent(SDL_Event *event, bool has_screen) {
+    ui::EventResult AgentManager::HandleEvent(SDL_Event *event, bool has_screen) {
         switch (event->type) {
             case EVENT_STREAM_STOPPED:
                 LOGD("Video stream stopped");

@@ -17,12 +17,13 @@
 #include <cstdint>
 #include <string>
 
-
+#include "util/cbuf.hpp"
 #include "core/common.hpp"
 #include "android/input.hpp"
 #include "android/keycodes.hpp"
 
 namespace irobot::message {
+
 
     using namespace irobot::android;
 
@@ -98,5 +99,7 @@ namespace irobot::message {
 
         static uint16_t ToFixedPoint16(float f);
     };
+
+    struct ControlMessageQueue CBUF(ControlMessage, 64);
 }
 #endif //ANDROID_IROBOT_CONTROL_MSG_HPP

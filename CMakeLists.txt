@@ -22,7 +22,10 @@ add_subdirectory(libs)
 include_directories(${CMAKE_HOME_DIRECTORY}/src ${PROJECT_BINARY_DIR}/src)
 
 SET(COMMON_SOURCE_HEADERS
-        ${CMAKE_HOME_DIRECTORY}/src/agent/agent_manager.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/agent/agent_manager.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/agent/agent_recorder.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/agent/agent_controller.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/agent/agent_stream.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ai/brain.hpp
         ${CMAKE_HOME_DIRECTORY}/src/android/input.hpp
         ${CMAKE_HOME_DIRECTORY}/src/android/keycodes.hpp
@@ -30,6 +33,7 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/android/receiver.hpp
         ${CMAKE_HOME_DIRECTORY}/src/message/device_msg.hpp
         ${CMAKE_HOME_DIRECTORY}/src/message/control_msg.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/message/blob_msg.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/cbuf.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/lock.hpp
         ${CMAKE_HOME_DIRECTORY}/src/util/log.hpp
@@ -56,11 +60,15 @@ SET(COMMON_SOURCE_HEADERS
 SET(COMMON_SOURCES
         ${COMMON_SOURCE_HEADERS}
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_manager.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/agent/agent_recorder.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/agent/agent_controller.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/agent/agent_stream.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ai/brain.cpp
         ${CMAKE_HOME_DIRECTORY}/src/android/file_handler.cpp
         ${CMAKE_HOME_DIRECTORY}/src/android/receiver.cpp
         ${CMAKE_HOME_DIRECTORY}/src/message/device_msg.cpp
         ${CMAKE_HOME_DIRECTORY}/src/message/control_msg.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/message/blob_msg.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/event_converter.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/screen.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ui/input_manager.cpp
