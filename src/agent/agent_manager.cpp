@@ -57,7 +57,7 @@ namespace irobot::agent {
                             SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
                         }else{
                             LOGI("stop event recording...");
-                            std::string json_str="{\"event_time\": \"2020-04-10 20:23:58.667\",\n\"msg_type\": \"CONTROL_MSG_TYPE_UNKNOWN\"\n}\n]";
+                            std::string json_str="{\"event_time\": \"2020-12-12 20:20:20.200\",\n\"msg_type\": \"CONTROL_MSG_TYPE_UNKNOWN\"\n}\n]";
                             char cstr[json_str.size() + 1];
                             strcpy(cstr, json_str.c_str());
                             SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
