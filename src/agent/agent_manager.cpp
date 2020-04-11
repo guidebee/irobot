@@ -15,9 +15,6 @@ namespace irobot::agent {
 
     bool AgentManager::Init(uint16_t port) {
         this->local_port = port;
-        (*this->agent_stream) = AgentStream{};
-        (*this->agent_controller) = AgentController{};
-
         this->control_server_socket = platform::listen_on_port(this->local_port + 1);
         if (this->control_server_socket == INVALID_SOCKET) {
             LOGE("Could not listen on control server port %" PRIu16,
@@ -42,6 +39,12 @@ namespace irobot::agent {
     }
 
     void AgentManager::Stop() {
+        if (this->video_server_socket != INVALID_SOCKET) {
+            platform::close_socket(&this->video_server_socket);
+        }
+        if (this->control_server_socket != INVALID_SOCKET) {
+            platform::close_socket(&this->control_server_socket);
+        }
         this->agent_stream->Stop();
         this->agent_controller->Stop();
     }
@@ -49,12 +52,7 @@ namespace irobot::agent {
     void AgentManager::Destroy() {
         this->agent_stream->Destroy();
         this->agent_controller->Destroy();
-        if (this->video_server_socket != INVALID_SOCKET) {
-            platform::close_socket(&this->video_server_socket);
-        }
-        if (this->control_server_socket != INVALID_SOCKET) {
-            platform::close_socket(&this->control_server_socket);
-        }
+        LOGD("Agent manager stopped");
 
     }
 

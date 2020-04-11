@@ -31,6 +31,7 @@ namespace irobot::agent {
         while (cbuf_take(&this->queue, &msg)) {
             msg.Destroy();
         }
+        LOGD("Agent stream stopped");
 
     }
 

@@ -56,13 +56,17 @@ namespace irobot {
     FileHandler file_handler;
     Decoder decoder;
     Screen screen;
-    agent::AgentManager null_input_manager = {
+    agent::AgentController agent_controller;
+    agent::AgentStream agent_stream;
+    agent::AgentManager agent_manager = {
             .controller = &controller,
             .video_buffer = &video_buffer,
+            .agent_stream=&agent_stream,
+            .agent_controller=&agent_controller
 
     };
     InputManager input_manager = {
-            .agent_manager=&null_input_manager,
+            .agent_manager=&agent_manager,
             .screen = &screen,
             .prefer_text = false, // initialized later
     };
@@ -111,6 +115,7 @@ namespace irobot {
                 .max_fps = options->max_fps,
                 .control = options->control,
         };
+
         if (!server.Start(options->serial, &params)) {
             return false;
         }
@@ -129,6 +134,11 @@ namespace irobot {
         bool recorder_initialized = false;
         bool controller_initialized = false;
         bool controller_started = false;
+
+
+        if (!agent_manager.Init(options->port)) {
+            return false;
+        }
 
         bool cannot_cont = false;
 
@@ -202,6 +212,9 @@ namespace irobot {
             cannot_cont = true;
         }
 
+        if (!cannot_cont & !agent_manager.Start()) {
+            cannot_cont = true;
+        }
 
         if (!cannot_cont & options->display) {
             if (options->control) {
@@ -235,7 +248,7 @@ namespace irobot {
                 msg.type = message::CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
                 msg.set_screen_power_mode.mode = message::SCREEN_POWER_MODE_OFF;
 
-                if (!controller.PushMessage(&msg)) {
+                if (!agent_manager.PushDeviceControlMessage(&msg)) {
                     LOGW("Could not request 'set screen power mode'");
                 }
             }
@@ -261,7 +274,7 @@ namespace irobot {
             bool quit = false;
             while (!quit) {
                 while (SDL_PollEvent(&event)) {
-                    enum EventResult result = null_input_manager.HandleEvent(&event, false);
+                    enum EventResult result = agent_manager.HandleEvent(&event, false);
                     switch (result) {
                         case EVENT_RESULT_STOPPED_BY_USER:
                             quit = true;
@@ -286,6 +299,7 @@ namespace irobot {
 
         if (controller_started) {
             controller.Stop();
+            agent_manager.Stop();
         }
         if (file_handler_initialized) {
             file_handler.Stop();
@@ -304,9 +318,11 @@ namespace irobot {
 
         if (controller_started) {
             controller.Join();
+            agent_manager.Join();
         }
         if (controller_initialized) {
             controller.Destroy();
+            agent_manager.Destroy();
         }
 
         if (recorder_initialized) {

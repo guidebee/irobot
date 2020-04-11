@@ -78,13 +78,16 @@ namespace irobot::agent {
         while (cbuf_take(&this->queue, &msg)) {
             msg.Destroy();
         }
+        LOGD("Agent controller stopped");
 
     }
 
 
     void AgentController::Join() {
-        SDL_WaitThread(this->thread, nullptr);
-        SDL_WaitThread(this->record_thread, nullptr);
+        if(this->control_socket!=INVALID_SOCKET) {
+            SDL_WaitThread(this->thread, nullptr);
+            SDL_WaitThread(this->record_thread, nullptr);
+        }
 
     }
 
@@ -142,20 +145,20 @@ namespace irobot::agent {
 
     int AgentController::RunAgentController(void *data) {
 
-        auto *receiver = (AgentController *) data;
-        if (!receiver->WaitForClientConnection()) {
+        auto *controller = (AgentController *) data;
+        if (!controller->WaitForClientConnection()) {
             return 0;
         }
         unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE * 2];
         size_t head = 0;
 
-        while (!receiver->stopped) {
+        while (!controller->stopped) {
             assert(head < CONTROL_MSG_SERIALIZED_MAX_SIZE * 2);
-            ssize_t r = platform::net_recv(receiver->control_socket, buf,
+            ssize_t r = platform::net_recv(controller->control_socket, buf,
                                            CONTROL_MSG_SERIALIZED_MAX_SIZE * 2 - head);
             if (r <= 0) {
                 LOGD("Control socket error ,trying to re-establish connection");
-                if (!receiver->WaitForClientConnection()) {
+                if (!controller->WaitForClientConnection()) {
                     LOGD("Failed to re-establish connection");
                     break;
                 }
