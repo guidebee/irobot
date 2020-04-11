@@ -21,6 +21,7 @@ typedef int socklen_t;
 # include <netinet/in.h>
 # include <arpa/inet.h>
 # include <unistd.h>
+# include <cerrno>
 
 # define SOCKET_ERROR -1
 typedef struct sockaddr_in SOCKADDR_IN;
@@ -37,6 +38,7 @@ typedef struct in_addr IN_ADDR;
 
 
 #include <cstdio>
+#include <cstring>
 
 namespace irobot::platform {
 
@@ -102,6 +104,13 @@ namespace irobot::platform {
 
     ssize_t net_recv(socket_t socket, void *buf, size_t len) {
         return recv(socket, (char *) buf, len, 0);
+    }
+
+    bool net_try_recv(socket_t socket) {
+        char buf[1];
+        recv(socket, (char *) buf, 1, MSG_PEEK | MSG_DONTWAIT);
+
+        return errno > 34 && errno < 45;
     }
 
     ssize_t net_recv_all(socket_t socket, void *buf, size_t len) {

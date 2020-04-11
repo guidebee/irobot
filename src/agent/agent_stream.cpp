@@ -74,6 +74,17 @@ namespace irobot::agent {
             return 0;
         }
         for (;;) {
+            if (stream->video_socket != INVALID_SOCKET) {
+                bool connected = platform::net_try_recv(stream->video_socket);
+                if (!connected) {
+                    LOGD("stream socket error ,trying to re-establish connection");
+                    if (!stream->WaitForClientConnection()) {
+                        LOGD("Failed to re-establish connection");
+                        break;
+                    }
+
+                }
+            }
             util::mutex_lock(stream->mutex);
             while (!stream->stopped && cbuf_is_empty(&stream->queue)) {
                 util::cond_wait(stream->thread_cond, stream->mutex);

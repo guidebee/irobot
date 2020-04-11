@@ -51,6 +51,8 @@ namespace irobot::platform {
 
     socket_t net_accept(socket_t server_socket);
 
+    bool net_try_recv(socket_t socket);
+
     // the _all versions wait/retry until len bytes have been written/read
     ssize_t net_recv(socket_t socket, void *buf, size_t len);
 
