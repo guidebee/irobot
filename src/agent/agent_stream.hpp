@@ -33,6 +33,8 @@ namespace irobot::agent {
 
         static int RunStream(void *data);
 
+        bool IsConnected();
+
 
     private:
 

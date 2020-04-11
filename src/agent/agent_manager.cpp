@@ -155,35 +155,37 @@ namespace irobot::agent {
         }
     }
 
-    void AgentManager::SendOpenCVImage(message::BlobMessageType type,int max_size, bool color){
+    void AgentManager::SendOpenCVImage(message::BlobMessageType type, int max_size, bool color) {
         auto mat = ai::ConvertToMat(*this->video_buffer, max_size,
                                     color);
 
-        unsigned char *data = mat.data;
-        int width = mat.size().width;
-        int height = mat.size().height;
-        int length = mat.total() * mat.elemSize();
+        if (this->agent_stream->IsConnected()) {
+            unsigned char *data = mat.data;
+            int width = mat.size().width;
+            int height = mat.size().height;
+            int length = mat.total() * mat.elemSize();
 
-        struct message::BlobMessage msg{};
-        msg.type = type;
-        struct timeval tm_now{};
-        gettimeofday(&tm_now, nullptr);
-        Uint64 milli_seconds = tm_now.tv_sec * 1000LL + tm_now.tv_usec / 1000;
-        msg.timestamp = milli_seconds;
-        msg.id = 0;
-        msg.count = 1;
-        Uint64 size = length + 16;
+            struct message::BlobMessage msg{};
+            msg.type = type;
+            struct timeval tm_now{};
+            gettimeofday(&tm_now, nullptr);
+            Uint64 milli_seconds = tm_now.tv_sec * 1000LL + tm_now.tv_usec / 1000;
+            msg.timestamp = milli_seconds;
+            msg.id = 0;
+            msg.count = 1;
+            Uint64 size = length + 16;
 
-        msg.buffers[0].data = (unsigned char *) SDL_malloc(size);
-        if (msg.buffers[0].data != nullptr) {
-            util::buffer_write64be(msg.buffers[0].data, (uint64_t) width);
-            util::buffer_write64be(msg.buffers[0].data + 8, (uint64_t) height);
-            memcpy(msg.buffers[0].data + 16, data, length);
-            msg.buffers[0].length = size;
-            this->agent_stream->PushMessage(&msg);
+            msg.buffers[0].data = (unsigned char *) SDL_malloc(size);
+            if (msg.buffers[0].data != nullptr) {
+                util::buffer_write64be(msg.buffers[0].data, (uint64_t) width);
+                util::buffer_write64be(msg.buffers[0].data + 8, (uint64_t) height);
+                memcpy(msg.buffers[0].data + 16, data, length);
+                msg.buffers[0].length = size;
+                this->agent_stream->PushMessage(&msg);
 
-        } else {
-            LOGW("Unable to allow memory");
+            } else {
+                LOGW("Unable to allow memory");
+            }
         }
     }
 
@@ -199,8 +201,8 @@ namespace irobot::agent {
                 util::mutex_lock(this->video_buffer->mutex);
                 LOGD("Agent Manager received Opencv Frame %d", this->video_buffer->frame_number);
                 {
-                    this->SendOpenCVImage(message::BLOB_MSG_TYPE_OPENCV_MAT,800,false);
-                    this->SendOpenCVImage(message::BLOB_MSG_TYPE_SCREEN_SHOT,240,true);
+                    this->SendOpenCVImage(message::BLOB_MSG_TYPE_OPENCV_MAT, 800, false);
+                    this->SendOpenCVImage(message::BLOB_MSG_TYPE_SCREEN_SHOT, 240, true);
                 }
                 util::mutex_unlock(this->video_buffer->mutex);
                 return ui::EVENT_RESULT_CONTINUE;

@@ -75,6 +75,13 @@ namespace irobot::agent {
         return true;
     }
 
+    bool AgentStream::IsConnected(){
+        if (this->video_socket != INVALID_SOCKET){
+            bool connected = platform::net_try_recv(this->video_socket);
+            return connected;
+        }
+        return false;
+    }
     int AgentStream::RunStream(void *data) {
         auto *stream = static_cast<AgentStream *>(data);
         if (!stream->WaitForClientConnection()) {
@@ -84,7 +91,7 @@ namespace irobot::agent {
             if (stream->video_socket != INVALID_SOCKET) {
                 bool connected = platform::net_try_recv(stream->video_socket);
                 if (!connected) {
-                    LOGD("stream socket error ,trying to re-establish connection");
+                    LOGD("stream socket error 1,trying to re-establish connection");
                     if (!stream->WaitForClientConnection()) {
                         LOGD("Failed to re-establish connection");
                         break;
@@ -110,7 +117,7 @@ namespace irobot::agent {
             util::mutex_unlock(stream->mutex);
 
             if (!ok) {
-                LOGD("stream socket error ,trying to re-establish connection");
+                LOGD("stream socket error 2,trying to re-establish connection");
                 if (!stream->WaitForClientConnection()) {
                     LOGD("Failed to re-establish connection");
                     break;
