@@ -8,12 +8,13 @@
 #include "util/lock.hpp"
 
 namespace irobot::agent {
-    bool AgentController::Init(socket_t server_socket) {
+    bool AgentController::Init(socket_t server_socket, message::MessageHandler handler) {
         bool initialized = Actor::Init();
         if (!initialized) {
             return false;
         }
         this->control_server_socket = server_socket;
+        this->message_handler = handler;
         return true;
     }
 
@@ -27,9 +28,8 @@ namespace irobot::agent {
     }
 
     void AgentController::ProcessMessage(struct message::ControlMessage *msg) {
-        switch (msg->type) {
-            default:
-                break;
+        if (this->message_handler) {
+            this->message_handler(msg);
         }
     }
 
@@ -141,14 +141,12 @@ namespace irobot::agent {
     }
 
     int AgentController::RunAgentController(void *data) {
-
         auto *controller = (AgentController *) data;
         if (!controller->WaitForClientConnection()) {
             return 0;
         }
         unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE * 2];
         size_t head = 0;
-
         while (!controller->stopped) {
             assert(head < CONTROL_MSG_SERIALIZED_MAX_SIZE * 2);
             ssize_t r = platform::net_recv(controller->control_socket, buf,
@@ -161,20 +159,17 @@ namespace irobot::agent {
                 }
 
             }
-
-            ssize_t consumed = ProcessMessages(buf, r);
+            ssize_t consumed = controller->ProcessMessages(buf, r);
             if (consumed == -1) {
                 // an error occurred
                 break;
             }
-
             if (consumed) {
                 // shift the remaining data in the buffer
                 memmove(buf, &buf[consumed], r - consumed);
                 head = r - consumed;
             }
         }
-
         return 0;
     }
 

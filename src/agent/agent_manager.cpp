@@ -28,7 +28,7 @@ namespace irobot::agent {
             return false;
         }
         bool initialzied = this->agent_stream->Init(this->video_server_socket);
-        initialzied &= this->agent_controller->Init(this->control_server_socket);
+        initialzied &= this->agent_controller->Init(this->control_server_socket, ProcessAgentControlMessage);
         return initialzied;
     }
 
@@ -59,6 +59,10 @@ namespace irobot::agent {
     void AgentManager::Join() {
         this->agent_stream->Join();
         this->agent_controller->Join();
+    }
+
+    void AgentManager::ProcessAgentControlMessage(message::ControlMessage *msg) {
+        printf("received message %d", msg->type);
     }
 
     void AgentManager::ProcessKey(const SDL_KeyboardEvent *event) {

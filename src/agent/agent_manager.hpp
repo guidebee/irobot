@@ -52,11 +52,12 @@ namespace irobot::agent {
 
         ui::EventResult HandleEvent(SDL_Event *event, bool has_screen);
 
+        bool PushDeviceControlMessage(const message::ControlMessage *msg); // Agent-->Device
+
+    private:
         void ProcessKey(const SDL_KeyboardEvent *event);
 
-        bool PushDeviceControlMessage(const message::ControlMessage *msg);
-
-
+        static void ProcessAgentControlMessage(message::ControlMessage *msg); //Client<--Agent
 
     };
 

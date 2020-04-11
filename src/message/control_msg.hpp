@@ -25,6 +25,7 @@
 namespace irobot::message {
 
 
+
     using namespace irobot::android;
 
     enum ControlMessageType {
@@ -101,5 +102,8 @@ namespace irobot::message {
     };
 
     struct ControlMessageQueue CBUF(ControlMessage, 64);
+
+    typedef void (*MessageHandler)(ControlMessage *msg);
+
 }
 #endif //ANDROID_IROBOT_CONTROL_MSG_HPP
