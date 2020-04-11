@@ -61,7 +61,7 @@ namespace irobot::agent {
         return w == length;
     }
 
-    int AgentRecorder::RunController(void *data) {
+    int AgentRecorder::RunRecorder(void *data) {
         auto *recorder = static_cast<AgentRecorder *>(data);
         for (;;) {
             util::mutex_lock(recorder->mutex);
@@ -90,7 +90,7 @@ namespace irobot::agent {
 
     bool AgentRecorder::Start() {
         LOGD("Starting agent recorder thread");
-        this->thread = SDL_CreateThread(RunController, "agent recorder",
+        this->thread = SDL_CreateThread(RunRecorder, "agent recorder",
                                         this);
         if (!this->thread) {
             LOGC("Could not start agent recorder thread");

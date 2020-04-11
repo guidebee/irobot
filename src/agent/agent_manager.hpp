@@ -26,9 +26,9 @@ namespace irobot::agent {
     class AgentManager {
 
     public:
-        Controller *controller= nullptr;
-        video::VideoBuffer *video_buffer=nullptr;
-        SDL_RWops *fp_events=nullptr;
+        Controller *controller = nullptr;
+        video::VideoBuffer *video_buffer = nullptr;
+        SDL_RWops *fp_events = nullptr;
 
         ui::EventResult HandleEvent(SDL_Event *event, bool has_screen);
 

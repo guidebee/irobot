@@ -26,7 +26,7 @@ namespace irobot::agent {
 
         bool PushMessage(const message::ControlMessage *msg);
 
-        static int RunController(void *data);
+        static int RunRecorder(void *data);
 
     private:
 
