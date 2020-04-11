@@ -8,13 +8,14 @@
 #include "util/lock.hpp"
 
 namespace irobot::agent {
-    bool AgentController::Init(socket_t server_socket, message::MessageHandler handler) {
+    bool AgentController::Init(socket_t server_socket, message::MessageHandler handler, void *pEntity) {
         bool initialized = Actor::Init();
         if (!initialized) {
             return false;
         }
         this->control_server_socket = server_socket;
         this->message_handler = handler;
+        this->entity = pEntity;
         return true;
     }
 
@@ -29,7 +30,7 @@ namespace irobot::agent {
 
     void AgentController::ProcessMessage(struct message::ControlMessage *msg) {
         if (this->message_handler) {
-            this->message_handler(msg);
+            this->message_handler(this->entity, msg);
         }
     }
 

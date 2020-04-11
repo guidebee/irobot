@@ -21,10 +21,11 @@ namespace irobot::agent {
         message::ControlMessageQueue queue{};
         SDL_Thread *record_thread = nullptr;
         message::MessageHandler message_handler = nullptr;
+        void * entity = nullptr;
 
         void Destroy() override;
 
-        bool Init(socket_t server_socket, message::MessageHandler message_handler);
+        bool Init(socket_t server_socket, message::MessageHandler message_handler,void * entity);
 
         bool WaitForClientConnection();
 

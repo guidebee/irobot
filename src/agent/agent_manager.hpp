@@ -57,7 +57,11 @@ namespace irobot::agent {
     private:
         void ProcessKey(const SDL_KeyboardEvent *event);
 
-        static void ProcessAgentControlMessage(message::ControlMessage *msg); //Client<--Agent
+        static void ProcessAgentControlMessage(void *entity, message::ControlMessage *msg); //Client<--Agent
+
+        void StartRecordEvents();
+
+        void StopRecordEvents();
 
     };
 

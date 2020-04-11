@@ -28,7 +28,9 @@ namespace irobot::agent {
             return false;
         }
         bool initialzied = this->agent_stream->Init(this->video_server_socket);
-        initialzied &= this->agent_controller->Init(this->control_server_socket, ProcessAgentControlMessage);
+
+        initialzied &= this->agent_controller->Init(this->control_server_socket,
+                                                    ProcessAgentControlMessage, this);
         return initialzied;
     }
 
@@ -61,9 +63,41 @@ namespace irobot::agent {
         this->agent_controller->Join();
     }
 
-    void AgentManager::ProcessAgentControlMessage(message::ControlMessage *msg) {
-        printf("received message %d", msg->type);
+
+    void AgentManager::ProcessAgentControlMessage(void *entity, message::ControlMessage *msg) {
+        auto *agent_manager = (AgentManager *) entity;
+        switch (msg->type) {
+            case message::CONTROL_MSG_TYPE_START_RECORDING:
+                agent_manager->StartRecordEvents();
+                break;
+            case message::CONTROL_MSG_TYPE_END_RECORDING:
+                agent_manager->StopRecordEvents();
+                break;
+            default:
+                agent_manager->controller->PushMessage(msg);
+        }
+
     }
+
+    void AgentManager::StartRecordEvents() {
+        LOGI("Start event recording...");
+        this->fp_events = SDL_RWFromFile(EVENT_FILE_NAME, "w");
+        std::string json_str = "[\n";
+        char cstr[json_str.size() + 1];
+        strcpy(cstr, json_str.c_str());
+        SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
+    }
+
+    void AgentManager::StopRecordEvents() {
+        LOGI("stop event recording...");
+        std::string json_str = "{\"event_time\": \"2020-12-12 20:20:20.200\",\n\"msg_type\": \"CONTROL_MSG_TYPE_UNKNOWN\"\n}\n]";
+        char cstr[json_str.size() + 1];
+        strcpy(cstr, json_str.c_str());
+        SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
+        SDL_RWclose(this->fp_events);
+        this->fp_events = nullptr;
+    }
+
 
     void AgentManager::ProcessKey(const SDL_KeyboardEvent *event) {
         // control: indicates the state of the command-line option --no-control
@@ -101,20 +135,9 @@ namespace irobot::agent {
                 case SDLK_e:
                     if (cmd && !shift && !repeat && down) {
                         if (this->fp_events == nullptr) {
-                            LOGI("Start event recording...");
-                            this->fp_events = SDL_RWFromFile(EVENT_FILE_NAME, "w");
-                            std::string json_str = "[\n";
-                            char cstr[json_str.size() + 1];
-                            strcpy(cstr, json_str.c_str());
-                            SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
+                            this->StartRecordEvents();
                         } else {
-                            LOGI("stop event recording...");
-                            std::string json_str = "{\"event_time\": \"2020-12-12 20:20:20.200\",\n\"msg_type\": \"CONTROL_MSG_TYPE_UNKNOWN\"\n}\n]";
-                            char cstr[json_str.size() + 1];
-                            strcpy(cstr, json_str.c_str());
-                            SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
-                            SDL_RWclose(this->fp_events);
-                            this->fp_events = nullptr;
+                            this->StopRecordEvents();
                         }
                     }
                     break;
@@ -141,12 +164,12 @@ namespace irobot::agent {
                 LOGD("User requested to quit");
                 return ui::EVENT_RESULT_STOPPED_BY_USER;
             case EVENT_NEW_OPENCV_FRAME:
+                LOGD("Agent Manager received Opencv Frame %d", this->video_buffer->frame_number);
                 return ui::EVENT_RESULT_CONTINUE;
             case EVENT_NEW_FRAME:
                 if (!has_screen) {
                     util::mutex_lock(this->video_buffer->mutex);
                     this->video_buffer->ConsumeRenderedFrame();
-                    LOGD("Agent manager receive new frame %d\n", this->video_buffer->frame_number);
                     util::mutex_unlock(this->video_buffer->mutex);
                 }
                 return ui::EVENT_RESULT_CONTINUE;

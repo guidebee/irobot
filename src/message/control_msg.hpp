@@ -103,7 +103,7 @@ namespace irobot::message {
 
     struct ControlMessageQueue CBUF(ControlMessage, 64);
 
-    typedef void (*MessageHandler)(ControlMessage *msg);
+    typedef void (*MessageHandler)(void* entity,ControlMessage *msg);
 
 }
 #endif //ANDROID_IROBOT_CONTROL_MSG_HPP
