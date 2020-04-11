@@ -3,8 +3,8 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#ifndef ANDROID_IROBOT_NULL_INPUT_MANAGER_HPP
-#define ANDROID_IROBOT_NULL_INPUT_MANAGER_HPP
+#ifndef ANDROID_IROBOT_AGENT_MANAGER_HPP
+#define ANDROID_IROBOT_AGENT_MANAGER_HPP
 
 #if defined (__cplusplus)
 extern "C" {
@@ -63,4 +63,4 @@ namespace irobot::agent {
 
 
 }
-#endif //ANDROID_IROBOT_NULL_INPUT_MANAGER_HPP
+#endif //ANDROID_IROBOT_AGENT_MANAGER_HPP

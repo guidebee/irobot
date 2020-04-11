@@ -20,11 +20,11 @@ namespace irobot::agent {
         socket_t control_server_socket = INVALID_SOCKET;
         message::ControlMessageQueue queue{};
         SDL_Thread *record_thread = nullptr;
-        message::MessageHandler message_handler=nullptr;
+        message::MessageHandler message_handler = nullptr;
 
         void Destroy() override;
 
-        bool Init(socket_t server_socket,message::MessageHandler message_handler);
+        bool Init(socket_t server_socket, message::MessageHandler message_handler);
 
         bool WaitForClientConnection();
 
@@ -42,7 +42,6 @@ namespace irobot::agent {
         ssize_t ProcessMessages(const unsigned char *buf, size_t len);
 
         void ProcessMessage(message::ControlMessage *msg);
-
 
     };
 

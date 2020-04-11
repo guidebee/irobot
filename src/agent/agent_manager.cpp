@@ -141,14 +141,12 @@ namespace irobot::agent {
                 LOGD("User requested to quit");
                 return ui::EVENT_RESULT_STOPPED_BY_USER;
             case EVENT_NEW_OPENCV_FRAME:
-
                 return ui::EVENT_RESULT_CONTINUE;
             case EVENT_NEW_FRAME:
                 if (!has_screen) {
                     util::mutex_lock(this->video_buffer->mutex);
-                    const AVFrame *frame = this->video_buffer->ConsumeRenderedFrame();
-                    struct Size new_frame_size = {(uint16_t) frame->width, (uint16_t) frame->height};
-                    LOGI("receive new frame %d,%d\n", new_frame_size.width, new_frame_size.height);
+                    this->video_buffer->ConsumeRenderedFrame();
+                    LOGD("Agent manager receive new frame %d\n", this->video_buffer->frame_number);
                     util::mutex_unlock(this->video_buffer->mutex);
                 }
                 return ui::EVENT_RESULT_CONTINUE;
