@@ -12,7 +12,7 @@
 
 namespace irobot::agent {
 
-    unsigned char data_buffer[BLOB_MSG_SERIALIZED_MAX_SIZE];
+    unsigned char data_buffer[2][BLOB_MSG_SERIALIZED_MAX_SIZE];
 
     bool AgentStream::Init(socket_t socket) {
         cbuf_init(&this->queue);
@@ -62,12 +62,14 @@ namespace irobot::agent {
             message::BlobMessage *msg) {
         if (this->video_socket != INVALID_SOCKET) {
 
-            int length = msg->Serialize(data_buffer);
+            int length = msg->Serialize(data_buffer[buffer_index % 2]);
             if (!length) {
                 return false;
             }
             int w = platform::net_send_all(this->video_socket,
-                                           data_buffer, length);
+                                           data_buffer[buffer_index % 2], length);
+
+            buffer_index += 1;
             return w == length;
         }
         return true;

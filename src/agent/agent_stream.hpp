@@ -33,9 +33,10 @@ namespace irobot::agent {
 
         static int RunStream(void *data);
 
+
     private:
 
-
+         int buffer_index=0;
     };
 
 }

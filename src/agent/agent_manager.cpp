@@ -155,6 +155,37 @@ namespace irobot::agent {
         }
     }
 
+    void AgentManager::SendOpenCVImage(message::BlobMessageType type,int max_size, bool color){
+        auto mat = ai::ConvertToMat(*this->video_buffer, max_size,
+                                    color);
+
+        unsigned char *data = mat.data;
+        int width = mat.size().width;
+        int height = mat.size().height;
+        int length = mat.total() * mat.elemSize();
+
+        struct message::BlobMessage msg{};
+        msg.type = type;
+        struct timeval tm_now{};
+        gettimeofday(&tm_now, nullptr);
+        Uint64 milli_seconds = tm_now.tv_sec * 1000LL + tm_now.tv_usec / 1000;
+        msg.timestamp = milli_seconds;
+        msg.id = 0;
+        msg.count = 1;
+        Uint64 size = length + 16;
+
+        msg.buffers[0].data = (unsigned char *) SDL_malloc(size);
+        if (msg.buffers[0].data != nullptr) {
+            util::buffer_write64be(msg.buffers[0].data, (uint64_t) width);
+            util::buffer_write64be(msg.buffers[0].data + 8, (uint64_t) height);
+            memcpy(msg.buffers[0].data + 16, data, length);
+            msg.buffers[0].length = size;
+            this->agent_stream->PushMessage(&msg);
+
+        } else {
+            LOGW("Unable to allow memory");
+        }
+    }
 
     ui::EventResult AgentManager::HandleEvent(SDL_Event *event, bool has_screen) {
         switch (event->type) {
@@ -165,38 +196,13 @@ namespace irobot::agent {
                 LOGD("User requested to quit");
                 return ui::EVENT_RESULT_STOPPED_BY_USER;
             case EVENT_NEW_OPENCV_FRAME:
+                util::mutex_lock(this->video_buffer->mutex);
                 LOGD("Agent Manager received Opencv Frame %d", this->video_buffer->frame_number);
                 {
-                    auto mat = ai::ConvertToMat(*this->video_buffer, 800,
-                                                false);
-
-                    unsigned char *data = mat.data;
-                    int width = mat.size().width;
-                    int height = mat.size().height;
-                    int length = mat.total() * mat.elemSize();
-                    printf("%d,%d", mat.size().width, mat.size().height);
-                    struct message::BlobMessage msg{};
-                    msg.type = message::BLOB_MSG_TYPE_OPENCV_MAT;
-                    struct timeval tm_now{};
-                    gettimeofday(&tm_now, nullptr);
-                    Uint64 milli_seconds = tm_now.tv_sec * 1000LL + tm_now.tv_usec / 1000;
-                    msg.timestamp = milli_seconds;
-                    msg.id = 0;
-                    msg.count = 1;
-                    Uint64 size = length + 16;
-
-                    msg.buffers[0].data = (unsigned char *) SDL_malloc(size);
-                    if (msg.buffers[0].data != nullptr) {
-                        util::buffer_write64be(msg.buffers[0].data, (uint64_t) width);
-                        util::buffer_write64be(msg.buffers[0].data + 8, (uint64_t) height);
-                        memcpy(msg.buffers[0].data + 16, data, length);
-                        msg.buffers[0].length = size;
-                        this->agent_stream->PushMessage(&msg);
-
-                    } else {
-                        LOGW("Unable to allow memory");
-                    }
+                    this->SendOpenCVImage(message::BLOB_MSG_TYPE_OPENCV_MAT,800,false);
+                    this->SendOpenCVImage(message::BLOB_MSG_TYPE_SCREEN_SHOT,240,true);
                 }
+                util::mutex_unlock(this->video_buffer->mutex);
                 return ui::EVENT_RESULT_CONTINUE;
             case EVENT_NEW_FRAME:
                 if (!has_screen) {

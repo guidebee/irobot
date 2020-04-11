@@ -50,6 +50,7 @@ namespace irobot::agent {
 
         void Join();
 
+        void SendOpenCVImage(message::BlobMessageType type,int size, bool color);
 
         ui::EventResult HandleEvent(SDL_Event *event, bool has_screen);
 

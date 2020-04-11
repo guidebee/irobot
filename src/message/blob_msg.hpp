@@ -26,8 +26,8 @@ namespace irobot::message {
 
     enum BlobMessageType {
         BLOB_MSG_TYPE_UNKNOWN = 0,
-        BLOB_MSG_TYPE_SCREEN_SHOT,
-        BLOB_MSG_TYPE_OPENCV_MAT
+        BLOB_MSG_TYPE_SCREEN_SHOT=1,
+        BLOB_MSG_TYPE_OPENCV_MAT=2
     };
 
     struct BlobMessage {
@@ -49,7 +49,7 @@ namespace irobot::message {
     };
 
     // only allow 1 buffer, since video image is big,may cause OOM
-    struct BlobMessageQueue CBUF(BlobMessage, 1);
+    struct BlobMessageQueue CBUF(BlobMessage, 2);
 
 }
 #endif //ANDROID_IROBOT_BLOB_MSG_HPP

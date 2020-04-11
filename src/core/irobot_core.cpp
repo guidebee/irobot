@@ -230,10 +230,12 @@ namespace irobot {
                 controller_started = true;
             }
 
+            char default_window_title[DEVICE_NAME_FIELD_LENGTH+ 32];
+            sprintf(default_window_title,"iRobot-%s",device_name);
             if (!options->headless) {
                 input_manager.prefer_text = options->prefer_text;
                 const char *_window_title =
-                        options->window_title ? options->window_title : device_name;
+                        options->window_title ? options->window_title : default_window_title;
 
                 if (!cannot_cont & !screen.InitRendering(_window_title, frame_size,
                                                          options->always_on_top, options->window_x,
