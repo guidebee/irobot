@@ -25,6 +25,15 @@ namespace irobot::agent {
     }
 
 
+    bool AgentStream::WaitForClientConnection() {
+        if (this->video_socket != INVALID_SOCKET) {
+            platform::close_socket(&this->video_socket);
+        }
+        this->video_socket = platform::net_accept(this->video_server_socket);
+        LOGD("Agent stream client connected");
+        return this->video_socket != INVALID_SOCKET;
+    }
+
     void AgentStream::Destroy() {
         Actor::Destroy();
         message::BlobMessage msg{};
@@ -61,6 +70,9 @@ namespace irobot::agent {
 
     int AgentStream::RunStream(void *data) {
         auto *stream = static_cast<AgentStream *>(data);
+        if (!stream->WaitForClientConnection()) {
+            return 0;
+        }
         for (;;) {
             util::mutex_lock(stream->mutex);
             while (!stream->stopped && cbuf_is_empty(&stream->queue)) {
@@ -79,8 +91,12 @@ namespace irobot::agent {
             bool ok = stream->ProcessMessage(&msg);
             msg.Destroy();
             if (!ok) {
-                LOGD("Could not write msg to socket");
-                break;
+                LOGD("stream socket error ,trying to re-establish connection");
+                if (!stream->WaitForClientConnection()) {
+                    LOGD("Failed to re-establish connection");
+                    break;
+                }
+
             }
         }
         return 0;

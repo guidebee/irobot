@@ -21,7 +21,7 @@ namespace irobot::agent {
 
         bool Init(socket_t server_socket);
 
-
+        bool WaitForClientConnection();
 
         void Destroy() override;
 

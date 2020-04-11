@@ -22,6 +22,7 @@ namespace irobot::agent {
             platform::close_socket(&this->control_socket);
         }
         this->control_socket = platform::net_accept(this->control_server_socket);
+        LOGD("Agent controller client connected");
         return this->control_socket != INVALID_SOCKET;
     }
 
