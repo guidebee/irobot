@@ -85,19 +85,17 @@ namespace irobot::agent {
 
 
     void AgentController::Join() {
-        if(this->control_socket!=INVALID_SOCKET) {
+        if (this->control_socket != INVALID_SOCKET) {
             SDL_WaitThread(this->thread, nullptr);
             SDL_WaitThread(this->record_thread, nullptr);
         }
 
     }
 
-
     ssize_t AgentController::ProcessMessages(const unsigned char *buf, size_t len) {
         size_t head = 0;
         for (;;) {
-            struct message::ControlMessage msg{};
-
+            message::ControlMessage msg{};
             ssize_t r = msg.JsonDeserialize(&buf[head], len - head);
             if (r == -1) {
                 return -1;
@@ -105,10 +103,8 @@ namespace irobot::agent {
             if (r == 0) {
                 return head;
             }
-
             ProcessMessage(&msg);
             msg.Destroy();
-
             head += r;
             assert(head <= len);
             if (head == len) {

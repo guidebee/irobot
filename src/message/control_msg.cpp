@@ -239,12 +239,12 @@ namespace irobot::message {
                 this->type = CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL;
             } else if (msg_type == "CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL") {
                 this->type = CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL;
-//        } else if (strcmp(msg_type, "CONTROL_MSG_TYPE_GET_CLIPBOARD") == 0) {
-//            this->type = CONTROL_MSG_TYPE_GET_CLIPBOARD;
-//        } else if (strcmp(msg_type, "CONTROL_MSG_TYPE_SET_CLIPBOARD") == 0) {
-//            this->type = CONTROL_MSG_TYPE_SET_CLIPBOARD;
-//        } else if (strcmp(msg_type, "CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE") == 0) {
-//            this->type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
+            } else if (msg_type == "CONTROL_MSG_TYPE_GET_CLIPBOARD") {
+                this->type = CONTROL_MSG_TYPE_GET_CLIPBOARD;
+            } else if (msg_type == "CONTROL_MSG_TYPE_SET_CLIPBOARD") {
+                this->type = CONTROL_MSG_TYPE_SET_CLIPBOARD;
+            } else if (msg_type == "CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE") {
+                this->type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
             } else if (msg_type == "CONTROL_MSG_TYPE_ROTATE_DEVICE") {
                 this->type = CONTROL_MSG_TYPE_ROTATE_DEVICE;
             } else if (msg_type == "CONTROL_MSG_TYPE_START_RECORDING") {
