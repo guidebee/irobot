@@ -23,7 +23,6 @@ include_directories(${CMAKE_HOME_DIRECTORY}/src ${PROJECT_BINARY_DIR}/src)
 
 SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_manager.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/agent/agent_recorder.hpp
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_controller.hpp
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_stream.hpp
         ${CMAKE_HOME_DIRECTORY}/src/ai/brain.hpp
@@ -60,7 +59,6 @@ SET(COMMON_SOURCE_HEADERS
 SET(COMMON_SOURCES
         ${COMMON_SOURCE_HEADERS}
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_manager.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/agent/agent_recorder.cpp
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_controller.cpp
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_stream.cpp
         ${CMAKE_HOME_DIRECTORY}/src/ai/brain.cpp

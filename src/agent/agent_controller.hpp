@@ -14,18 +14,31 @@
 namespace irobot::agent {
 
     class AgentController : public Actor {
+
     public:
         socket_t control_socket = 0;
+        message::ControlMessageQueue queue{};
+        SDL_Thread *record_thread = nullptr;
+
+        void Destroy() override;
 
         bool Init(socket_t socket);
 
         bool Start() override;
 
-        static void ProcessMessage(struct message::ControlMessage *msg);
+        void Join() override;
+
+        static int RunAgentController(void *data);
+
+        static int RunAgentRecorder(void *data);
+
+    private:
+        bool SendMessage(message::ControlMessage *msg);
 
         static ssize_t ProcessMessages(const unsigned char *buf, size_t len);
 
-        static int RunAgentController(void *data);
+        static void ProcessMessage(struct message::ControlMessage *msg);
+
 
     };
 
