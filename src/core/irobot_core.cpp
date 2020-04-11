@@ -56,12 +56,13 @@ namespace irobot {
     FileHandler file_handler;
     Decoder decoder;
     Screen screen;
+
     agent::AgentController agent_controller;
     agent::AgentStream agent_stream;
     agent::AgentManager agent_manager = {
             .controller = &controller,
             .video_buffer = &video_buffer,
-            .agent_stream=&agent_stream,
+            .agent_stream = &agent_stream,
             .agent_controller=&agent_controller
 
     };

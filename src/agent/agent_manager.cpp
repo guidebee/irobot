@@ -5,9 +5,10 @@
 
 #include "agent_manager.hpp"
 #include "ui/events.hpp"
-
+#include <sys/time.h>
 #include "util/log.hpp"
 #include "util/lock.hpp"
+#include "util/buffer_util.hpp"
 #include "platform/net.hpp"
 #include "ai/brain.hpp"
 
@@ -143,7 +144,7 @@ namespace irobot::agent {
                     break;
                 case SDLK_k:
                     if (cmd && !shift && !repeat && down) {
-                        ai::ProcessFrame(*this->video_buffer);
+                        ai::SaveFrame(*this->video_buffer);
                     }
                     break;
                 default:
@@ -165,6 +166,37 @@ namespace irobot::agent {
                 return ui::EVENT_RESULT_STOPPED_BY_USER;
             case EVENT_NEW_OPENCV_FRAME:
                 LOGD("Agent Manager received Opencv Frame %d", this->video_buffer->frame_number);
+                {
+                    auto mat = ai::ConvertToMat(*this->video_buffer, 800,
+                                                false);
+
+                    unsigned char *data = mat.data;
+                    int width = mat.size().width;
+                    int height = mat.size().height;
+                    int length = mat.total() * mat.elemSize();
+                    printf("%d,%d", mat.size().width, mat.size().height);
+                    struct message::BlobMessage msg{};
+                    msg.type = message::BLOB_MSG_TYPE_OPENCV_MAT;
+                    struct timeval tm_now{};
+                    gettimeofday(&tm_now, nullptr);
+                    Uint64 milli_seconds = tm_now.tv_sec * 1000LL + tm_now.tv_usec / 1000;
+                    msg.timestamp = milli_seconds;
+                    msg.id = 0;
+                    msg.count = 1;
+                    Uint64 size = length + 16;
+
+                    msg.buffers[0].data = (unsigned char *) SDL_malloc(size);
+                    if (msg.buffers[0].data != nullptr) {
+                        util::buffer_write64be(msg.buffers[0].data, (uint64_t) width);
+                        util::buffer_write64be(msg.buffers[0].data + 8, (uint64_t) height);
+                        memcpy(msg.buffers[0].data + 16, data, length);
+                        msg.buffers[0].length = size;
+                        this->agent_stream->PushMessage(&msg);
+
+                    } else {
+                        LOGW("Unable to allow memory");
+                    }
+                }
                 return ui::EVENT_RESULT_CONTINUE;
             case EVENT_NEW_FRAME:
                 if (!has_screen) {

@@ -12,6 +12,8 @@
 
 namespace irobot::agent {
 
+    unsigned char data_buffer[BLOB_MSG_SERIALIZED_MAX_SIZE];
+
     bool AgentStream::Init(socket_t socket) {
         cbuf_init(&this->queue);
         bool initialized = Actor::Init();
@@ -58,14 +60,17 @@ namespace irobot::agent {
 
     bool AgentStream::ProcessMessage(
             message::BlobMessage *msg) {
-        unsigned char serialized_msg[BLOB_MSG_SERIALIZED_MAX_SIZE];
-        int length = msg->Serialize(serialized_msg);
-        if (!length) {
-            return false;
+        if (this->video_socket != INVALID_SOCKET) {
+
+            int length = msg->Serialize(data_buffer);
+            if (!length) {
+                return false;
+            }
+            int w = platform::net_send_all(this->video_socket,
+                                           data_buffer, length);
+            return w == length;
         }
-        int w = platform::net_send_all(this->video_socket,
-                                       serialized_msg, length);
-        return w == length;
+        return true;
     }
 
     int AgentStream::RunStream(void *data) {
@@ -98,9 +103,10 @@ namespace irobot::agent {
             bool non_empty = cbuf_take(&stream->queue, &msg);
             assert(non_empty);
             (void) non_empty;
-            util::mutex_unlock(stream->mutex);
             bool ok = stream->ProcessMessage(&msg);
             msg.Destroy();
+            util::mutex_unlock(stream->mutex);
+
             if (!ok) {
                 LOGD("stream socket error ,trying to re-establish connection");
                 if (!stream->WaitForClientConnection()) {

@@ -50,6 +50,7 @@ namespace irobot::agent {
 
         void Join();
 
+
         ui::EventResult HandleEvent(SDL_Event *event, bool has_screen);
 
         bool PushDeviceControlMessage(const message::ControlMessage *msg); // Agent-->Device

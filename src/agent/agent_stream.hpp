@@ -29,11 +29,12 @@ namespace irobot::agent {
 
         bool PushMessage(const message::BlobMessage *msg);
 
+        bool ProcessMessage(message::BlobMessage *msg);
+
         static int RunStream(void *data);
 
     private:
 
-        bool ProcessMessage(message::BlobMessage *msg);
 
     };
 

@@ -48,7 +48,8 @@ namespace irobot::message {
 
     };
 
-    struct BlobMessageQueue CBUF(BlobMessage, 64);
+    // only allow 1 buffer, since video image is big,may cause OOM
+    struct BlobMessageQueue CBUF(BlobMessage, 1);
 
 }
 #endif //ANDROID_IROBOT_BLOB_MSG_HPP
