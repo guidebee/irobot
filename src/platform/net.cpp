@@ -130,4 +130,18 @@ namespace irobot::platform {
         return !shutdown(socket, how);
     }
 
+    socket_t listen_on_port(uint16_t port) {
+        return net_listen(IPV4_LOCALHOST, port, 1);
+    }
+
+    void close_socket(socket_t *socket) {
+        if (*socket != INVALID_SOCKET) {
+            net_shutdown(*socket, SHUT_RDWR);
+            if (!net_close(*socket)) {
+                return;
+            }
+            *socket = INVALID_SOCKET;
+        }
+    }
+
 }

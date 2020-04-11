@@ -15,10 +15,13 @@ namespace irobot::agent {
 
     class AgentStream : public Actor {
     public:
-        socket_t video_socket = 0;
+        socket_t video_socket = INVALID_SOCKET;
+        socket_t video_server_socket = INVALID_SOCKET;
         message::BlobMessageQueue queue{};
 
-        bool Init(socket_t socket);
+        bool Init(socket_t server_socket);
+
+
 
         void Destroy() override;
 

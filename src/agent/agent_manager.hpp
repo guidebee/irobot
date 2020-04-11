@@ -18,23 +18,46 @@ extern "C" {
 #include "ui/events.hpp"
 #include "core/controller.hpp"
 #include "video/video_buffer.hpp"
+#include "agent/agent_controller.hpp"
+#include "agent/agent_stream.hpp"
 
 #define EVENT_FILE_NAME "events.json"
 
 namespace irobot::agent {
 
-    class AgentManager {
+    class AgentManager { // implements all methods of Actor
 
     public:
-        Controller *controller = nullptr;
+
         video::VideoBuffer *video_buffer = nullptr;
         SDL_RWops *fp_events = nullptr;
+        socket_t video_server_socket = INVALID_SOCKET;;
+        socket_t control_server_socket = INVALID_SOCKET;;
+        uint16_t local_port = 0;
+
+        // the following are sub classes of Actor (4 threads)
+        Controller *controller = nullptr;
+        AgentController *agent_controller = nullptr; // (2 threads)
+        AgentStream *agent_stream = nullptr;
+
+        bool Init(uint16_t port);
+
+        bool Start();
+
+        void Stop();
+
+        void Destroy();
+
+        void Join();
 
         ui::EventResult HandleEvent(SDL_Event *event, bool has_screen);
 
         void ProcessKey(const SDL_KeyboardEvent *event);
 
         bool PushDeviceControlMessage(const message::ControlMessage *msg);
+
+
+
     };
 
 

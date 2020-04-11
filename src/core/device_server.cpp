@@ -21,7 +21,7 @@
 
 #define DEFAULT_SERVER_PATH  "./server/" SERVER_FILENAME
 #define DEVICE_SERVER_PATH "/data/local/tmp/irobot-server.jar"
-#define IPV4_LOCALHOST 0x7F000001
+
 
 namespace irobot {
 

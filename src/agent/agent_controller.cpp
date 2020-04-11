@@ -8,13 +8,21 @@
 #include "util/lock.hpp"
 
 namespace irobot::agent {
-    bool AgentController::Init(socket_t socket) {
+    bool AgentController::Init(socket_t server_socket) {
         bool initialized = Actor::Init();
         if (!initialized) {
             return false;
         }
-        this->control_socket = socket;
+        this->control_server_socket = server_socket;
         return true;
+    }
+
+    bool AgentController::WaitForClientConnection() {
+        if (this->control_socket != INVALID_SOCKET) {
+            platform::close_socket(&this->control_socket);
+        }
+        this->control_socket = platform::net_accept(this->control_server_socket);
+        return this->control_socket != INVALID_SOCKET;
     }
 
     void AgentController::ProcessMessage(struct message::ControlMessage *msg) {
@@ -26,17 +34,20 @@ namespace irobot::agent {
 
     bool AgentController::SendMessage(
             message::ControlMessage *msg) {
-        auto json_str = msg->JsonSerialize();
-        int length = json_str.size();
-        char cstr[length + 1];
-        strcpy(cstr, json_str.c_str());
+        if (this->control_socket != INVALID_SOCKET) {
+            auto json_str = msg->JsonSerialize();
+            int length = json_str.size();
+            char cstr[length + 1];
+            strcpy(cstr, json_str.c_str());
 
-        if (!length) {
-            return false;
+            if (!length) {
+                return false;
+            }
+            int w = platform::net_send_all(this->control_socket,
+                                           cstr, length);
+            return w == length;
         }
-        int w = platform::net_send_all(this->control_socket,
-                                       cstr, length);
-        return w == length;
+        return true;
     }
 
 
@@ -69,7 +80,6 @@ namespace irobot::agent {
         }
 
     }
-
 
 
     void AgentController::Join() {
@@ -131,7 +141,11 @@ namespace irobot::agent {
     }
 
     int AgentController::RunAgentController(void *data) {
+
         auto *receiver = (AgentController *) data;
+        if (!receiver->WaitForClientConnection()) {
+            return 0;
+        }
         unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE * 2];
         size_t head = 0;
 
@@ -140,8 +154,12 @@ namespace irobot::agent {
             ssize_t r = platform::net_recv(receiver->control_socket, buf,
                                            CONTROL_MSG_SERIALIZED_MAX_SIZE * 2 - head);
             if (r <= 0) {
-                LOGD("AgentController stopped");
-                break;
+                LOGD("Control socket error ,trying to re-establish connection");
+                if (!receiver->WaitForClientConnection()) {
+                    LOGD("Failed to re-establish connection");
+                    break;
+                }
+
             }
 
             ssize_t consumed = ProcessMessages(buf, r);

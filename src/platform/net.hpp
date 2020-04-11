@@ -37,6 +37,8 @@ typedef int socket_t;
 
 #include <cstdint>
 
+#define IPV4_LOCALHOST 0x7F000001
+
 namespace irobot::platform {
 
     bool net_init();
@@ -62,6 +64,10 @@ namespace irobot::platform {
     bool net_shutdown(socket_t socket, int how);
 
     bool net_close(socket_t socket);
+
+    socket_t listen_on_port(uint16_t port);
+
+    void close_socket(socket_t *socket);
 
 }
 #endif //ANDROID_IROBOT_NET_HPP

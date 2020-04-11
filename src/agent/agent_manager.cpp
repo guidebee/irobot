@@ -8,9 +8,61 @@
 
 #include "util/log.hpp"
 #include "util/lock.hpp"
+#include "platform/net.hpp"
 #include "ai/brain.hpp"
 
 namespace irobot::agent {
+
+    bool AgentManager::Init(uint16_t port) {
+        this->local_port = port;
+        (*this->agent_stream) = AgentStream{};
+        (*this->agent_controller) = AgentController{};
+
+        this->control_server_socket = platform::listen_on_port(this->local_port + 1);
+        if (this->control_server_socket == INVALID_SOCKET) {
+            LOGE("Could not listen on control server port %" PRIu16,
+                 (unsigned short) (this->local_port + 1));
+            return false;
+        }
+        this->video_server_socket = platform::listen_on_port(this->local_port + 2);
+        if (this->video_server_socket == INVALID_SOCKET) {
+            LOGE("Could not listen on video server port %" PRIu16,
+                 (unsigned short) (this->local_port + 2));
+            return false;
+        }
+        bool initialzied = this->agent_stream->Init(this->video_server_socket);
+        initialzied &= this->agent_controller->Init(this->control_server_socket);
+        return initialzied;
+    }
+
+    bool AgentManager::Start() {
+        bool started = this->agent_stream->Start();
+        started &= this->agent_controller->Start();
+        return started;
+    }
+
+    void AgentManager::Stop() {
+        this->agent_stream->Stop();
+        this->agent_controller->Stop();
+    }
+
+    void AgentManager::Destroy() {
+        this->agent_stream->Destroy();
+        this->agent_controller->Destroy();
+        if (this->video_server_socket != INVALID_SOCKET) {
+            platform::close_socket(&this->video_server_socket);
+        }
+        if (this->control_server_socket != INVALID_SOCKET) {
+            platform::close_socket(&this->control_server_socket);
+        }
+
+    }
+
+    void AgentManager::Join() {
+        this->agent_stream->Join();
+        this->agent_controller->Join();
+    }
+
     void AgentManager::ProcessKey(const SDL_KeyboardEvent *event) {
         // control: indicates the state of the command-line option --no-control
         // ctrl: the Ctrl key

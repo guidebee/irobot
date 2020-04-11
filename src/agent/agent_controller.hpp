@@ -16,13 +16,16 @@ namespace irobot::agent {
     class AgentController : public Actor {
 
     public:
-        socket_t control_socket = 0;
+        socket_t control_socket = INVALID_SOCKET;
+        socket_t control_server_socket = INVALID_SOCKET;
         message::ControlMessageQueue queue{};
         SDL_Thread *record_thread = nullptr;
 
         void Destroy() override;
 
-        bool Init(socket_t socket);
+        bool Init(socket_t server_socket);
+
+        bool WaitForClientConnection();
 
         bool Start() override;
 

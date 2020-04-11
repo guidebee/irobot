@@ -19,7 +19,7 @@ namespace irobot::agent {
 
             return false;
         }
-        this->video_socket = socket;
+        this->video_server_socket = socket;
         this->stopped = false;
         return true;
     }
