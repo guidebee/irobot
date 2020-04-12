@@ -16,7 +16,7 @@
 
 
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
-#define SOCKET_NAME "scrcpy"
+#define SOCKET_NAME "irobot"
 #define SERVER_FILENAME "irobot-server"
 
 #define DEFAULT_SERVER_PATH  "./server/" SERVER_FILENAME
