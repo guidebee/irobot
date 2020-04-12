@@ -137,7 +137,7 @@ namespace irobot {
             SERVER_DEBUGGER_PORT,
 #endif
                 "/", // unused
-                "com.genymobile.scrcpy.Server",
+                "com.guidebee.irobot.Server",
                 IROBOT_SERVER_VERSION,
                 max_size_string,
                 bit_rate_string,
