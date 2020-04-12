@@ -19,4 +19,11 @@ namespace irobot::platform {
         return !close(socket);
     }
 
+    bool net_try_recv(socket_t socket) {
+        char buf[1];
+        recv(socket, (char *) buf, 1, MSG_PEEK | MSG_DONTWAIT);
+
+        return errno > 34 && errno < 45;
+    }
+
 }

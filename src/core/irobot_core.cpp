@@ -122,7 +122,7 @@ namespace irobot {
             return false;
         }
 
-        auto proc_show_touches = PROCESS_NONE;
+        ProcessType proc_show_touches = PROCESS_NONE;
         bool show_touches_waited = false;
         if (options->show_touches) {
             LOGI("Enable show_touches");

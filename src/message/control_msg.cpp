@@ -89,7 +89,7 @@ namespace irobot::message {
             milli_seconds -= 1000;
             tm_now.tv_sec++;
         }
-        struct tm *t = localtime(&tm_now.tv_sec);
+        struct tm *t = localtime(reinterpret_cast<const time_t *>(&tm_now.tv_sec));
         strftime(temp, sizeof(temp) - 1, "%Y-%m-%d %H:%M:%S", t);
         strcat(buffer, temp);
         strcat(buffer, ".");

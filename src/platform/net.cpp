@@ -106,12 +106,7 @@ namespace irobot::platform {
         return recv(socket, (char *) buf, len, 0);
     }
 
-    bool net_try_recv(socket_t socket) {
-        char buf[1];
-        recv(socket, (char *) buf, 1, MSG_PEEK | MSG_DONTWAIT);
 
-        return errno > 34 && errno < 45;
-    }
 
     ssize_t net_recv_all(socket_t socket, void *buf, size_t len) {
         return recv(socket, (char *) buf, len, MSG_WAITALL);

@@ -27,4 +27,10 @@ namespace irobot::platform {
         return !closesocket(socket);
     }
 
+    bool net_try_recv(socket_t socket) {
+        unsigned long l;
+        ioctlsocket(socket, FIONREAD, &l);
+        return l>=0;
+    }
+
 }
