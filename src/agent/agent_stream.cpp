@@ -87,7 +87,7 @@ namespace irobot::agent {
             LOGI("Video transfer speed: %.2fM/s  %.3fG in %.1f seconds with %.1f fps\n", speed,
                  this->total_bytes / (1024.0 * 1024.0 * 1024.0),
                  (float) (currentTime - this->start_ticks) / 1000.0,
-                 (float) this->total_frame * 1000.0 / ((float) (currentTime - this->start_ticks)));
+                 (float) this->total_frame * 500.0 / ((float) (currentTime - this->start_ticks)));
             this->last_ticks = currentTime;
         }
         return speed;
