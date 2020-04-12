@@ -14,7 +14,6 @@ namespace irobot::agent {
 
     unsigned char data_buffer[2][BLOB_MSG_SERIALIZED_MAX_SIZE];
 
-
     bool AgentStream::Init(socket_t socket) {
         cbuf_init(&this->queue);
         bool initialized = Actor::Init();
