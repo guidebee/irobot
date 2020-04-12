@@ -5,7 +5,7 @@
 
 #ifndef ANDROID_IROBOT_AGENT_CONTROLLER_HPP
 #define ANDROID_IROBOT_AGENT_CONTROLLER_HPP
-
+#include <cassert>
 #include "core/actor.hpp"
 #include "util/cbuf.hpp"
 #include "platform/net.hpp"

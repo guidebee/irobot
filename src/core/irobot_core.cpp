@@ -60,10 +60,10 @@ namespace irobot {
     agent::AgentController agent_controller;
     agent::AgentStream agent_stream;
     agent::AgentManager agent_manager = {
-            .controller = &controller,
             .video_buffer = &video_buffer,
+            .controller = &controller,
+            .agent_controller=&agent_controller,
             .agent_stream = &agent_stream,
-            .agent_controller=&agent_controller
 
     };
     InputManager input_manager = {
