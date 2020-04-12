@@ -36,6 +36,7 @@ typedef int socket_t;
 #endif
 
 #include <cstdint>
+#include <cerrno>
 
 #define IPV4_LOCALHOST 0x7F000001
 //#define IPV4_LOCALHOST 0x00000000
