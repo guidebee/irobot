@@ -199,7 +199,7 @@ namespace irobot::agent {
                 return ui::EVENT_RESULT_STOPPED_BY_USER;
             case EVENT_NEW_OPENCV_FRAME:
                 util::mutex_lock(this->video_buffer->mutex);
-                LOGD("Agent Manager received Opencv Frame %d", this->video_buffer->frame_number);
+                //LOGD("Agent Manager received Opencv Frame %d\r", this->video_buffer->frame_number);
                 {
                     this->SendOpenCVImage(message::BLOB_MSG_TYPE_OPENCV_MAT, 800, false);
                     this->SendOpenCVImage(message::BLOB_MSG_TYPE_SCREEN_SHOT, 240, true);
