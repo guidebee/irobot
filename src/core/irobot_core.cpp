@@ -148,6 +148,10 @@ namespace irobot {
                 cannot_cont = true;
             }
             screen.InitFileHandler(&file_handler);
+        }else{
+            if (!Screen::InitSDLAndConfigure(false)) {
+                cannot_cont = true;
+            }
         }
 
         if (!cannot_cont & !server.ConnectTo()) {

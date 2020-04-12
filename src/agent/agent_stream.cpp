@@ -32,7 +32,7 @@ namespace irobot::agent {
             platform::close_socket(&this->video_socket);
         }
         this->video_socket = platform::net_accept(this->video_server_socket);
-        LOGD("Agent stream client connected");
+        LOGI("Agent stream client connected");
         return this->video_socket != INVALID_SOCKET;
     }
 
@@ -42,7 +42,7 @@ namespace irobot::agent {
         while (cbuf_take(&this->queue, &msg)) {
             msg.Destroy();
         }
-        LOGD("Agent stream stopped");
+        LOGI("Agent stream stopped");
 
     }
 
@@ -93,7 +93,7 @@ namespace irobot::agent {
         while (!controller->stopped) {
             bool connected = controller->IsConnected();
             if (!connected) {
-                LOGD("Control socket error ,trying to re-establish connection");
+                LOGI("Control socket error ,trying to re-establish connection");
                 if (!controller->WaitForClientConnection()) {
                     LOGD("Failed to re-establish connection");
                     break;
@@ -145,7 +145,7 @@ namespace irobot::agent {
 
     bool AgentStream::Start() {
 
-        LOGD("Starting agent receiver thread");
+        LOGI("Starting agent receiver thread");
         this->receiver_thread = SDL_CreateThread(RunAgentReceiver, "agent receiver",
                                                  this);
         if (!this->receiver_thread) {
