@@ -20,6 +20,7 @@ extern "C" {
 #include "video/video_buffer.hpp"
 #include "agent/agent_controller.hpp"
 #include "agent/agent_stream.hpp"
+#include "image_hash/phash.hpp"
 
 #define EVENT_FILE_NAME "events.json"
 
@@ -40,6 +41,7 @@ namespace irobot::agent {
         AgentController *agent_controller = nullptr; // (2 threads)
         AgentStream *agent_stream = nullptr;
 
+
         bool Init(uint16_t port);
 
         bool Start();
@@ -56,6 +58,8 @@ namespace irobot::agent {
 
         bool PushDeviceControlMessage(const message::ControlMessage *msg); // Agent-->Device
 
+        cv::Ptr<cv::img_hash::ImgHashBase> phash_func;
+
     private:
         void ProcessKey(const SDL_KeyboardEvent *event);
 
@@ -64,6 +68,10 @@ namespace irobot::agent {
         void StartRecordEvents();
 
         void StopRecordEvents();
+
+
+
+
 
     };
 

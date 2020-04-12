@@ -32,7 +32,7 @@ namespace irobot::agent {
             platform::close_socket(&this->video_socket);
         }
         this->video_socket = platform::net_accept(this->video_server_socket);
-        LOGD("Agent stream client connected");
+        LOGI("Agent stream client connected");
         return this->video_socket != INVALID_SOCKET;
     }
 
@@ -42,7 +42,7 @@ namespace irobot::agent {
         while (cbuf_take(&this->queue, &msg)) {
             msg.Destroy();
         }
-        LOGD("Agent stream stopped");
+        LOGI("Agent stream stopped");
 
     }
 
@@ -61,7 +61,6 @@ namespace irobot::agent {
     bool AgentStream::ProcessMessage(
             message::BlobMessage *msg) {
         if (this->video_socket != INVALID_SOCKET) {
-
             int length = msg->Serialize(data_buffer[buffer_index % 2]);
             if (!length) {
                 return false;
@@ -70,9 +69,28 @@ namespace irobot::agent {
                                            data_buffer[buffer_index % 2], length);
 
             buffer_index += 1;
+            this->total_bytes += length;
+            this->total_frame += 1;
+            GetTransferSpeed();
             return w == length;
         }
         return true;
+    }
+
+
+    float AgentStream::GetTransferSpeed() {
+        Uint32 currentTime = SDL_GetTicks();
+        auto speed = (float) ((double) (this->total_bytes) /
+                              (double) (currentTime - this->start_ticks) * 1000.0 / (1024.0 * 1024.0));
+        auto delta = currentTime - this->last_ticks;
+        if (delta > 5000) {
+            LOGI("Video transfer speed: %.2fM/s  %.3fG in %.1f seconds with %.1f fps\n", speed,
+                 this->total_bytes / (1024.0 * 1024.0 * 1024.0),
+                 (float) (currentTime - this->start_ticks) / 1000.0,
+                 (float) this->total_frame * 500.0 / ((float) (currentTime - this->start_ticks)));
+            this->last_ticks = currentTime;
+        }
+        return speed;
     }
 
     bool AgentStream::IsConnected() {
@@ -93,7 +111,7 @@ namespace irobot::agent {
         while (!controller->stopped) {
             bool connected = controller->IsConnected();
             if (!connected) {
-                LOGD("Control socket error ,trying to re-establish connection");
+                LOGI("Control socket error ,trying to re-establish connection");
                 if (!controller->WaitForClientConnection()) {
                     LOGD("Failed to re-establish connection");
                     break;
@@ -145,7 +163,8 @@ namespace irobot::agent {
 
     bool AgentStream::Start() {
 
-        LOGD("Starting agent receiver thread");
+        this->start_ticks = SDL_GetTicks();
+        LOGI("Starting agent receiver thread");
         this->receiver_thread = SDL_CreateThread(RunAgentReceiver, "agent receiver",
                                                  this);
         if (!this->receiver_thread) {

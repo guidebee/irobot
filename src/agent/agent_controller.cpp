@@ -24,7 +24,7 @@ namespace irobot::agent {
             platform::close_socket(&this->control_socket);
         }
         this->control_socket = platform::net_accept(this->control_server_socket);
-        LOGD("Agent controller client connected");
+        LOGI("Agent controller client connected");
         return this->control_socket != INVALID_SOCKET;
     }
 
@@ -55,7 +55,7 @@ namespace irobot::agent {
 
     bool AgentController::Start() {
 
-        LOGD("Starting agent controller thread");
+        LOGI("Starting agent controller thread");
         this->thread = SDL_CreateThread(RunAgentController,
                                         "agent controller", this);
         if (!this->thread) {
@@ -80,7 +80,7 @@ namespace irobot::agent {
         while (cbuf_take(&this->queue, &msg)) {
             msg.Destroy();
         }
-        LOGD("Agent controller stopped");
+        LOGI("Agent controller stopped");
 
     }
 
@@ -153,7 +153,7 @@ namespace irobot::agent {
             ssize_t r = platform::net_recv(controller->control_socket, buf,
                                            CONTROL_MSG_SERIALIZED_MAX_SIZE * 2 - head);
             if (r <= 0) {
-                LOGD("Control socket error ,trying to re-establish connection");
+                LOGI("Control socket error ,trying to re-establish connection");
                 if (!controller->WaitForClientConnection()) {
                     LOGD("Failed to re-establish connection");
                     break;

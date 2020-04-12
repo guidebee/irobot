@@ -64,6 +64,7 @@ namespace irobot {
             .controller = &controller,
             .agent_controller=&agent_controller,
             .agent_stream = &agent_stream,
+            .phash_func=cv::img_hash::PHash::create()
 
     };
     InputManager input_manager = {
@@ -148,6 +149,10 @@ namespace irobot {
                 cannot_cont = true;
             }
             screen.InitFileHandler(&file_handler);
+        }else{
+            if (!Screen::InitSDLAndConfigure(false)) {
+                cannot_cont = true;
+            }
         }
 
         if (!cannot_cont & !server.ConnectTo()) {
@@ -275,6 +280,7 @@ namespace irobot {
         } else {
             SDL_Event event;
             bool quit = false;
+            InputManager::SwitchFpsCounterState(&fps_counter);
             while (!quit) {
                 while (SDL_PollEvent(&event)) {
                     enum EventResult result = agent_manager.HandleEvent(&event, false);

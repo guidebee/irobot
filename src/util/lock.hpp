@@ -54,7 +54,6 @@ namespace irobot::util {
     static inline int cond_wait_timeout(SDL_cond *cond,
                                         SDL_mutex *mutex, uint32_t ms) {
         int r = SDL_CondWaitTimeout(cond, mutex, ms);
-        mutex_log(r, "Could not wait on condition with timeout");
         return r;
     }
 

@@ -35,6 +35,7 @@ namespace irobot::message {
         Uint64 timestamp = 0;
         Uint64 id = 0;
         Uint64 count = 0;
+        Uint64 total_length=0;
         struct {
             Uint64 length = 0;
             unsigned char *data = nullptr;
