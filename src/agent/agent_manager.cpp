@@ -228,7 +228,7 @@ namespace irobot::agent {
                 //LOGD("Agent Manager received Opencv Frame %d\r", this->video_buffer->frame_number);
                 {
                     this->SendOpenCVImage(message::BLOB_MSG_TYPE_OPENCV_MAT, 800, false);
-                    //this->SendOpenCVImage(message::BLOB_MSG_TYPE_SCREEN_SHOT, 240, true);
+                    this->SendOpenCVImage(message::BLOB_MSG_TYPE_SCREEN_SHOT, 240, true);
                 }
                 util::mutex_unlock(this->video_buffer->mutex);
                 return ui::EVENT_RESULT_CONTINUE;
