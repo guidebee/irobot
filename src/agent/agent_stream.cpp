@@ -14,6 +14,7 @@ namespace irobot::agent {
 
     unsigned char data_buffer[2][BLOB_MSG_SERIALIZED_MAX_SIZE];
 
+
     bool AgentStream::Init(socket_t socket) {
         cbuf_init(&this->queue);
         bool initialized = Actor::Init();
@@ -75,30 +76,42 @@ namespace irobot::agent {
         return true;
     }
 
-    bool AgentStream::IsConnected(){
-        if (this->video_socket != INVALID_SOCKET){
+    bool AgentStream::IsConnected() {
+        if (this->video_socket != INVALID_SOCKET) {
             bool connected = platform::net_try_recv(this->video_socket);
             return connected;
         }
         return false;
     }
-    int AgentStream::RunStream(void *data) {
-        auto *stream = static_cast<AgentStream *>(data);
-        if (!stream->WaitForClientConnection()) {
+
+
+    int AgentStream::RunAgentReceiver(void *data) {
+        auto *controller = (AgentStream *) data;
+        if (!controller->WaitForClientConnection()) {
             return 0;
         }
-        for (;;) {
-            if (stream->video_socket != INVALID_SOCKET) {
-                bool connected = platform::net_try_recv(stream->video_socket);
-                if (!connected) {
-                    LOGD("stream socket error 1,trying to re-establish connection");
-                    if (!stream->WaitForClientConnection()) {
-                        LOGD("Failed to re-establish connection");
-                        break;
-                    }
 
+        while (!controller->stopped) {
+            bool connected = controller->IsConnected();
+            if (!connected) {
+                LOGD("Control socket error ,trying to re-establish connection");
+                if (!controller->WaitForClientConnection()) {
+                    LOGD("Failed to re-establish connection");
+                    break;
                 }
             }
+            SDL_Delay(1);
+
+
+        }
+        return 0;
+    }
+
+    int AgentStream::RunStream(void *data) {
+        auto *stream = static_cast<AgentStream *>(data);
+
+        for (;;) {
+
             util::mutex_lock(stream->mutex);
             while (!stream->stopped && cbuf_is_empty(&stream->queue)) {
                 util::cond_wait(stream->thread_cond, stream->mutex);
@@ -118,17 +131,29 @@ namespace irobot::agent {
 
             if (!ok) {
                 LOGD("stream socket error 2,trying to re-establish connection");
-                if (!stream->WaitForClientConnection()) {
-                    LOGD("Failed to re-establish connection");
-                    break;
-                }
+
 
             }
         }
         return 0;
     }
 
+    void AgentStream::Join() {
+        SDL_WaitThread(this->thread, nullptr);
+        SDL_WaitThread(this->receiver_thread, nullptr);
+
+    }
+
     bool AgentStream::Start() {
+
+        LOGD("Starting agent receiver thread");
+        this->receiver_thread = SDL_CreateThread(RunAgentReceiver, "agent receiver",
+                                                 this);
+        if (!this->receiver_thread) {
+            LOGC("Could not start agent receiver thread");
+            return false;
+        }
+
         LOGD("Starting agent stream thread");
         this->thread = SDL_CreateThread(RunStream, "agent stream",
                                         this);
@@ -136,6 +161,7 @@ namespace irobot::agent {
             LOGC("Could not start agent stream thread");
             return false;
         }
+
 
         return true;
     }

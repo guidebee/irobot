@@ -23,7 +23,6 @@ namespace irobot::agent {
         message::MessageHandler message_handler = nullptr;
         void * entity = nullptr;
 
-        void Destroy() override;
 
         bool Init(socket_t server_socket, message::MessageHandler message_handler,void * entity);
 
@@ -32,6 +31,8 @@ namespace irobot::agent {
         bool Start() override;
 
         void Join() override;
+
+        void Destroy() override;
 
         static int RunAgentController(void *data);
 

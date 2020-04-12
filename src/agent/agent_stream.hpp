@@ -6,6 +6,17 @@
 #ifndef ANDROID_IROBOT_AGENT_STREAM_HPP
 #define ANDROID_IROBOT_AGENT_STREAM_HPP
 
+#if defined (__cplusplus)
+extern "C" {
+#endif
+
+#include <SDL2/SDL_timer.h>
+
+#if defined (__cplusplus)
+}
+#endif
+
+
 #include "core/actor.hpp"
 #include "util/cbuf.hpp"
 #include "platform/net.hpp"
@@ -17,6 +28,7 @@ namespace irobot::agent {
     public:
         socket_t video_socket = INVALID_SOCKET;
         socket_t video_server_socket = INVALID_SOCKET;
+        SDL_Thread *receiver_thread = nullptr;
         message::BlobMessageQueue queue{};
 
         bool Init(socket_t server_socket);
@@ -24,6 +36,8 @@ namespace irobot::agent {
         bool WaitForClientConnection();
 
         void Destroy() override;
+
+        void Join() override;
 
         bool Start() override;
 
@@ -33,12 +47,16 @@ namespace irobot::agent {
 
         static int RunStream(void *data);
 
+        static int RunAgentReceiver(void *data);
+
         bool IsConnected();
 
 
     private:
 
-         int buffer_index=0;
+        int buffer_index = 0;
+
+
     };
 
 }
