@@ -37,8 +37,8 @@ typedef int socket_t;
 
 #include <cstdint>
 
-//#define IPV4_LOCALHOST 0x7F000001
-#define IPV4_LOCALHOST 0x00000000
+#define IPV4_LOCALHOST 0x7F000001
+//#define IPV4_LOCALHOST 0x00000000
 
 namespace irobot::platform {
 
