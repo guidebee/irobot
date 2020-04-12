@@ -17,13 +17,14 @@ namespace irobot::message {
         index += 8;
         util::buffer_write64be(&buf[index], this->count);
         index += 8;
-
+        util::buffer_write64be(&buf[index], this->total_length);
+        index += 8;
         for (int i = 0; i < this->count; i++) {
             int length = this->buffers[i].length;
             util::buffer_write64be(&buf[index], length);
             index += 8;
             memcpy(&buf[index], this->buffers[i].data, length);
-            index += length;
+            index += length + 16;
         }
         return index;
     }

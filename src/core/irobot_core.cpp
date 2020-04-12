@@ -63,7 +63,8 @@ namespace irobot {
             .controller = &controller,
             .video_buffer = &video_buffer,
             .agent_stream = &agent_stream,
-            .agent_controller=&agent_controller
+            .agent_controller=&agent_controller,
+            .phash_func=cv::img_hash::PHash::create()
 
     };
     InputManager input_manager = {
@@ -279,6 +280,7 @@ namespace irobot {
         } else {
             SDL_Event event;
             bool quit = false;
+            InputManager::SwitchFpsCounterState(&fps_counter);
             while (!quit) {
                 while (SDL_PollEvent(&event)) {
                     enum EventResult result = agent_manager.HandleEvent(&event, false);

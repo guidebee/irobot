@@ -58,6 +58,7 @@ namespace irobot::agent {
 
         int buffer_index = 0;
         unsigned long  total_bytes =0;
+        unsigned long total_frame =0;
         Uint32 start_ticks =0;
         Uint32 last_ticks =0;
 
