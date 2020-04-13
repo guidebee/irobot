@@ -49,13 +49,19 @@ namespace irobot::agent {
     bool AgentStream::PushMessage(
             const message::BlobMessage *msg) {
         util::mutex_lock(this->mutex);
-        bool was_empty = cbuf_is_empty(&this->queue);
-        bool res = cbuf_push(&this->queue, *msg);
-        if (was_empty) {
-            util::cond_signal(this->thread_cond);
+        bool was_full = cbuf_is_full(&this->queue);
+        if (!was_full) {
+            bool was_empty = cbuf_is_empty(&this->queue);
+            bool res = cbuf_push(&this->queue, *msg);
+            if (was_empty) {
+                util::cond_signal(this->thread_cond);
+            }
+            util::mutex_unlock(this->mutex);
+            return res;
+        } else {
+            LOGD("Queue is full,skip video frame");
+            return false;
         }
-        util::mutex_unlock(this->mutex);
-        return res;
     }
 
     bool AgentStream::ProcessMessage(

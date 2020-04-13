@@ -52,14 +52,6 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/core/controller.hpp
         ${CMAKE_HOME_DIRECTORY}/src/core/device_server.hpp
         ${CMAKE_HOME_DIRECTORY}/src/core/irobot_core.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/average_hash.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/block_mean_hash.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/color_moment_hash.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/img_hash.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/img_hash_base.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/phash.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/precomp.hpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/radial_variance_hash.hpp
         ${CMAKE_HOME_DIRECTORY}/src/platform/command.hpp
         ${CMAKE_HOME_DIRECTORY}/src/platform/net.hpp
         )
@@ -88,12 +80,6 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/core/controller.cpp
         ${CMAKE_HOME_DIRECTORY}/src/core/device_server.cpp
         ${CMAKE_HOME_DIRECTORY}/src/core/irobot_core.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/average_hash.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/block_mean_hash.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/color_moment_hash.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/img_hash_base.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/phash.cpp
-        ${CMAKE_HOME_DIRECTORY}/src/image_hash/radial_variance_hash.cpp
         ${CMAKE_HOME_DIRECTORY}/src/platform/command.cpp
         ${CMAKE_HOME_DIRECTORY}/src/platform/net.cpp
         )
@@ -114,7 +100,6 @@ configure_file(
         "${PROJECT_BINARY_DIR}/src/config.hpp"
 )
 
-message(${OpenCV_LIBS})
 # -------------------------------------------------------------
 # utility functions
 function(APP name)

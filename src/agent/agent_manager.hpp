@@ -11,7 +11,7 @@
 #include "agent/agent_controller.hpp"
 #include "agent/agent_stream.hpp"
 #include "core/controller.hpp"
-#include "image_hash/phash.hpp"
+#include <opencv2/img_hash.hpp>
 #include "ui/events.hpp"
 #include "video/video_buffer.hpp"
 

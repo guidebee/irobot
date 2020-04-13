@@ -136,9 +136,6 @@ namespace irobot::video {
                       this->video_buffer->rgb_frame->linesize
             );
             this->video_buffer->frame_number = this->codec_ctx->frame_number;
-//            SaveFrame(this->video_buffer->rgb_frame, this->codec_cv_ctx->width,
-//                      this->codec_cv_ctx->height, this->codec_ctx->frame_number);
-            // a frame was received
             this->PushFrame();
 
         } else if (ret != AVERROR(EAGAIN)) {
