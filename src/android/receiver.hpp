@@ -22,7 +22,7 @@ namespace irobot::android {
     public:
         socket_t control_socket;
 
-        bool Init(socket_t control_socket);
+        bool Init(socket_t socket);
 
         bool Start() override;
 

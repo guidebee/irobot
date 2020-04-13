@@ -6,16 +6,8 @@
 #ifndef ANDROID_IROBOT_FPS_COUNTER_HPP
 #define ANDROID_IROBOT_FPS_COUNTER_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <SDL2/SDL_atomic.h>
 #include <SDL2/SDL_timer.h>
-
-#if defined (__cplusplus)
-}
-#endif
 
 #include <cstdint>
 #include "config.hpp"

@@ -6,16 +6,7 @@
 #ifndef ANDROID_IROBOT_EVENT_CONVERTER_HPP
 #define ANDROID_IROBOT_EVENT_CONVERTER_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <SDL2/SDL_events.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
 
 #include "message/control_msg.hpp"
 

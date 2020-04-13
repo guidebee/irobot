@@ -12,13 +12,14 @@ extern "C" {
 
 #include <unistd.h>
 #include <libavformat/avformat.h>
-#include <SDL2/SDL_events.h>
-#include <SDL2/SDL_thread.h>
-#include <SDL2/SDL_atomic.h>
 
 #if defined (__cplusplus)
 }
 #endif
+
+#include <SDL2/SDL_events.h>
+#include <SDL2/SDL_thread.h>
+#include <SDL2/SDL_atomic.h>
 
 #include <cassert>
 #include <cstdint>

@@ -12,12 +12,12 @@ extern "C" {
 
 #include <libavutil/avutil.h>
 #include <libavformat/avformat.h>
-#include <SDL2/SDL_mutex.h>
-#include <SDL2/SDL_mutex.h>
 
 #if defined (__cplusplus)
 }
 #endif
+
+#include <SDL2/SDL_mutex.h>
 
 #include "config.hpp"
 

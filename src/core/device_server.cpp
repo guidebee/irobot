@@ -219,18 +219,18 @@ namespace irobot {
         this->tunnel_forward = false;
     }
 
-    bool DeviceServer::Start(const char *serial,
+    bool DeviceServer::Start(const char *pSerial,
                              const DeviceServerParameters *params) {
         this->local_port = params->local_port;
 
-        if (serial) {
-            this->serial = SDL_strdup(serial);
+        if (pSerial) {
+            this->serial = SDL_strdup(pSerial);
             if (!this->serial) {
                 return false;
             }
         }
 
-        if (!PushServer(serial)) {
+        if (!PushServer(pSerial)) {
             SDL_free(this->serial);
             return false;
         }

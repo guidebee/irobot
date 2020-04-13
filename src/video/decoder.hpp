@@ -9,7 +9,7 @@
 #if defined (__cplusplus)
 extern "C" {
 #endif
-#include <SDL2/SDL_events.h>
+
 #include <libavformat/avformat.h>
 #include <libswscale/swscale.h>
 #include <libavutil/imgutils.h>
@@ -17,6 +17,7 @@ extern "C" {
 }
 #endif
 
+#include <SDL2/SDL_events.h>
 #include "config.hpp"
 
 #define IMAGE_ALIGN 1

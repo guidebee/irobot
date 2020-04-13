@@ -6,16 +6,7 @@
 #ifndef ANDROID_IROBOT_AGENT_STREAM_HPP
 #define ANDROID_IROBOT_AGENT_STREAM_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <SDL2/SDL_timer.h>
-
-#if defined (__cplusplus)
-}
-#endif
-
 
 #include "core/actor.hpp"
 #include "util/cbuf.hpp"
@@ -57,10 +48,10 @@ namespace irobot::agent {
     private:
 
         int buffer_index = 0;
-        unsigned long  total_bytes =0;
-        unsigned long total_frame =0;
-        Uint32 start_ticks =0;
-        Uint32 last_ticks =0;
+        unsigned long total_bytes = 0;
+        unsigned long total_frame = 0;
+        Uint32 start_ticks = 0;
+        Uint32 last_ticks = 0;
 
 
     };

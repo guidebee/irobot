@@ -5,26 +5,19 @@
 
 #include "receiver.hpp"
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
 #include <SDL2/SDL_clipboard.h>
-
-#if defined (__cplusplus)
-}
-#endif
 
 #include <cassert>
 #include "util/log.hpp"
 
 namespace irobot::android {
 
-    bool Receiver::Init(socket_t control_socket) {
+    bool Receiver::Init(socket_t socket) {
         bool initialized = Actor::Init();
         if (!initialized) {
             return false;
         }
-        this->control_socket = control_socket;
+        this->control_socket = socket;
         return true;
     }
 

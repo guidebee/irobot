@@ -10,7 +10,6 @@
 extern "C" {
 #endif
 
-#include <SDL2/SDL.h>
 #include <libavformat/avformat.h>
 #include <libavutil/imgutils.h>
 #include <libswscale/swscale.h>
@@ -18,6 +17,8 @@ extern "C" {
 #if defined (__cplusplus)
 }
 #endif
+
+#include <SDL2/SDL.h>
 
 #include "android/file_handler.hpp"
 #include "core/common.hpp"

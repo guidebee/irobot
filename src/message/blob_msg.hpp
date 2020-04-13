@@ -7,27 +7,18 @@
 #ifndef ANDROID_IROBOT_BLOB_MSG_HPP
 #define ANDROID_IROBOT_BLOB_MSG_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <SDL2/SDL_types.h>
-
-#if defined (__cplusplus)
-}
-#endif
+#include "util/cbuf.hpp"
 
 #define BLOB_MSG_DATA_MAX_COUNT 16
 #define BLOB_MSG_SERIALIZED_MAX_SIZE 10485760
-
-#include "util/cbuf.hpp"
 
 namespace irobot::message {
 
     enum BlobMessageType {
         BLOB_MSG_TYPE_UNKNOWN = 0,
-        BLOB_MSG_TYPE_SCREEN_SHOT=1,
-        BLOB_MSG_TYPE_OPENCV_MAT=2
+        BLOB_MSG_TYPE_SCREEN_SHOT = 1,
+        BLOB_MSG_TYPE_OPENCV_MAT = 2
     };
 
     struct BlobMessage {
@@ -35,7 +26,7 @@ namespace irobot::message {
         Uint64 timestamp = 0;
         Uint64 id = 0;
         Uint64 count = 0;
-        Uint64 total_length=0;
+        Uint64 total_length = 0;
         struct {
             Uint64 length = 0;
             unsigned char *data = nullptr;

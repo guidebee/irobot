@@ -6,21 +6,14 @@
 #ifndef ANDROID_IROBOT_AGENT_MANAGER_HPP
 #define ANDROID_IROBOT_AGENT_MANAGER_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <SDL2/SDL_events.h>
-#if defined (__cplusplus)
-}
-#endif
 
-#include "ui/events.hpp"
-#include "core/controller.hpp"
-#include "video/video_buffer.hpp"
 #include "agent/agent_controller.hpp"
 #include "agent/agent_stream.hpp"
+#include "core/controller.hpp"
 #include "image_hash/phash.hpp"
+#include "ui/events.hpp"
+#include "video/video_buffer.hpp"
 
 #define EVENT_FILE_NAME "events.json"
 
@@ -41,7 +34,6 @@ namespace irobot::agent {
         AgentController *agent_controller = nullptr; // (2 threads)
         AgentStream *agent_stream = nullptr;
 
-
         bool Init(uint16_t port);
 
         bool Start();
@@ -52,7 +44,7 @@ namespace irobot::agent {
 
         void Join();
 
-        void SendOpenCVImage(message::BlobMessageType type,int size, bool color);
+        void SendOpenCVImage(message::BlobMessageType type, int size, bool color);
 
         ui::EventResult HandleEvent(SDL_Event *event, bool has_screen);
 
@@ -68,9 +60,6 @@ namespace irobot::agent {
         void StartRecordEvents();
 
         void StopRecordEvents();
-
-
-
 
 
     };

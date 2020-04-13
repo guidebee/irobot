@@ -6,16 +6,8 @@
 #ifndef ANDROID_IROBOT_ACTOR_HPP
 #define ANDROID_IROBOT_ACTOR_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <SDL2/SDL_mutex.h>
 #include <SDL2/SDL_thread.h>
-
-#if defined (__cplusplus)
-}
-#endif
 
 namespace irobot {
 

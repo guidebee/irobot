@@ -7,15 +7,7 @@
 #ifndef ANDROID_IROBOT_SERVER_HPP
 #define ANDROID_IROBOT_SERVER_HPP
 
-#if defined (__cplusplus)
-extern "C" {
-#endif
-
 #include <SDL2/SDL_timer.h>
-#if defined (__cplusplus)
-}
-#endif
-
 #include <cstdint>
 
 #include "platform/command.hpp"
@@ -49,7 +41,7 @@ namespace irobot {
         void Init();
 
         // push, enable tunnel et start the server
-        bool Start(const char *serial,
+        bool Start(const char *pSerial,
                    const struct DeviceServerParameters *params);
 
         // block until the communication with the server is established

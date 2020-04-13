@@ -6,13 +6,6 @@
 #ifndef ANDROID_IROBOT_CONTROL_MSG_HPP
 #define ANDROID_IROBOT_CONTROL_MSG_HPP
 
-#define CONTROL_MSG_TEXT_MAX_LENGTH 300
-#define CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH 4093
-#define CONTROL_MSG_SERIALIZED_MAX_SIZE \
-    (3 + CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH)
-
-#define POINTER_ID_MOUSE UINT64_C(-1)
-
 #include <cstddef>
 #include <cstdint>
 #include <string>
@@ -22,8 +15,14 @@
 #include "android/input.hpp"
 #include "android/keycodes.hpp"
 
-namespace irobot::message {
+#define CONTROL_MSG_TEXT_MAX_LENGTH 300
+#define CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH 4093
+#define CONTROL_MSG_SERIALIZED_MAX_SIZE \
+    (3 + CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH)
 
+#define POINTER_ID_MOUSE UINT64_C(-1)
+
+namespace irobot::message {
 
 
     using namespace irobot::android;
@@ -103,7 +102,7 @@ namespace irobot::message {
 
     struct ControlMessageQueue CBUF(ControlMessage, 64);
 
-    typedef void (*MessageHandler)(void* entity,ControlMessage *msg);
+    typedef void (*MessageHandler)(void *entity, ControlMessage *msg);
 
 }
 #endif //ANDROID_IROBOT_CONTROL_MSG_HPP

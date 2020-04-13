@@ -5,11 +5,13 @@
 
 #ifndef ANDROID_IROBOT_AGENT_CONTROLLER_HPP
 #define ANDROID_IROBOT_AGENT_CONTROLLER_HPP
+
 #include <cassert>
+
 #include "core/actor.hpp"
-#include "util/cbuf.hpp"
 #include "platform/net.hpp"
 #include "message/control_msg.hpp"
+#include "util/cbuf.hpp"
 
 namespace irobot::agent {
 
@@ -21,10 +23,10 @@ namespace irobot::agent {
         message::ControlMessageQueue queue{};
         SDL_Thread *record_thread = nullptr;
         message::MessageHandler message_handler = nullptr;
-        void * entity = nullptr;
+        void *entity = nullptr;
 
-
-        bool Init(socket_t server_socket, message::MessageHandler message_handler,void * entity);
+        bool Init(socket_t server_socket,
+                  message::MessageHandler message_handler, void *entity);
 
         bool WaitForClientConnection();
 
