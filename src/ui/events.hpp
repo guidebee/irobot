@@ -11,6 +11,7 @@
 #define EVENT_NEW_OPENCV_FRAME          (SDL_USEREVENT + 3)
 #define EVENT_START_RECORD_UI_EVENT     (SDL_USEREVENT + 4)
 #define EVENT_END_RECORD_UI_EVENT       (SDL_USEREVENT + 5)
+#define EVENT_NEW_DATA_STREAM_CONNECTION                 (SDL_USEREVENT + 6)
 
 namespace irobot::ui {
 

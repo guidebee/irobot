@@ -6,7 +6,9 @@
 #include "agent_stream.hpp"
 
 #include <cassert>
+#include <SDL2/SDL_events.h>
 
+#include "ui/events.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"
 
@@ -33,6 +35,10 @@ namespace irobot::agent {
         }
         this->video_socket = platform::net_accept(this->video_server_socket);
         LOGI("Agent stream client connected");
+        static SDL_Event new_opencv_frame_event = {
+                .type = EVENT_NEW_OPENCV_FRAME,
+        };
+        SDL_PushEvent(&new_opencv_frame_event);
         return this->video_socket != INVALID_SOCKET;
     }
 

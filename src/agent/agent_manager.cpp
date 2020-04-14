@@ -224,6 +224,7 @@ namespace irobot::agent {
                 LOGD("User requested to quit");
                 return ui::EVENT_RESULT_STOPPED_BY_USER;
             case EVENT_NEW_OPENCV_FRAME:
+            case EVENT_NEW_DATA_STREAM_CONNECTION:
                 util::mutex_lock(this->video_buffer->mutex);
                 //LOGD("Agent Manager received Opencv Frame %d\r", this->video_buffer->frame_number);
                 {
