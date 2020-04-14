@@ -972,6 +972,7 @@ namespace irobot {
 #endif
 
         struct IRobotCore args = {};
+        platform::net_init();
 
         if (!args.ParseArgs(argc, argv)) {
             return 1;
@@ -999,6 +1000,8 @@ namespace irobot {
         int res = args.Init() ? 0 : 1;
 
         avformat_network_deinit(); // ignore failure
+
+        platform::net_cleanup();
 
 #if defined (__WINDOWS__)
         if (res != 0) {
