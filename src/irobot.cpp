@@ -5,7 +5,6 @@
 #include "core/irobot_core.hpp"
 
 int main(int argc, char *argv[]) {
-    signal(SIGPIPE, SIG_IGN);
     return irobot::IRobotCore::iRobotMain(argc, argv);
 }
 

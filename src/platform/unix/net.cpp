@@ -5,9 +5,12 @@
 
 #include "platform/net.hpp"
 
+#include <csignal>
+
 namespace irobot::platform {
     bool net_init() {
         // do nothing
+        signal(SIGPIPE, SIG_IGN);
         return true;
     }
 
