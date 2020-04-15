@@ -15,10 +15,10 @@ namespace irobot {
 
     public:
 
-        SDL_Thread *thread;
-        SDL_mutex *mutex;
-        SDL_cond *thread_cond;
-        bool stopped;
+        SDL_Thread *thread = nullptr;
+        SDL_mutex *mutex = nullptr;
+        SDL_cond *thread_cond = nullptr;
+        bool stopped = false;
 
         virtual bool Init();
 

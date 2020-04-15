@@ -28,7 +28,6 @@ extern "C" {
 
 namespace irobot {
 
-
     class IRobotCore {
 
     public:
@@ -63,9 +62,13 @@ namespace irobot {
 
         IRobotCore();
 
-        bool Init();
+        static int iRobotMain(int argc, char **argv);
 
         bool ParseArgs(int argc, char **argv);
+
+    private:
+
+        bool Start();
 
         static ProcessType SetShowTouchesEnabled(const char *serial, bool enabled);
 
@@ -100,10 +103,7 @@ namespace irobot {
         static void PrintUsage(const char *arg0);
 
         static void PrintVersion();
-
-        static int iRobotMain(int argc, char **argv);
     };
-
 }
 
 #endif //ANDROID_IROBOT_CORE_HPP

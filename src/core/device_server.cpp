@@ -10,18 +10,15 @@
 #include <cstdio>
 
 #include "config.hpp"
+#include "platform/net.hpp"
 #include "platform/command.hpp"
 #include "util/log.hpp"
-#include "platform/net.hpp"
 
-
-#pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 #define SOCKET_NAME "irobot"
 #define SERVER_FILENAME "irobot-server"
 
 #define DEFAULT_SERVER_PATH  "./server/" SERVER_FILENAME
 #define DEVICE_SERVER_PATH "/data/local/tmp/irobot-server.jar"
-
 
 namespace irobot {
 

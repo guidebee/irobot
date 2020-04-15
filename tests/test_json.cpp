@@ -5,6 +5,7 @@
 
 #include "catch.hpp"
 #include <nlohmann/json.hpp>
+
 using nlohmann::json;
 
 TEST_CASE("test json library", "[json]") {

@@ -23,7 +23,7 @@ namespace irobot::message {
             int length = this->buffers[i].length;
             util::buffer_write64be(&buf[index], length);
             index += 8;
-            memcpy(&buf[index], this->buffers[i].data, length+16);
+            memcpy(&buf[index], this->buffers[i].data, length + 16);
             index += length + 16;
         }
         return index;

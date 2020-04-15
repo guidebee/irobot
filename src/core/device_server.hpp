@@ -79,7 +79,7 @@ namespace irobot {
 
         bool DisableTunnel();
 
-        ProcessType ExecuteServer(const struct DeviceServerParameters *params);
+        ProcessType ExecuteServer(const DeviceServerParameters *params);
 
     };
 }

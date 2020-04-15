@@ -35,7 +35,7 @@ namespace irobot::ai {
         int maxSize = MAX(image.size().width, image.size().height);
         float scale = (float) max_size / (float) maxSize;
         cv::resize(image, outImg, cv::Size(), scale, scale);
-        if(!color){
+        if (!color) {
             cv::cvtColor(outImg, greyMat, cv::COLOR_BGR2GRAY);
             outImg = greyMat;
         }

@@ -6,12 +6,11 @@
 #ifndef ANDROID_IROBOT_CONTROLLER_HPP
 #define ANDROID_IROBOT_CONTROLLER_HPP
 
-
 #include "actor.hpp"
 #include "android/receiver.hpp"
 #include "message/control_msg.hpp"
-#include "util/cbuf.hpp"
 #include "platform/net.hpp"
+#include "util/cbuf.hpp"
 
 namespace irobot {
 

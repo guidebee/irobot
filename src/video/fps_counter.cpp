@@ -15,7 +15,7 @@
 namespace irobot::video {
 
     bool FpsCounter::Init() {
-        bool initialzed=Actor::Init();
+        bool initialzed = Actor::Init();
         if (!initialzed) {
             return false;
         }

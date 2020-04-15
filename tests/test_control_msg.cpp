@@ -214,10 +214,10 @@ TEST_CASE("json serialize inject scroll event", "[message][ControlMessage]") {
     REQUIRE(msg1.inject_scroll_event.position.point.y == 1026);
     REQUIRE(msg1.inject_scroll_event.position.screen_size.width == 1080);
     REQUIRE(msg1.inject_scroll_event.position.screen_size.height == 1920);
-    auto content=msg1.JsonSerialize();
+    auto content = msg1.JsonSerialize();
     REQUIRE(json::accept(content));
     json j2 = json::parse(content);
-    std::cout<<j2.dump(2);
+    std::cout << j2.dump(2);
 
 
 }

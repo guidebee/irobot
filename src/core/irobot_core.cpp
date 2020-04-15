@@ -9,12 +9,12 @@
 
 #include "config.hpp"
 #include "android/file_handler.hpp"
+#include "agent/agent_manager.hpp"
 #include "core/common.hpp"
 #include "core/controller.hpp"
 #include "device_server.hpp"
 #include "platform/net.hpp"
 #include "ui/screen.hpp"
-#include "agent/agent_manager.hpp"
 #include "video/decoder.hpp"
 #include "video/fps_counter.hpp"
 #include "video/recorder.hpp"
@@ -106,7 +106,7 @@ namespace irobot {
 
     }
 
-    bool IRobotCore::Init() {
+    bool IRobotCore::Start() {
         const IRobotCore *options = this;
         bool record = options->record_filename != nullptr;
         DeviceServerParameters params = {
@@ -137,7 +137,6 @@ namespace irobot {
         bool controller_initialized = false;
         bool controller_started = false;
 
-
         if (!agent_manager.Init(options->port)) {
             return false;
         }
@@ -149,7 +148,7 @@ namespace irobot {
                 cannot_cont = true;
             }
             screen.InitFileHandler(&file_handler);
-        }else{
+        } else {
             if (!Screen::InitSDLAndConfigure(false)) {
                 cannot_cont = true;
             }
@@ -211,7 +210,6 @@ namespace irobot {
 
         stream.Init(server.video_socket, dec, rec);
 
-
         // now we consumed the header values, the socket receives the video stream
         // start the stream
         if (!cannot_cont & !stream.Start()) {
@@ -235,8 +233,8 @@ namespace irobot {
                 controller_started = true;
             }
 
-            char default_window_title[DEVICE_NAME_FIELD_LENGTH+ 32];
-            sprintf(default_window_title,"iRobot-%s",device_name);
+            char default_window_title[DEVICE_NAME_FIELD_LENGTH + 32];
+            sprintf(default_window_title, "iRobot-%s", device_name);
             if (!options->headless) {
                 input_manager.prefer_text = options->prefer_text;
                 const char *_window_title =
@@ -971,19 +969,19 @@ namespace irobot {
         SDL_LogSetAllPriority(SDL_LOG_PRIORITY_DEBUG);
 #endif
 
-        struct IRobotCore args = {};
+        IRobotCore irobot_core = {};
         platform::net_init();
 
-        if (!args.ParseArgs(argc, argv)) {
+        if (!irobot_core.ParseArgs(argc, argv)) {
             return 1;
         }
 
-        if (args.help) {
+        if (irobot_core.help) {
             PrintUsage(argv[0]);
             return 0;
         }
 
-        if (args.version) {
+        if (irobot_core.version) {
             PrintVersion();
             return 0;
         }
@@ -997,7 +995,7 @@ namespace irobot {
             return 1;
         }
 
-        int res = args.Init() ? 0 : 1;
+        int res = irobot_core.Start() ? 0 : 1;
 
         avformat_network_deinit(); // ignore failure
 

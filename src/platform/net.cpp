@@ -107,7 +107,6 @@ namespace irobot::platform {
     }
 
 
-
     ssize_t net_recv_all(socket_t socket, void *buf, size_t len) {
         return recv(socket, (char *) buf, len, MSG_WAITALL);
     }
