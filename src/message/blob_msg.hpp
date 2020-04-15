@@ -3,7 +3,6 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#pragma ide diagnostic ignored "OCUnusedMacroInspection"
 #ifndef ANDROID_IROBOT_BLOB_MSG_HPP
 #define ANDROID_IROBOT_BLOB_MSG_HPP
 

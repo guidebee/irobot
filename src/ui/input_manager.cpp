@@ -8,11 +8,11 @@
 
 #include <cassert>
 
+#include "message/control_msg.hpp"
 #include "ui/event_converter.hpp"
 #include "util/lock.hpp"
 #include "util/log.hpp"
 #include "video/video_buffer.hpp"
-#include "message/control_msg.hpp"
 
 namespace irobot::ui {
 

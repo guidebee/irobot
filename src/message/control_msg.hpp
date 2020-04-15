@@ -10,10 +10,10 @@
 #include <cstdint>
 #include <string>
 
-#include "util/cbuf.hpp"
-#include "core/common.hpp"
 #include "android/input.hpp"
 #include "android/keycodes.hpp"
+#include "util/cbuf.hpp"
+#include "core/common.hpp"
 
 #define CONTROL_MSG_TEXT_MAX_LENGTH 300
 #define CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH 4093
@@ -23,7 +23,6 @@
 #define POINTER_ID_MOUSE UINT64_C(-1)
 
 namespace irobot::message {
-
 
     using namespace irobot::android;
 

@@ -10,8 +10,8 @@
 
 namespace irobot::message {
 
-    ssize_t DeviceMessage::Deserialize(const unsigned char *buf, size_t len
-    ) {
+    ssize_t DeviceMessage::Deserialize(const unsigned char *buf,
+                                       size_t len) {
 
         struct DeviceMessage *msg = this;
         if (len < 3) {

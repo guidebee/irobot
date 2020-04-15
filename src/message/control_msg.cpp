@@ -75,9 +75,7 @@ namespace irobot::message {
 
     std::string ControlMessage::JsonSerialize() {
         char buffer[2 * CONTROL_MSG_SERIALIZED_MAX_SIZE];
-
         char temp[256];
-
         strcpy(buffer, "{\n");
         sprintf(temp, R"(    "event_time" : ")");
         strcat(buffer, temp);
@@ -96,7 +94,6 @@ namespace irobot::message {
         sprintf(temp, "%03d", milli_seconds);
         strcat(buffer, temp);
         strcat(buffer, "\",\n");
-
 
         switch (this->type) {
             case CONTROL_MSG_TYPE_INJECT_KEYCODE: {

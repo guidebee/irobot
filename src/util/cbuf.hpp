@@ -22,9 +22,9 @@ extern "C" {
 //
 // data has length CAP + 1 to distinguish empty vs full.
 #define CBUF(TYPE, CAP) { \
-    TYPE data[(CAP) + 1]; \
-    size_t head; \
-    size_t tail; \
+    TYPE data[(CAP) + 1]{}; \
+    size_t head=0; \
+    size_t tail=0; \
 }
 
 #define cbuf_size_(PCBUF) \

@@ -29,7 +29,6 @@ namespace irobot::message {
         return index;
     }
 
-
     void BlobMessage::Destroy() {
         for (int i = 0; i < this->count; i++) {
             if (this->buffers[i].data != nullptr) {

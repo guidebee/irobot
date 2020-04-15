@@ -36,7 +36,6 @@ typedef struct in_addr IN_ADDR;
 }
 #endif
 
-
 #include <cstdio>
 #include <cstring>
 
