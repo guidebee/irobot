@@ -19,8 +19,6 @@ find_library(SWSCALE_LIBRARY swscale)
 find_path(AVFILTER_INCLUDE_DIR libavfilter/avfilter.h)
 find_library(AVFILTER_LIBRARY avfilter)
 
-find_path(AVRESAMPLE_INCLUDE_DIR libavresample/avresample.h)
-find_library(AVRESAMPLE_LIBRARY avresample)
 
 find_path(SWRESAMPLE_INCLUDE_DIR libswresample/swresample.h)
 find_library(SWRESAMPLE_LIBRARY swresample)
@@ -35,7 +33,6 @@ target_include_directories(FFmpeg INTERFACE
         ${AVDEVICE_INCLUDE_DIR}
         ${SWSCALE_INCLUDE_DIR}
         ${AVFILTER_INCLUDE_DIR}
-        ${AVRESAMPLE_INCLUDE_DIR}
         ${SWRESAMPLE_INCLUDE_DIR}
         )
 
@@ -46,6 +43,5 @@ target_link_libraries(FFmpeg INTERFACE
         ${AVDEVICE_LIBRARY}
         ${SWSCALE_LIBRARY}
         ${AVFILTER_LIBRARY}
-        ${AVRESAMPLE_LIBRARY}
         ${SWRESAMPLE_LIBRARY}
         )
