@@ -3,7 +3,7 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#include "catch.hpp"
+#include "catch2/catch.hpp"
 #include "util/cbuf.hpp"
 
 struct int_queue CBUF(int, 32);

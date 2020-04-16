@@ -3,7 +3,7 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#include "catch.hpp"
+#include "catch2/catch.hpp"
 #include "core/irobot_core.hpp"
 #include "core/common.hpp"
 
