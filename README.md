@@ -2,6 +2,9 @@
 
 [scrcpy](https://github.com/Genymobile/scrcpy)  C++ rewrite and CMake
 
+ ![irobot_agent](https://github.com/guidebee/irobot/blob/master/docs/irobot_agent.png)
+
+
 This application provides display and control of Android devices connected on USB (or over TCP/IP). It does not require any root access. It works on GNU/Linux, Windows and macOS.
 
 ## Architecture
@@ -433,16 +436,6 @@ The target directory can be changed on start:
 ```bash
 scrcpy --push-target /sdcard/foo/bar/
 ```
-
-
-### Audio forwarding
-
-Audio is not forwarded by _scrcpy_. Use [sndcpy].
-
-Also see [issue #14].
-
-[sndcpy]: https://github.com/rom1v/sndcpy
-[issue #14]: https://github.com/Genymobile/scrcpy/issues/14
 
 
 ## Shortcuts
