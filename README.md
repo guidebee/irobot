@@ -1,6 +1,6 @@
 # iRobot for Android
 
-[irobot](https://github.com/Genymobile/irobot)  C++ rewrite and CMake
+[scrcpy](https://github.com/Genymobile/irobot)  C++ rewrite and CMake
 
  ![irobot_agent](https://github.com/guidebee/irobot/blob/master/docs/irobot_agent.png)
 
