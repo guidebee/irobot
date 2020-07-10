@@ -1,6 +1,6 @@
 # iRobot for Android
 
-[scrcpy](https://github.com/Genymobile/scrcpy)  C++ rewrite and CMake
+[irobot](https://github.com/Genymobile/irobot)  C++ rewrite and CMake
 
  ![irobot_agent](https://github.com/guidebee/irobot/blob/master/docs/irobot_agent.png)
 
@@ -30,8 +30,8 @@ increase performance.
 To limit both the width and height to some value (e.g. 1024):
 
 ```bash
-scrcpy --max-size 1024
-scrcpy -m 1024  # short version
+irobot --max-size 1024
+irobot -m 1024  # short version
 ```
 
 The other dimension is computed to that the device aspect ratio is preserved.
@@ -43,8 +43,8 @@ That way, a device in 1920×1080 will be mirrored at 1024×576.
 The default bit-rate is 8 Mbps. To change the video bitrate (e.g. to 2 Mbps):
 
 ```bash
-scrcpy --bit-rate 2M
-scrcpy -b 2M  # short version
+irobot --bit-rate 2M
+irobot -b 2M  # short version
 ```
 
 #### Limit frame rate
@@ -52,7 +52,7 @@ scrcpy -b 2M  # short version
 The capture frame rate can be limited:
 
 ```bash
-scrcpy --max-fps 15
+irobot --max-fps 15
 ```
 
 This is officially supported since Android 10, but may work on earlier versions.
@@ -64,7 +64,7 @@ The device screen may be cropped to mirror only part of the screen.
 This is useful for example to mirror only one eye of the Oculus Go:
 
 ```bash
-scrcpy --crop 1224:1440:0:0   # 1224x1440 at offset (0,0)
+irobot --crop 1224:1440:0:0   # 1224x1440 at offset (0,0)
 ```
 
 If `--max-size` is also specified, resizing is applied after cropping.
@@ -76,10 +76,10 @@ If `--max-size` is also specified, resizing is applied after cropping.
 To lock the orientation of the mirroring:
 
 ```bash
-scrcpy --lock-video-orientation 0   # natural orientation
-scrcpy --lock-video-orientation 1   # 90° counterclockwise
-scrcpy --lock-video-orientation 2   # 180°
-scrcpy --lock-video-orientation 3   # 90° clockwise
+irobot --lock-video-orientation 0   # natural orientation
+irobot --lock-video-orientation 1   # 90° counterclockwise
+irobot --lock-video-orientation 2   # 180°
+irobot --lock-video-orientation 3   # 90° clockwise
 ```
 
 This affects recording orientation.
@@ -90,15 +90,15 @@ This affects recording orientation.
 It is possible to record the screen while mirroring:
 
 ```bash
-scrcpy --record file.mp4
-scrcpy -r file.mkv
+irobot --record file.mp4
+irobot -r file.mkv
 ```
 
 To disable mirroring while recording:
 
 ```bash
-scrcpy --no-display --record file.mp4
-scrcpy -Nr file.mkv
+irobot --no-display --record file.mp4
+irobot -Nr file.mkv
 # interrupt recording with Ctrl+C
 ```
 
@@ -113,7 +113,7 @@ variation] does not impact the recorded file.
 
 #### Wireless
 
-_Scrcpy_ uses `adb` to communicate with the device, and `adb` can [connect] to a
+_irobot_ uses `adb` to communicate with the device, and `adb` can [connect] to a
 device over TCP/IP:
 
 1. Connect the device to the same Wi-Fi as your computer.
@@ -121,13 +121,13 @@ device over TCP/IP:
 3. Enable adb over TCP/IP on your device: `adb tcpip 5555`.
 4. Unplug your device.
 5. Connect to your device: `adb connect DEVICE_IP:5555` _(replace `DEVICE_IP`)_.
-6. Run `scrcpy` as usual.
+6. Run `irobot` as usual.
 
 It may be useful to decrease the bit-rate and the definition:
 
 ```bash
-scrcpy --bit-rate 2M --max-size 800
-scrcpy -b2M -m800  # short version
+irobot --bit-rate 2M --max-size 800
+irobot -b2M -m800  # short version
 ```
 
 [connect]: https://developer.android.com/studio/command-line/adb.html#wireless
@@ -138,25 +138,25 @@ scrcpy -b2M -m800  # short version
 If several devices are listed in `adb devices`, you must specify the _serial_:
 
 ```bash
-scrcpy --serial 0123456789abcdef
-scrcpy -s 0123456789abcdef  # short version
+irobot --serial 0123456789abcdef
+irobot -s 0123456789abcdef  # short version
 ```
 
 If the device is connected over TCP/IP:
 
 ```bash
-scrcpy --serial 192.168.0.1:5555
-scrcpy -s 192.168.0.1:5555  # short version
+irobot --serial 192.168.0.1:5555
+irobot -s 192.168.0.1:5555  # short version
 ```
 
-You can start several instances of _scrcpy_ for several devices.
+You can start several instances of _irobot_ for several devices.
 
 #### Autostart on device connection
 
 You could use [AutoAdb]:
 
 ```bash
-autoadb scrcpy -s '{}'
+autoadb irobot -s '{}'
 ```
 
 [AutoAdb]: https://github.com/rom1v/autoadb
@@ -176,7 +176,7 @@ ssh -CN -L5037:localhost:5037 -R27183:localhost:27183 your_remote_computer
 From another terminal:
 
 ```bash
-scrcpy
+irobot
 ```
 
 To avoid enabling remote port forwarding, you could force a forward connection
@@ -191,14 +191,14 @@ ssh -CN -L5037:localhost:5037 -L27183:localhost:27183 your_remote_computer
 From another terminal:
 
 ```bash
-scrcpy --force-adb-forward
+irobot --force-adb-forward
 ```
 
 
 Like for wireless connections, it may be useful to reduce quality:
 
 ```
-scrcpy -b2M -m800 --max-fps 15
+irobot -b2M -m800 --max-fps 15
 ```
 
 ### Window configuration
@@ -208,7 +208,7 @@ scrcpy -b2M -m800 --max-fps 15
 By default, the window title is the device model. It can be changed:
 
 ```bash
-scrcpy --window-title 'My device'
+irobot --window-title 'My device'
 ```
 
 #### Position and size
@@ -216,7 +216,7 @@ scrcpy --window-title 'My device'
 The initial window position and size may be specified:
 
 ```bash
-scrcpy --window-x 100 --window-y 100 --window-width 800 --window-height 600
+irobot --window-x 100 --window-y 100 --window-width 800 --window-height 600
 ```
 
 #### Borderless
@@ -224,15 +224,15 @@ scrcpy --window-x 100 --window-y 100 --window-width 800 --window-height 600
 To disable window decorations:
 
 ```bash
-scrcpy --window-borderless
+irobot --window-borderless
 ```
 
 #### Always on top
 
-To keep the scrcpy window always on top:
+To keep the irobot window always on top:
 
 ```bash
-scrcpy --always-on-top
+irobot --always-on-top
 ```
 
 #### Fullscreen
@@ -240,8 +240,8 @@ scrcpy --always-on-top
 The app may be started directly in fullscreen:
 
 ```bash
-scrcpy --fullscreen
-scrcpy -f  # short version
+irobot --fullscreen
+irobot -f  # short version
 ```
 
 Fullscreen can then be toggled dynamically with `Ctrl`+`f`.
@@ -251,7 +251,7 @@ Fullscreen can then be toggled dynamically with `Ctrl`+`f`.
 The window may be rotated:
 
 ```bash
-scrcpy --rotation 1
+irobot --rotation 1
 ```
 
 Possibles values are:
@@ -263,7 +263,7 @@ Possibles values are:
 The rotation can also be changed dynamically with `Ctrl`+`←` _(left)_ and
 `Ctrl`+`→` _(right)_.
 
-Note that _scrcpy_ manages 3 different rotations:
+Note that _irobot_ manages 3 different rotations:
  - `Ctrl`+`r` requests the device to switch between portrait and landscape (the
    current running app may refuse, if it does support the requested
    orientation).
@@ -282,8 +282,8 @@ To disable controls (everything which can interact with the device: input keys,
 mouse events, drag&drop files):
 
 ```bash
-scrcpy --no-control
-scrcpy -n
+irobot --no-control
+irobot -n
 ```
 
 #### Display
@@ -292,7 +292,7 @@ If several displays are available, it is possible to select the display to
 mirror:
 
 ```bash
-scrcpy --display 1
+irobot --display 1
 ```
 
 The list of display ids can be retrieved by:
@@ -310,11 +310,11 @@ The secondary display may only be controlled if the device runs at least Android
 To prevent the device to sleep after some delay when the device is plugged in:
 
 ```bash
-scrcpy --stay-awake
-scrcpy -w
+irobot --stay-awake
+irobot -w
 ```
 
-The initial state is restored when scrcpy is closed.
+The initial state is restored when irobot is closed.
 
 
 #### Turn screen off
@@ -323,8 +323,8 @@ It is possible to turn the device screen off while mirroring on start with a
 command-line option:
 
 ```bash
-scrcpy --turn-screen-off
-scrcpy -S
+irobot --turn-screen-off
+irobot -S
 ```
 
 Or by pressing `Ctrl`+`o` at any time.
@@ -334,21 +334,21 @@ To turn it back on, press `Ctrl`+`Shift`+`o` (or `POWER`, `Ctrl`+`p`).
 It can also be useful to prevent the device from sleeping:
 
 ```bash
-scrcpy --turn-screen-off --stay-awake
-scrcpy -Sw
+irobot --turn-screen-off --stay-awake
+irobot -Sw
 ```
 
 
 #### Render expired frames
 
-By default, to minimize latency, _scrcpy_ always renders the last decoded frame
+By default, to minimize latency, _irobot_ always renders the last decoded frame
 available, and drops any previous one.
 
 To force the rendering of all frames (at a cost of a possible increased
 latency), use:
 
 ```bash
-scrcpy --render-expired-frames
+irobot --render-expired-frames
 ```
 
 #### Show touches
@@ -358,12 +358,12 @@ device).
 
 Android provides this feature in _Developers options_.
 
-_Scrcpy_ provides an option to enable this feature on start and restore the
+_irobot_ provides an option to enable this feature on start and restore the
 initial value on exit:
 
 ```bash
-scrcpy --show-touches
-scrcpy -t
+irobot --show-touches
+irobot -t
 ```
 
 Note that it only shows _physical_ touches (with the finger on the device).
@@ -405,20 +405,20 @@ But this may [cause issues][prefertext]. If you encounter such a problem, you
 can avoid it by:
 
 ```bash
-scrcpy --prefer-text
+irobot --prefer-text
 ```
 
 (but this will break keyboard behavior in games)
 
-[textevents]: https://blog.rom1v.com/2018/03/introducing-scrcpy/#handle-text-input
-[prefertext]: https://github.com/Genymobile/scrcpy/issues/650#issuecomment-512945343
+[textevents]: https://blog.rom1v.com/2018/03/introducing-irobot/#handle-text-input
+[prefertext]: https://github.com/Genymobile/irobot/issues/650#issuecomment-512945343
 
 
 ### File drop
 
 #### Install APK
 
-To install an APK, drag & drop an APK file (ending with `.apk`) to the _scrcpy_
+To install an APK, drag & drop an APK file (ending with `.apk`) to the _irobot_
 window.
 
 There is no visual feedback, a log is printed to the console.
@@ -427,14 +427,14 @@ There is no visual feedback, a log is printed to the console.
 #### Push file to device
 
 To push a file to `/sdcard/` on the device, drag & drop a (non-APK) file to the
-_scrcpy_ window.
+_irobot_ window.
 
 There is no visual feedback, a log is printed to the console.
 
 The target directory can be changed on start:
 
 ```bash
-scrcpy --push-target /sdcard/foo/bar/
+irobot --push-target /sdcard/foo/bar/
 ```
 
 
