@@ -467,3 +467,11 @@ irobot --push-target /sdcard/foo/bar/
 
 _¹Double-click on black borders to remove them._  
 _²Right-click turns the screen on if it was off, presses BACK otherwise._
+
+## OpenCV Lib Windows x64
+   * install MSYS2
+   * install openCV pacman -S mingw-w64-x86_64-opencv
+   * Add C:\msys64\mingw64\bin to Path
+   * Env Set VCPKG_DEFAULT_TRIPLET=x64-windows
+   * Env Set VCPKG_ROOT=[vcpkg install directory]
+   * Use the lib in \libs\FFmpeg\ffmpeg_x64-windows
