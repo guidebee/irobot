@@ -1,477 +1,293 @@
 # iRobot for Android
 
-[scrcpy](https://github.com/Genymobile/scrcpy)  C++ rewrite and CMake
+A C++17 desktop client for mirroring, controlling, and automating Android devices — built as a C++ rewrite of [scrcpy](https://github.com/Genymobile/scrcpy) with CMake, extended with an **AI agent system** that allows external programs (including machine learning models) to observe and control Android games and apps in real time.
 
- ![irobot_agent](https://github.com/guidebee/irobot/blob/master/docs/irobot_agent.png)
+![irobot_agent](https://github.com/guidebee/irobot/blob/master/docs/irobot_agent.png)
 
+No root access required. Works on GNU/Linux, Windows, and macOS.
 
-This application provides display and control of Android devices connected on USB (or over TCP/IP). It does not require any root access. It works on GNU/Linux, Windows and macOS.
-
-## Architecture
-
- ![irobot_android](https://github.com/guidebee/irobot/blob/master/docs/irobot_android_new_arch.png)
-
-
-
-## Old Architecture
-
- ![irobot_android](https://github.com/guidebee/irobot/blob/master/docs/irobot_android_arch.png)
-
+---
 
 ## Features
 
-### Capture configuration
+- **Screen mirroring** — real-time H.264 video stream rendered via SDL2
+- **Full device control** — keyboard, mouse, touch, scroll, and drag-and-drop
+- **Screen recording** — save to MP4 or MKV while mirroring (or headless)
+- **Clipboard sync** — bidirectional sync between desktop and device
+- **File/APK transfer** — drag and drop files or APKs onto the window
+- **Wireless support** — connect over TCP/IP without USB
+- **AI agent API** — expose device video and control over sockets so external agents can play games or automate the device
+- **Image processing** — OpenCV integration for perceptual hashing and frame analysis
 
-#### Reduce size
+---
 
-Sometimes, it is useful to mirror an Android device at a lower definition to
-increase performance.
+## Architecture
 
-To limit both the width and height to some value (e.g. 1024):
+### Current Architecture
 
-```bash
-irobot --max-size 1024
-irobot -m 1024  # short version
+![irobot_android](https://github.com/guidebee/irobot/blob/master/docs/irobot_android_new_arch.png)
+
+### How it works
+
+```
+Android Device                       Desktop (iRobot)
+──────────────                       ────────────────
+ irobot-server (APK)  ──H.264──►  VideoStream → Decoder → Screen (SDL2)
+                      ◄─Control─  Controller  ← InputManager ← SDL Events
+                                                     │
+                                              AgentManager
+                                           ┌──────┴──────┐
+                                     AgentStream     AgentController
+                                     (video/frames   (receives commands
+                                      → AI client)    from AI client)
 ```
 
-The other dimension is computed to that the device aspect ratio is preserved.
-That way, a device in 1920×1080 will be mirrored at 1024×576.
+The companion `irobot-server` APK is pushed to the device via ADB, captures the screen as an H.264 stream, and relays control messages back as Android input events. The **AgentManager** layer bridges device I/O to external AI clients over TCP sockets, enabling autonomous game playing.
 
+---
 
-#### Change bit-rate
+## Dependencies
 
-The default bit-rate is 8 Mbps. To change the video bitrate (e.g. to 2 Mbps):
+| Library | Purpose |
+|---------|---------|
+| **FFmpeg** | H.264 decode, video recording |
+| **SDL2** | Windowing, rendering, event loop |
+| **OpenCV** | Image processing, perceptual hashing for agents |
+| **nlohmann/json** | Control event serialization |
+| **CMake + vcpkg** | Build system and package management |
+| **ADB** | Device communication and tunneling |
 
-```bash
-irobot --bit-rate 2M
-irobot -b 2M  # short version
-```
+---
 
-#### Limit frame rate
+## Build
 
-The capture frame rate can be limited:
+### Prerequisites
 
-```bash
-irobot --max-fps 15
-```
+- CMake ≥ 3.15
+- vcpkg with `VCPKG_ROOT` set
+- SDL2, FFmpeg, OpenCV installed via vcpkg
 
-This is officially supported since Android 10, but may work on earlier versions.
+### Windows (x64)
 
-#### Crop
-
-The device screen may be cropped to mirror only part of the screen.
-
-This is useful for example to mirror only one eye of the Oculus Go:
-
-```bash
-irobot --crop 1224:1440:0:0   # 1224x1440 at offset (0,0)
-```
-
-If `--max-size` is also specified, resizing is applied after cropping.
-
-
-#### Lock video orientation
-
-
-To lock the orientation of the mirroring:
+Install OpenCV via MSYS2:
 
 ```bash
-irobot --lock-video-orientation 0   # natural orientation
-irobot --lock-video-orientation 1   # 90° counterclockwise
-irobot --lock-video-orientation 2   # 180°
-irobot --lock-video-orientation 3   # 90° clockwise
+pacman -S mingw-w64-x86_64-opencv
 ```
 
-This affects recording orientation.
+Add `C:\msys64\mingw64\bin` to `PATH`, then set:
 
+```
+VCPKG_DEFAULT_TRIPLET=x64-windows
+VCPKG_ROOT=<vcpkg install directory>
+```
 
-### Recording
+FFmpeg libs for Windows are included under `libs/FFmpeg/ffmpeg_x64-windows`.
 
-It is possible to record the screen while mirroring:
+### Configure and build
 
 ```bash
-irobot --record file.mp4
-irobot -r file.mkv
+cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
+cmake --build build --config Release
 ```
 
-To disable mirroring while recording:
+---
 
-```bash
-irobot --no-display --record file.mp4
-irobot -Nr file.mkv
-# interrupt recording with Ctrl+C
-```
+## Usage
 
-"Skipped frames" are recorded, even if they are not displayed in real time (for
-performance reasons). Frames are _timestamped_ on the device, so [packet delay
-variation] does not impact the recorded file.
-
-[packet delay variation]: https://en.wikipedia.org/wiki/Packet_delay_variation
-
-
-### Connection
-
-#### Wireless
-
-_irobot_ uses `adb` to communicate with the device, and `adb` can [connect] to a
-device over TCP/IP:
-
-1. Connect the device to the same Wi-Fi as your computer.
-2. Get your device IP address (in Settings → About phone → Status).
-3. Enable adb over TCP/IP on your device: `adb tcpip 5555`.
-4. Unplug your device.
-5. Connect to your device: `adb connect DEVICE_IP:5555` _(replace `DEVICE_IP`)_.
-6. Run `irobot` as usual.
-
-It may be useful to decrease the bit-rate and the definition:
-
-```bash
-irobot --bit-rate 2M --max-size 800
-irobot -b2M -m800  # short version
-```
-
-[connect]: https://developer.android.com/studio/command-line/adb.html#wireless
-
-
-#### Multi-devices
-
-If several devices are listed in `adb devices`, you must specify the _serial_:
-
-```bash
-irobot --serial 0123456789abcdef
-irobot -s 0123456789abcdef  # short version
-```
-
-If the device is connected over TCP/IP:
-
-```bash
-irobot --serial 192.168.0.1:5555
-irobot -s 192.168.0.1:5555  # short version
-```
-
-You can start several instances of _irobot_ for several devices.
-
-#### Autostart on device connection
-
-You could use [AutoAdb]:
-
-```bash
-autoadb irobot -s '{}'
-```
-
-[AutoAdb]: https://github.com/rom1v/autoadb
-
-#### SSH tunnel
-
-To connect to a remote device, it is possible to connect a local `adb` client to
-a remote `adb` server (provided they use the same version of the _adb_
-protocol):
-
-```bash
-adb kill-server    # kill the local adb server on 5037
-ssh -CN -L5037:localhost:5037 -R27183:localhost:27183 your_remote_computer
-# keep this open
-```
-
-From another terminal:
+### Basic
 
 ```bash
 irobot
 ```
 
-To avoid enabling remote port forwarding, you could force a forward connection
-instead (notice the `-L` instead of `-R`):
+Connects to the first ADB-detected device and opens a mirrored window.
+
+### Capture configuration
 
 ```bash
-adb kill-server    # kill the local adb server on 5037
-ssh -CN -L5037:localhost:5037 -L27183:localhost:27183 your_remote_computer
-# keep this open
+# Limit resolution (preserves aspect ratio)
+irobot --max-size 1024
+irobot -m 1024
+
+# Change bitrate
+irobot --bit-rate 2M
+irobot -b 2M
+
+# Limit frame rate
+irobot --max-fps 15
+
+# Crop the screen region
+irobot --crop 1224:1440:0:0   # 1224x1440 at offset (0,0)
+
+# Lock video orientation (0=natural, 1=90°CCW, 2=180°, 3=90°CW)
+irobot --lock-video-orientation 0
 ```
 
-From another terminal:
+### Recording
 
 ```bash
+# Mirror and record simultaneously
+irobot --record file.mp4
+irobot -r file.mkv
+
+# Record only (no display window)
+irobot --no-display --record file.mp4
+irobot -Nr file.mkv
+# Stop with Ctrl+C
+```
+
+Frames are timestamped on the device, so packet delay variation does not affect the recorded file.
+
+### Connection
+
+#### Wireless
+
+1. Connect device to the same Wi-Fi as your computer.
+2. Find device IP in Settings → About phone → Status.
+3. Enable ADB over TCP/IP: `adb tcpip 5555`
+4. Unplug USB, then: `adb connect DEVICE_IP:5555`
+5. Run `irobot` normally.
+
+For wireless, reducing quality helps:
+
+```bash
+irobot -b2M -m800
+```
+
+#### Multiple devices
+
+```bash
+irobot --serial 0123456789abcdef
+irobot -s 192.168.0.1:5555   # TCP/IP device
+```
+
+#### SSH tunnel
+
+```bash
+# On local machine:
+adb kill-server
+ssh -CN -L5037:localhost:5037 -R27183:localhost:27183 your_remote_host
+# In another terminal:
+irobot
+```
+
+To force a forward connection instead:
+
+```bash
+adb kill-server
+ssh -CN -L5037:localhost:5037 -L27183:localhost:27183 your_remote_host
+# In another terminal:
 irobot --force-adb-forward
-```
-
-
-Like for wireless connections, it may be useful to reduce quality:
-
-```
-irobot -b2M -m800 --max-fps 15
 ```
 
 ### Window configuration
 
-#### Title
-
-By default, the window title is the device model. It can be changed:
-
 ```bash
 irobot --window-title 'My device'
-```
-
-#### Position and size
-
-The initial window position and size may be specified:
-
-```bash
 irobot --window-x 100 --window-y 100 --window-width 800 --window-height 600
-```
-
-#### Borderless
-
-To disable window decorations:
-
-```bash
 irobot --window-borderless
-```
-
-#### Always on top
-
-To keep the irobot window always on top:
-
-```bash
 irobot --always-on-top
+irobot --fullscreen        # or -f
+irobot --rotation 1        # 0=none, 1=90°CCW, 2=180°, 3=90°CW
 ```
 
-#### Fullscreen
-
-The app may be started directly in fullscreen:
+### Other options
 
 ```bash
-irobot --fullscreen
-irobot -f  # short version
+irobot --no-control          # read-only mirror, no input
+irobot --display 1           # mirror a secondary display
+irobot --stay-awake          # prevent device sleep
+irobot --turn-screen-off     # turn off device screen while mirroring
+irobot --show-touches        # show physical touch indicators
+irobot --render-expired-frames  # render all frames (higher latency)
+irobot --prefer-text         # inject text events instead of key events
+irobot --push-target /sdcard/foo/  # change drag-and-drop target directory
 ```
 
-Fullscreen can then be toggled dynamically with `Ctrl`+`f`.
+---
 
-#### Rotation
+## AI Agent API
 
-The window may be rotated:
+iRobot exposes two sockets that external AI clients connect to:
 
-```bash
-irobot --rotation 1
-```
+| Socket | Direction | Purpose |
+|--------|-----------|---------|
+| **AgentStream** | iRobot → Agent | Streams video frames and OpenCV Mat data |
+| **AgentController** | Agent → iRobot | Receives touch/key commands from agent |
 
-Possibles values are:
- - `0`: no rotation
- - `1`: 90 degrees counterclockwise
- - `2`: 180 degrees
- - `3`: 90 degrees clockwise
+### Message types
 
-The rotation can also be changed dynamically with `Ctrl`+`←` _(left)_ and
-`Ctrl`+`→` _(right)_.
+- `BLOB_MSG_TYPE_SCREENSHOT` — sends a screen capture to the agent
+- `BLOB_MSG_TYPE_OPENCV_MAT` — sends a processed (resized/grayscale) image
+- Standard control messages — `INJECT_TOUCH_EVENT`, `INJECT_KEYCODE`, etc.
 
-Note that _irobot_ manages 3 different rotations:
- - `Ctrl`+`r` requests the device to switch between portrait and landscape (the
-   current running app may refuse, if it does support the requested
-   orientation).
- - `--lock-video-orientation` changes the mirroring orientation (the orientation
-   of the video sent from the device to the computer). This affects the
-   recording.
- - `--rotation` (or `Ctrl`+`←`/`Ctrl`+`→`) rotates only the window content. This
-   affects only the display, not the recording.
+### Event recording
 
+With `--record-agent-events`, gameplay control events are serialized to `events.json` for replay, dataset collection, or imitation learning.
 
-### Other mirroring options
+### Image processing
 
-#### Read-only
+The `brain` module (`src/ai/brain.cpp`) provides:
+- `SaveFrame()` — capture a frame to disk
+- `ConvertToMat()` — convert an H.264-decoded `AVFrame` to an OpenCV `Mat` (resized, grayscale)
 
-To disable controls (everything which can interact with the device: input keys,
-mouse events, drag&drop files):
+OpenCV PHash (perceptual hashing) is available for comparing game states across frames.
 
-```bash
-irobot --no-control
-irobot -n
-```
-
-#### Display
-
-If several displays are available, it is possible to select the display to
-mirror:
-
-```bash
-irobot --display 1
-```
-
-The list of display ids can be retrieved by:
-
-```
-adb shell dumpsys display   # search "mDisplayId=" in the output
-```
-
-The secondary display may only be controlled if the device runs at least Android
-10 (otherwise it is mirrored in read-only).
-
-
-#### Stay awake
-
-To prevent the device to sleep after some delay when the device is plugged in:
-
-```bash
-irobot --stay-awake
-irobot -w
-```
-
-The initial state is restored when irobot is closed.
-
-
-#### Turn screen off
-
-It is possible to turn the device screen off while mirroring on start with a
-command-line option:
-
-```bash
-irobot --turn-screen-off
-irobot -S
-```
-
-Or by pressing `Ctrl`+`o` at any time.
-
-To turn it back on, press `Ctrl`+`Shift`+`o` (or `POWER`, `Ctrl`+`p`).
-
-It can also be useful to prevent the device from sleeping:
-
-```bash
-irobot --turn-screen-off --stay-awake
-irobot -Sw
-```
-
-
-#### Render expired frames
-
-By default, to minimize latency, _irobot_ always renders the last decoded frame
-available, and drops any previous one.
-
-To force the rendering of all frames (at a cost of a possible increased
-latency), use:
-
-```bash
-irobot --render-expired-frames
-```
-
-#### Show touches
-
-For presentations, it may be useful to show physical touches (on the physical
-device).
-
-Android provides this feature in _Developers options_.
-
-_irobot_ provides an option to enable this feature on start and restore the
-initial value on exit:
-
-```bash
-irobot --show-touches
-irobot -t
-```
-
-Note that it only shows _physical_ touches (with the finger on the device).
-
-
-### Input control
-
-#### Rotate device screen
-
-Press `Ctrl`+`r` to switch between portrait and landscape modes.
-
-Note that it rotates only if the application in foreground supports the
-requested orientation.
-
-#### Copy-paste
-
-It is possible to synchronize clipboards between the computer and the device, in
-both directions:
-
- - `Ctrl`+`c` copies the device clipboard to the computer clipboard;
- - `Ctrl`+`Shift`+`v` copies the computer clipboard to the device clipboard (and
-   pastes if the device runs Android >= 7);
- - `Ctrl`+`v` _pastes_ the computer clipboard as a sequence of text events (but
-   breaks non-ASCII characters).
-
-Moreover, any time the Android clipboard changes, it is automatically
-synchronized to the computer clipboard.
-
-#### Text injection preference
-
-There are two kinds of [events][textevents] generated when typing text:
- - _key events_, signaling that a key is pressed or released;
- - _text events_, signaling that a text has been entered.
-
-By default, letters are injected using key events, so that the keyboard behaves
-as expected in games (typically for WASD keys).
-
-But this may [cause issues][prefertext]. If you encounter such a problem, you
-can avoid it by:
-
-```bash
-irobot --prefer-text
-```
-
-(but this will break keyboard behavior in games)
-
-[textevents]: https://blog.rom1v.com/2018/03/introducing-irobot/#handle-text-input
-[prefertext]: https://github.com/Genymobile/irobot/issues/650#issuecomment-512945343
-
-
-### File drop
-
-#### Install APK
-
-To install an APK, drag & drop an APK file (ending with `.apk`) to the _irobot_
-window.
-
-There is no visual feedback, a log is printed to the console.
-
-
-#### Push file to device
-
-To push a file to `/sdcard/` on the device, drag & drop a (non-APK) file to the
-_irobot_ window.
-
-There is no visual feedback, a log is printed to the console.
-
-The target directory can be changed on start:
-
-```bash
-irobot --push-target /sdcard/foo/bar/
-```
-
+---
 
 ## Shortcuts
 
- | Action                                      |   Shortcut                    |   Shortcut (macOS)
- | ------------------------------------------- |:----------------------------- |:-----------------------------
- | Switch fullscreen mode                      | `Ctrl`+`f`                    | `Cmd`+`f`
- | Rotate display left                         | `Ctrl`+`←` _(left)_           | `Cmd`+`←` _(left)_
- | Rotate display right                        | `Ctrl`+`→` _(right)_          | `Cmd`+`→` _(right)_
- | Resize window to 1:1 (pixel-perfect)        | `Ctrl`+`g`                    | `Cmd`+`g`
- | Resize window to remove black borders       | `Ctrl`+`x` \| _Double-click¹_ | `Cmd`+`x`  \| _Double-click¹_
- | Click on `HOME`                             | `Ctrl`+`h` \| _Middle-click_  | `Ctrl`+`h` \| _Middle-click_
- | Click on `BACK`                             | `Ctrl`+`b` \| _Right-click²_  | `Cmd`+`b`  \| _Right-click²_
- | Click on `APP_SWITCH`                       | `Ctrl`+`s`                    | `Cmd`+`s`
- | Click on `MENU`                             | `Ctrl`+`m`                    | `Ctrl`+`m`
- | Click on `VOLUME_UP`                        | `Ctrl`+`↑` _(up)_             | `Cmd`+`↑` _(up)_
- | Click on `VOLUME_DOWN`                      | `Ctrl`+`↓` _(down)_           | `Cmd`+`↓` _(down)_
- | Click on `POWER`                            | `Ctrl`+`p`                    | `Cmd`+`p`
- | Power on                                    | _Right-click²_                | _Right-click²_
- | Turn device screen off (keep mirroring)     | `Ctrl`+`o`                    | `Cmd`+`o`
- | Turn device screen on                       | `Ctrl`+`Shift`+`o`            | `Cmd`+`Shift`+`o`
- | Rotate device screen                        | `Ctrl`+`r`                    | `Cmd`+`r`
- | Expand notification panel                   | `Ctrl`+`n`                    | `Cmd`+`n`
- | Collapse notification panel                 | `Ctrl`+`Shift`+`n`            | `Cmd`+`Shift`+`n`
- | Copy device clipboard to computer           | `Ctrl`+`c`                    | `Cmd`+`c`
- | Paste computer clipboard to device          | `Ctrl`+`v`                    | `Cmd`+`v`
- | Copy computer clipboard to device and paste | `Ctrl`+`Shift`+`v`            | `Cmd`+`Shift`+`v`
- | Enable/disable FPS counter (on stdout)      | `Ctrl`+`i`                    | `Cmd`+`i`
+| Action | Shortcut | macOS |
+|--------|----------|-------|
+| Toggle fullscreen | `Ctrl`+`f` | `Cmd`+`f` |
+| Rotate display left | `Ctrl`+`←` | `Cmd`+`←` |
+| Rotate display right | `Ctrl`+`→` | `Cmd`+`→` |
+| Resize to 1:1 (pixel-perfect) | `Ctrl`+`g` | `Cmd`+`g` |
+| Remove black borders | `Ctrl`+`x` / double-click | `Cmd`+`x` |
+| HOME | `Ctrl`+`h` / middle-click | `Ctrl`+`h` |
+| BACK | `Ctrl`+`b` / right-click | `Cmd`+`b` |
+| APP_SWITCH | `Ctrl`+`s` | `Cmd`+`s` |
+| MENU | `Ctrl`+`m` | `Ctrl`+`m` |
+| VOLUME_UP | `Ctrl`+`↑` | `Cmd`+`↑` |
+| VOLUME_DOWN | `Ctrl`+`↓` | `Cmd`+`↓` |
+| POWER | `Ctrl`+`p` | `Cmd`+`p` |
+| Power on | right-click | right-click |
+| Turn screen off | `Ctrl`+`o` | `Cmd`+`o` |
+| Turn screen on | `Ctrl`+`Shift`+`o` | `Cmd`+`Shift`+`o` |
+| Rotate device screen | `Ctrl`+`r` | `Cmd`+`r` |
+| Expand notifications | `Ctrl`+`n` | `Cmd`+`n` |
+| Collapse notifications | `Ctrl`+`Shift`+`n` | `Cmd`+`Shift`+`n` |
+| Copy device clipboard | `Ctrl`+`c` | `Cmd`+`c` |
+| Paste to device | `Ctrl`+`v` | `Cmd`+`v` |
+| Copy & paste to device | `Ctrl`+`Shift`+`v` | `Cmd`+`Shift`+`v` |
+| Toggle FPS counter | `Ctrl`+`i` | `Cmd`+`i` |
 
-_¹Double-click on black borders to remove them._  
-_²Right-click turns the screen on if it was off, presses BACK otherwise._
+---
 
-## OpenCV Lib Windows x64
-   * install MSYS2
-   * install openCV pacman -S mingw-w64-x86_64-opencv
-   * Add C:\msys64\mingw64\bin to Path
-   * Env Set VCPKG_DEFAULT_TRIPLET=x64-windows
-   * Env Set VCPKG_ROOT=[vcpkg install directory]
-   * Use the lib in \libs\FFmpeg\ffmpeg_x64-windows
+## Project Structure
+
+```
+src/
+├── irobot.cpp          # entry point, argument parsing
+├── core/               # lifecycle, device server, controller
+├── android/            # ADB communication, input event types
+├── message/            # control/device/blob message serialization
+├── video/              # H.264 stream, FFmpeg decoder, recorder
+├── agent/              # AI agent manager, controller, stream
+├── ai/                 # image processing (brain.cpp)
+├── ui/                 # SDL window, input manager, event converter
+├── platform/           # cross-platform net/command (Windows + Unix)
+└── util/               # circular buffers, queues, locks, logging
+server/
+└── irobot-server       # compiled Android APK deployed to device
+libs/
+└── FFmpeg/             # bundled FFmpeg for Windows x64
+```
+
+---
+
+## Related Projects
+
+- [scrcpy](https://github.com/Genymobile/scrcpy) — the original C project this is based on
+- [AutoAdb](https://github.com/rom1v/autoadb) — auto-start irobot when a device connects (`autoadb irobot -s '{}'`)
