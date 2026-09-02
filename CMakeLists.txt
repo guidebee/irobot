@@ -144,6 +144,11 @@ function(APP name)
         endforeach()
     endif ()
 
+    add_custom_command(TARGET ${APP_TARGET} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            "${CMAKE_HOME_DIRECTORY}/server"
+            "$<TARGET_FILE_DIR:${APP_TARGET}>/server")
+
     install(DIRECTORY ${CMAKE_HOME_DIRECTORY}/server
             DESTINATION ${CMAKE_CURRENT_BINARY_DIR})
 

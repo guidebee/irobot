@@ -1,0 +1,18 @@
+{
+  "version": 3,
+  "configurePresets": [
+    {
+      "name": "x64-mingw-clion",
+      "displayName": "x64 MinGW (CLion toolchain + vcpkg)",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
+        "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
+        "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic",
+        "CMAKE_C_COMPILER": "C:/Users/james/AppData/Local/Programs/CLion/bin/mingw/bin/gcc.exe",
+        "CMAKE_CXX_COMPILER": "C:/Users/james/AppData/Local/Programs/CLion/bin/mingw/bin/g++.exe",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ]
+}
