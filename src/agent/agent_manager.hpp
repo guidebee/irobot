@@ -11,7 +11,7 @@
 #include "agent/agent_controller.hpp"
 #include "agent/agent_stream.hpp"
 #include "core/controller.hpp"
-#include <opencv2/img_hash.hpp>
+#include <opencv2/core.hpp>
 #include "ui/events.hpp"
 #include "video/video_buffer.hpp"
 
@@ -50,7 +50,6 @@ namespace irobot::agent {
 
         bool PushDeviceControlMessage(const message::ControlMessage *msg); // Agent-->Device
 
-        cv::Ptr<cv::img_hash::ImgHashBase> phash_func;
 
     private:
         void ProcessKey(const SDL_KeyboardEvent *event);

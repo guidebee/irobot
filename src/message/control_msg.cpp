@@ -22,48 +22,65 @@
 namespace irobot::message {
 
     size_t ControlMessage::Serialize(unsigned char *buf) {
-        buf[0] = this->type;
+        buf[0] = (uint8_t) this->type;
         switch (this->type) {
             case CONTROL_MSG_TYPE_INJECT_KEYCODE:
+                // [type(1)][action(1)][keycode(4)][repeat(4)][metaState(4)] = 14 bytes
                 buf[1] = this->inject_keycode.action;
                 util::buffer_write32be(&buf[2], this->inject_keycode.keycode);
-                util::buffer_write32be(&buf[6], this->inject_keycode.metastate);
-                return 10;
+                util::buffer_write32be(&buf[6], 0); // repeat = 0
+                util::buffer_write32be(&buf[10], this->inject_keycode.metastate);
+                return 14;
             case CONTROL_MSG_TYPE_INJECT_TEXT: {
+                // [type(1)][4-byte len][N bytes]
                 size_t len = WriteString(this->inject_text.text,
                                          CONTROL_MSG_TEXT_MAX_LENGTH, &buf[1]);
                 return 1 + len;
             }
             case CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT: {
+                // [type(1)][action(1)][pointerId(8)][position(12)][pressure(2)][actionButton(4)][buttons(4)] = 32 bytes
                 buf[1] = this->inject_touch_event.action;
                 util::buffer_write64be(&buf[2], this->inject_touch_event.pointer_id);
                 WritePosition(&buf[10], &this->inject_touch_event.position);
-                uint16_t pressure =
-                        ToFixedPoint16(this->inject_touch_event.pressure);
+                uint16_t pressure = ToFixedPoint16(this->inject_touch_event.pressure);
                 util::buffer_write16be(&buf[22], pressure);
-                util::buffer_write32be(&buf[24], this->inject_touch_event.buttons);
-                return 28;
+                util::buffer_write32be(&buf[24], 0); // actionButton = 0
+                util::buffer_write32be(&buf[28], this->inject_touch_event.buttons);
+                return 32;
             }
             case CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT:
+                // [type(1)][position(12)][hScroll(2)][vScroll(2)][buttons(4)] = 21 bytes
+                // Server decodes i16 as float (val/32768) then multiplies by 16.
+                // So 1 SDL scroll unit → encode 2048 (= 32768/16) as signed i16.
                 WritePosition(&buf[1], &this->inject_scroll_event.position);
-                util::buffer_write32be(&buf[13],
-                                       (uint32_t) this->inject_scroll_event.hscroll);
-                util::buffer_write32be(&buf[17],
-                                       (uint32_t) this->inject_scroll_event.vscroll);
+                util::buffer_write16be(&buf[13], (uint16_t)(int16_t)(this->inject_scroll_event.hscroll * 2048));
+                util::buffer_write16be(&buf[15], (uint16_t)(int16_t)(this->inject_scroll_event.vscroll * 2048));
+                util::buffer_write32be(&buf[17], 0); // buttons = 0
                 return 21;
-            case CONTROL_MSG_TYPE_SET_CLIPBOARD: {
-                size_t len = WriteString(this->inject_text.text,
-                                         CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH,
-                                         &buf[1]);
-                return 1 + len;
-            }
-            case CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE:
-                buf[1] = this->set_screen_power_mode.mode;
-                return 2;
             case CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON:
-            case CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL:
-            case CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL:
+                // [type(1)][action(1)] = 2 bytes
+                buf[1] = this->back_or_screen_on.action;
+                return 2;
+            case CONTROL_MSG_TYPE_SET_CLIPBOARD: {
+                // [type(1)][sequence(8)][paste(1)][4-byte len][N bytes]
+                util::buffer_write64be(&buf[1], 0); // sequence = SEQUENCE_INVALID
+                buf[9] = 0; // paste = false
+                size_t len = WriteString(this->set_clipboard.text,
+                                         CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH,
+                                         &buf[10]);
+                return 10 + len;
+            }
             case CONTROL_MSG_TYPE_GET_CLIPBOARD:
+                // [type(1)][copyKey(1)] = 2 bytes
+                buf[1] = (uint8_t) this->get_clipboard.copy_key;
+                return 2;
+            case CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE:
+                // [type(1)][on(1)] = 2 bytes; mode NORMAL(2) → on=true, OFF(0) → on=false
+                buf[1] = (this->set_screen_power_mode.mode != SCREEN_POWER_MODE_OFF) ? 1 : 0;
+                return 2;
+            case CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL:
+            case CONTROL_MSG_TYPE_EXPAND_SETTINGS_PANEL:
+            case CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL:
             case CONTROL_MSG_TYPE_ROTATE_DEVICE:
                 // no additional data
                 return 1;
@@ -378,12 +395,12 @@ namespace irobot::message {
         util::buffer_write16be(&buf[10], position->screen_size.height);
     }
 
-// write length (2 bytes) + string (non nul-terminated)
+// write length (4 bytes) + string (non nul-terminated)
     size_t ControlMessage::WriteString(const char *utf8, size_t max_len, unsigned char *buf) {
         size_t len = util::utf8_truncation_index(utf8, max_len);
-        util::buffer_write16be(buf, (uint16_t) len);
-        memcpy(&buf[2], utf8, len);
-        return 2 + len;
+        util::buffer_write32be(buf, (uint32_t) len);
+        memcpy(&buf[4], utf8, len);
+        return 4 + len;
     }
 
     uint16_t ControlMessage::ToFixedPoint16(float f) {

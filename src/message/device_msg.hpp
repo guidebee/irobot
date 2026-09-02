@@ -25,7 +25,9 @@ extern "C" {
 namespace irobot::message {
 
     enum DeviceMessageType {
-        DEVICE_MSG_TYPE_CLIPBOARD,
+        DEVICE_MSG_TYPE_CLIPBOARD = 0,
+        DEVICE_MSG_TYPE_ACK_CLIPBOARD = 1,
+        DEVICE_MSG_TYPE_UHID_OUTPUT = 2,
     };
 
     struct DeviceMessage {

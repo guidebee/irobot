@@ -6,6 +6,7 @@
 #include "recorder.hpp"
 
 #include <cassert>
+#include <cstring>
 #include "config.hpp"
 
 #include "util/lock.hpp"
@@ -87,8 +88,10 @@ namespace irobot::video {
             return nullptr;
         }
 
-        // av_packet_ref() does not initialize all fields in old FFmpeg versions
-        av_init_packet(&rec->packet);
+        memset(&rec->packet, 0, sizeof(AVPacket));
+        rec->packet.pts = AV_NOPTS_VALUE;
+        rec->packet.dts = AV_NOPTS_VALUE;
+        rec->packet.pos = -1;
 
         if (av_packet_ref(&rec->packet, packet)) {
             SDL_free(rec);

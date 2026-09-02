@@ -18,6 +18,7 @@ No root access required. Works on GNU/Linux, Windows, and macOS.
 - **Wireless support** — connect over TCP/IP without USB
 - **AI agent API** — expose device video and control over sockets so external agents can play games or automate the device
 - **Image processing** — OpenCV integration for perceptual hashing and frame analysis
+- **Android 12+ compatible** — updated server uses the current scrcpy wire protocol
 
 ---
 
@@ -61,34 +62,90 @@ The companion `irobot-server` APK is pushed to the device via ADB, captures the 
 
 ## Build
 
-### Prerequisites
+### 1. Building the Android Server (`irobot-server`)
 
-- CMake ≥ 3.15
-- vcpkg with `VCPKG_ROOT` set
-- SDL2, FFmpeg, OpenCV installed via vcpkg
+The Android server is the APK that runs on the device. It is compiled from Java source under `irobot_server/` using a Gradle-free script to avoid SSL issues that can occur on some network configurations (e.g. VPN with TLS inspection).
 
-### Windows (x64)
+#### Requirements
 
-Install OpenCV via MSYS2:
+- Android SDK with **API level 37** and **Build Tools 35.0.0**
+- Java JDK 21 (the one bundled with Android Studio works: `<SDK>/openjdk/jdk-21.x.x`)
+- MSYS2 / Git Bash on Windows
+
+#### Build steps
+
+```bash
+cd /c/workspace/irobot_server
+
+# Set SDK and JDK paths (adjust to your installation)
+export ANDROID_HOME="/c/Users/<user>/AppData/Local/Android/Sdk"
+export JAVA_HOME="/c/Program Files/Android/openjdk/jdk-21.0.8"
+export PATH="$JAVA_HOME/bin:$PATH"
+
+bash build_server.sh
+```
+
+Output: `build_manual/irobot-server` (~100 KB DEX jar).
+
+#### Deploy to the desktop client
+
+Copy the built server to both locations so the desktop client can push it to devices:
+
+```bash
+cp build_manual/irobot-server /c/workspace/irobot/server/irobot-server
+cp build_manual/irobot-server /c/workspace/irobot/build/apps/server/irobot-server
+```
+
+#### Known gotchas (already handled by the script)
+
+| Issue | Fix |
+|-------|-----|
+| Platform dir named `android-37.0` instead of `android-37` | Script falls back automatically |
+| `aidl.exe` rejects POSIX paths on Windows | Script converts paths with `cygpath -w` |
+| `d8` not found on Windows | Script uses `d8.bat` |
+| UTF-8 BOM in Java source files copied from Windows | Strip with `python3 -c "..."` before building |
+| Missing `android/content/IContentProvider.java` | Fake stub included in source tree |
+| Socket name mismatch with C++ client | `DesktopConnection.java` uses `"irobot"` prefix |
+
+---
+
+### 2. Building the Desktop Client (`irobot`)
+
+#### Requirements
+
+- **CMake** ≥ 3.15
+- **Ninja** (recommended; bundled with CLion on Windows)
+- **MinGW-w64** GCC ≥ 10 on Windows (bundled with CLion works)
+- **vcpkg** with `VCPKG_ROOT` set (for SDL2, nlohmann-json)
+- **OpenCV** — on Windows, install via MSYS2:
 
 ```bash
 pacman -S mingw-w64-x86_64-opencv
 ```
 
-Add `C:\msys64\mingw64\bin` to `PATH`, then set:
+Add `C:\msys64\mingw64\bin` to `PATH`.
 
-```
-VCPKG_DEFAULT_TRIPLET=x64-windows
-VCPKG_ROOT=<vcpkg install directory>
-```
+FFmpeg libs for Windows are bundled under `libs/FFmpeg/ffmpeg_x64-windows` — no separate installation needed.
 
-FFmpeg libs for Windows are included under `libs/FFmpeg/ffmpeg_x64-windows`.
-
-### Configure and build
+#### Configure and build
 
 ```bash
-cmake -B build -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake
-cmake --build build --config Release
+# Configure (first time only)
+cmake -B build \
+  -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
+  -G Ninja
+
+# Build
+cmake --build build --target irobot
+```
+
+With CLion on Windows, open the project and use the IDE build. The CMake cache will pick up the bundled MinGW and Ninja automatically.
+
+#### Output
+
+```
+build/apps/irobot.exe          # desktop client
+build/apps/server/irobot-server  # server APK (deployed to device at runtime)
 ```
 
 ---
@@ -241,27 +298,27 @@ OpenCV PHash (perceptual hashing) is available for comparing game states across 
 | Action | Shortcut | macOS |
 |--------|----------|-------|
 | Toggle fullscreen | `Ctrl`+`f` | `Cmd`+`f` |
-| Rotate display left | `Ctrl`+`←` | `Cmd`+`←` |
-| Rotate display right | `Ctrl`+`→` | `Cmd`+`→` |
 | Resize to 1:1 (pixel-perfect) | `Ctrl`+`g` | `Cmd`+`g` |
 | Remove black borders | `Ctrl`+`x` / double-click | `Cmd`+`x` |
 | HOME | `Ctrl`+`h` / middle-click | `Ctrl`+`h` |
-| BACK | `Ctrl`+`b` / right-click | `Cmd`+`b` |
+| BACK | `Ctrl`+`b` / right-click (hold) | `Cmd`+`b` |
 | APP_SWITCH | `Ctrl`+`s` | `Cmd`+`s` |
 | MENU | `Ctrl`+`m` | `Ctrl`+`m` |
 | VOLUME_UP | `Ctrl`+`↑` | `Cmd`+`↑` |
 | VOLUME_DOWN | `Ctrl`+`↓` | `Cmd`+`↓` |
 | POWER | `Ctrl`+`p` | `Cmd`+`p` |
-| Power on | right-click | right-click |
 | Turn screen off | `Ctrl`+`o` | `Cmd`+`o` |
 | Turn screen on | `Ctrl`+`Shift`+`o` | `Cmd`+`Shift`+`o` |
 | Rotate device screen | `Ctrl`+`r` | `Cmd`+`r` |
 | Expand notifications | `Ctrl`+`n` | `Cmd`+`n` |
-| Collapse notifications | `Ctrl`+`Shift`+`n` | `Cmd`+`Shift`+`n` |
+| Expand settings panel | `Ctrl`+`n` (hold) | `Cmd`+`n` (hold) |
+| Collapse panels | `Ctrl`+`Shift`+`n` | `Cmd`+`Shift`+`n` |
 | Copy device clipboard | `Ctrl`+`c` | `Cmd`+`c` |
 | Paste to device | `Ctrl`+`v` | `Cmd`+`v` |
 | Copy & paste to device | `Ctrl`+`Shift`+`v` | `Cmd`+`Shift`+`v` |
 | Toggle FPS counter | `Ctrl`+`i` | `Cmd`+`i` |
+
+Right-click sends BACK (press and release). The screen turns on automatically if it is off.
 
 ---
 
@@ -283,7 +340,36 @@ server/
 └── irobot-server       # compiled Android APK deployed to device
 libs/
 └── FFmpeg/             # bundled FFmpeg for Windows x64
+irobot_server/
+├── app/src/main/java/  # Android server Java source (scrcpy-based)
+└── build_server.sh     # Gradle-free build script
 ```
+
+---
+
+## Compatibility
+
+### Server protocol (updated)
+
+The Android server and C++ client have been updated to the current [scrcpy](https://github.com/Genymobile/scrcpy) wire protocol. Key changes from the original 2020-era protocol:
+
+| Area | Change |
+|------|--------|
+| Server launch | Arguments are now `key=value` pairs (e.g. `max_size=1024`) instead of positional |
+| Audio | Server requires explicit `audio=false` since audio sockets are optional |
+| Video socket handshake | Three-part init: 64-byte device name → 4-byte codec ID → 12-byte session header |
+| Packet headers | Unified 12-byte header: `pts_flags(8) + size(4)`; bit 63 = session, bit 62 = config, bit 61 = keyframe |
+| INJECT_KEYCODE | Added `repeat` field (4 bytes); total 14 bytes |
+| INJECT_TOUCH_EVENT | Added `actionButton` field (4 bytes); total 32 bytes |
+| INJECT_SCROLL_EVENT | `hscroll`/`vscroll` changed from int32 to signed i16 fixed-point (server scales ×16) |
+| BACK_OR_SCREEN_ON | Added `action` field (DOWN/UP); total 2 bytes |
+| GET_CLIPBOARD | Added `copyKey` field (0=none, 1=copy, 2=cut); total 2 bytes |
+| SET_CLIPBOARD | Added 8-byte sequence and paste flag; length prefix changed 2→4 bytes |
+| SET_DISPLAY_POWER | Renamed from SET_SCREEN_POWER_MODE; payload is now a boolean |
+| Device messages | Clipboard length changed 2→4 bytes; ACK_CLIPBOARD and UHID_OUTPUT types added |
+| Type numbers | COLLAPSE_PANELS=7, GET_CLIPBOARD=8, SET_CLIPBOARD=9, SET_DISPLAY_POWER=10, ROTATE_DEVICE=11 |
+
+This update fixes crashes on Android 12+ (`SurfaceControl.createDisplay` API change) and resolves display corruption caused by the old header format.
 
 ---
 

@@ -12,6 +12,31 @@
 #include "util/buffer_util.hpp"
 #include "platform/net.hpp"
 #include "ai/brain.hpp"
+#include <opencv2/imgproc.hpp>
+
+static cv::Mat computePHash(const cv::Mat &img) {
+    cv::Mat gray, resized, dct_img;
+    if (img.channels() > 1)
+        cv::cvtColor(img, gray, cv::COLOR_BGR2GRAY);
+    else
+        gray = img;
+    cv::resize(gray, resized, cv::Size(32, 32));
+    resized.convertTo(dct_img, CV_32F);
+    cv::dct(dct_img, dct_img);
+    cv::Mat roi = dct_img(cv::Rect(0, 0, 8, 8));
+    float mean = static_cast<float>((cv::sum(roi)[0] - roi.at<float>(0, 0)) / 63.0);
+    cv::Mat hash(1, 8, CV_8U, cv::Scalar(0));
+    int bit = 0;
+    for (int i = 0; i < 8; i++) {
+        for (int j = 0; j < 8; j++) {
+            if (i == 0 && j == 0) continue;
+            if (roi.at<float>(i, j) > mean)
+                hash.at<uchar>(0, bit / 8) |= (uchar)(1 << (bit % 8));
+            bit++;
+        }
+    }
+    return hash;
+}
 
 namespace irobot::agent {
 
@@ -164,7 +189,7 @@ namespace irobot::agent {
             auto mat = ai::ConvertToMat(*this->video_buffer, max_size,
                                         color);
             cv::Mat hashImage;
-            this->phash_func->compute(mat, hashImage);
+            hashImage = computePHash(mat);
 
             unsigned char *data = mat.data;
             int width = mat.size().width;

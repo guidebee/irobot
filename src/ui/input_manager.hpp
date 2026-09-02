@@ -41,13 +41,15 @@ namespace irobot::ui {
 
         void ProcessMouseWheel(const SDL_MouseWheelEvent *event);
 
-        void PressBackOrTurnScreenOn();
+        void PressBackOrTurnScreenOn(enum AndroidKeyEventAction action);
 
         void ExpandNotificationPanel();
 
+        void ExpandSettingsPanel();
+
         void CollapseNotificationPanel();
 
-        void RequestDeviceClipboard();
+        void RequestDeviceClipboard(enum CopyKey copy_key = COPY_KEY_COPY);
 
         void SetDeviceClipboard();
 

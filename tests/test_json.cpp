@@ -3,7 +3,7 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#include "catch2/catch.hpp"
+#include <catch2/catch_all.hpp>
 #include <nlohmann/json.hpp>
 
 using nlohmann::json;

@@ -3,7 +3,7 @@
 // Copyright (c) 2020 GUIDEBEE IT. All rights reserved
 //
 
-#include "catch2/catch.hpp"
+#include <catch2/catch_all.hpp>
 #include <cstring>
 
 #include "message/control_msg.hpp"

@@ -33,6 +33,7 @@ namespace irobot::video {
         AVCodecContext *codec_ctx;
         AVCodecContext *codec_cv_ctx;
         SwsContext *sws_cv_ctx;
+        int frame_count;
 
         void Init(VideoBuffer *vb);
 

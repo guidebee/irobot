@@ -32,7 +32,7 @@ namespace irobot::video {
     void Decoder::Init(VideoBuffer *vb) {
         this->video_buffer = vb;
         this->sws_cv_ctx = nullptr;
-
+        this->frame_count = 0;
     }
 
     bool Decoder::Open(const AVCodec *codec) {
@@ -64,9 +64,7 @@ namespace irobot::video {
     }
 
     void Decoder::Close() {
-        avcodec_close(this->codec_ctx);
         avcodec_free_context(&this->codec_ctx);
-        avcodec_close(this->codec_cv_ctx);
         avcodec_free_context(&this->codec_cv_ctx);
         sws_freeContext(this->sws_cv_ctx);
         av_free(this->video_buffer->buffer);
@@ -74,8 +72,11 @@ namespace irobot::video {
     }
 
     bool Decoder::Push(const AVPacket *packet) {
-        // the new decoding/encoding API has been introduced by:
-        // <http://git.videolan.org/?p=ffmpeg.git;a=commitdiff;h=7fc329e2dd6226dfecaa4a1d7adf353bf2773726>
+        if (packet->pts == AV_NOPTS_VALUE) {
+            // CONFIG packet (SPS/PPS): feed to codec but don't expect a decoded frame
+            avcodec_send_packet(this->codec_ctx, packet);
+            return true;
+        }
         int ret;
         if ((ret = avcodec_send_packet(this->codec_ctx, packet)) < 0) {
             LOGE("Could not send video packet: %d", ret);
@@ -135,7 +136,7 @@ namespace irobot::video {
                       this->video_buffer->rgb_frame->data,
                       this->video_buffer->rgb_frame->linesize
             );
-            this->video_buffer->frame_number = this->codec_ctx->frame_number;
+            this->video_buffer->frame_number = ++this->frame_count;
             this->PushFrame();
 
         } else if (ret != AVERROR(EAGAIN)) {
