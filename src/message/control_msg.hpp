@@ -33,6 +33,7 @@ namespace irobot::message {
         CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT      = 3,
         CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON        = 4,
         CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL = 5,
+        CONTROL_MSG_TYPE_EXPAND_SETTINGS_PANEL    = 6,
         CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL = 7, // server: TYPE_COLLAPSE_PANELS
         CONTROL_MSG_TYPE_GET_CLIPBOARD            = 8,
         CONTROL_MSG_TYPE_SET_CLIPBOARD            = 9,
@@ -42,6 +43,13 @@ namespace irobot::message {
         CONTROL_MSG_TYPE_START_RECORDING          = 200,
         CONTROL_MSG_TYPE_END_RECORDING            = 201,
         CONTROL_MSG_TYPE_UNKNOWN                  = 255,
+    };
+
+    // copy_key values for GET_CLIPBOARD
+    enum CopyKey {
+        COPY_KEY_NONE = 0,
+        COPY_KEY_COPY = 1,
+        COPY_KEY_CUT  = 2,
     };
 
     enum ScreenPowerMode {
@@ -74,6 +82,12 @@ namespace irobot::message {
                 int32_t hscroll;
                 int32_t vscroll;
             } inject_scroll_event;
+            struct {
+                enum AndroidKeyEventAction action;
+            } back_or_screen_on;
+            struct {
+                enum CopyKey copy_key;
+            } get_clipboard;
             struct {
                 char *text; // owned, to be freed by SDL_free()
             } set_clipboard;

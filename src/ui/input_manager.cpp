@@ -72,9 +72,10 @@ namespace irobot::ui {
 
 
 // turn the screen on if it was off, press BACK otherwise
-    void InputManager::PressBackOrTurnScreenOn() {
+    void InputManager::PressBackOrTurnScreenOn(enum AndroidKeyEventAction action) {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON;
+        msg.back_or_screen_on.action = action;
 
         if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request 'press back or turn screen on'");
@@ -90,6 +91,15 @@ namespace irobot::ui {
         }
     }
 
+    void InputManager::ExpandSettingsPanel() {
+        struct ControlMessage msg{};
+        msg.type = CONTROL_MSG_TYPE_EXPAND_SETTINGS_PANEL;
+
+        if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
+            LOGW("Could not request 'expand settings panel'");
+        }
+    }
+
     void InputManager::CollapseNotificationPanel() {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL;
@@ -99,9 +109,10 @@ namespace irobot::ui {
         }
     }
 
-    void InputManager::RequestDeviceClipboard() {
+    void InputManager::RequestDeviceClipboard(enum CopyKey copy_key) {
         struct ControlMessage msg{};
         msg.type = CONTROL_MSG_TYPE_GET_CLIPBOARD;
+        msg.get_clipboard.copy_key = copy_key;
 
         if (!this->agent_manager->PushDeviceControlMessage(&msg)) {
             LOGW("Could not request device clipboard");
@@ -296,8 +307,8 @@ namespace irobot::ui {
                     }
                     return;
                 case SDLK_o:
-                    if (control && cmd && !shift && down) {
-                        SetScreenPowerMode(SCREEN_POWER_MODE_OFF);
+                    if (control && cmd && down) {
+                        SetScreenPowerMode(shift ? SCREEN_POWER_MODE_NORMAL : SCREEN_POWER_MODE_OFF);
                     }
                     return;
                 case SDLK_DOWN:
@@ -351,9 +362,11 @@ namespace irobot::ui {
                     }
                     return;
                 case SDLK_n:
-                    if (control && cmd && !repeat && down) {
+                    if (control && cmd && down) {
                         if (shift) {
                             CollapseNotificationPanel();
+                        } else if (repeat) {
+                            ExpandSettingsPanel();
                         } else {
                             ExpandNotificationPanel();
                         }
@@ -481,7 +494,7 @@ namespace irobot::ui {
         }
         if (event->type == SDL_MOUSEBUTTONDOWN) {
             if (control && event->button == SDL_BUTTON_RIGHT) {
-                PressBackOrTurnScreenOn();
+                PressBackOrTurnScreenOn(AKEY_EVENT_ACTION_DOWN);
                 return;
             }
             if (control && event->button == SDL_BUTTON_MIDDLE) {
@@ -498,6 +511,13 @@ namespace irobot::ui {
                 }
             }
             // otherwise, send the click event to the device
+        }
+
+        if (event->type == SDL_MOUSEBUTTONUP) {
+            if (control && event->button == SDL_BUTTON_RIGHT) {
+                PressBackOrTurnScreenOn(AKEY_EVENT_ACTION_UP);
+                return;
+            }
         }
 
         if (!control) {

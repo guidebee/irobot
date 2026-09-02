@@ -59,7 +59,7 @@ namespace irobot::message {
                 return 21;
             case CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON:
                 // [type(1)][action(1)] = 2 bytes
-                buf[1] = 0; // AKEY_EVENT_ACTION_DOWN
+                buf[1] = this->back_or_screen_on.action;
                 return 2;
             case CONTROL_MSG_TYPE_SET_CLIPBOARD: {
                 // [type(1)][sequence(8)][paste(1)][4-byte len][N bytes]
@@ -72,13 +72,14 @@ namespace irobot::message {
             }
             case CONTROL_MSG_TYPE_GET_CLIPBOARD:
                 // [type(1)][copyKey(1)] = 2 bytes
-                buf[1] = 0; // COPY_KEY_NONE
+                buf[1] = (uint8_t) this->get_clipboard.copy_key;
                 return 2;
             case CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE:
                 // [type(1)][on(1)] = 2 bytes; mode NORMAL(2) → on=true, OFF(0) → on=false
                 buf[1] = (this->set_screen_power_mode.mode != SCREEN_POWER_MODE_OFF) ? 1 : 0;
                 return 2;
             case CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL:
+            case CONTROL_MSG_TYPE_EXPAND_SETTINGS_PANEL:
             case CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL:
             case CONTROL_MSG_TYPE_ROTATE_DEVICE:
                 // no additional data
