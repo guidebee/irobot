@@ -8,7 +8,12 @@
 
 struct int_queue CBUF(int, 32);
 
-TEST_CASE("utility cbuf empty", "[util][cbuf]") {
+TEST_CASE (
+"utility cbuf empty"
+,
+"[util][cbuf]"
+)
+ {
     struct int_queue queue{};
     cbuf_init(&queue);
     REQUIRE(cbuf_is_empty(&queue));
@@ -24,7 +29,12 @@ TEST_CASE("utility cbuf empty", "[util][cbuf]") {
     REQUIRE(!take_empty_ok); // the queue is empty
 }
 
-TEST_CASE("utility cbuf full", "[util][cbuf]") {
+TEST_CASE (
+"utility cbuf full"
+,
+"[util][cbuf]"
+)
+ {
     struct int_queue queue{};
     cbuf_init(&queue);
 
@@ -44,7 +54,12 @@ TEST_CASE("utility cbuf full", "[util][cbuf]") {
     REQUIRE(!cbuf_is_full(&queue));
 }
 
-TEST_CASE("utility cbuf push take", "[util][cbuf]") {
+TEST_CASE (
+"utility cbuf push take"
+,
+"[util][cbuf]"
+)
+ {
     struct int_queue queue{};
     cbuf_init(&queue);
 

@@ -35,34 +35,35 @@
  * AVCodecID.
  * @see avcodec_descriptor_get()
  */
-typedef struct AVCodecDescriptor {
-    enum AVCodecID     id;
+typedef struct AVCodecDescriptor
+{
+    enum AVCodecID id;
     enum AVMediaType type;
     /**
      * Name of the codec described by this descriptor. It is non-empty and
      * unique for each codec descriptor. It should contain alphanumeric
      * characters and '_' only.
      */
-    const char      *name;
+    const char* name;
     /**
      * A more descriptive name for this codec. May be NULL.
      */
-    const char *long_name;
+    const char* long_name;
     /**
      * Codec properties, a combination of AV_CODEC_PROP_* flags.
      */
-    int             props;
+    int props;
     /**
      * MIME type(s) associated with the codec.
      * May be NULL; if not, a NULL-terminated array of MIME types.
      * The first item is always non-NULL and is the preferred MIME type.
      */
-    const char *const *mime_types;
+    const char* const * mime_types;
     /**
      * If non-NULL, an array of profiles recognized for this codec.
      * Terminated with FF_PROFILE_UNKNOWN.
      */
-    const struct AVProfile *profiles;
+    const struct AVProfile* profiles;
 } AVCodecDescriptor;
 
 /**
@@ -104,7 +105,7 @@ typedef struct AVCodecDescriptor {
 /**
  * @return descriptor for given codec ID or NULL if no descriptor exists.
  */
-const AVCodecDescriptor *avcodec_descriptor_get(enum AVCodecID id);
+const AVCodecDescriptor* avcodec_descriptor_get(enum AVCodecID id);
 
 /**
  * Iterate over all codec descriptors known to libavcodec.
@@ -113,13 +114,13 @@ const AVCodecDescriptor *avcodec_descriptor_get(enum AVCodecID id);
  *
  * @return next descriptor or NULL after the last descriptor
  */
-const AVCodecDescriptor *avcodec_descriptor_next(const AVCodecDescriptor *prev);
+const AVCodecDescriptor* avcodec_descriptor_next(const AVCodecDescriptor* prev);
 
 /**
  * @return codec descriptor with the given name or NULL if no such descriptor
  *         exists.
  */
-const AVCodecDescriptor *avcodec_descriptor_get_by_name(const char *name);
+const AVCodecDescriptor* avcodec_descriptor_get_by_name(const char* name);
 
 /**
  * @}

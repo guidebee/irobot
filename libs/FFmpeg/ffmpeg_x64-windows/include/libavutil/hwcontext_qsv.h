@@ -32,16 +32,18 @@
 /**
  * This struct is allocated as AVHWDeviceContext.hwctx
  */
-typedef struct AVQSVDeviceContext {
+typedef struct AVQSVDeviceContext
+{
     mfxSession session;
 } AVQSVDeviceContext;
 
 /**
  * This struct is allocated as AVHWFramesContext.hwctx
  */
-typedef struct AVQSVFramesContext {
-    mfxFrameSurface1 *surfaces;
-    int            nb_surfaces;
+typedef struct AVQSVFramesContext
+{
+    mfxFrameSurface1* surfaces;
+    int nb_surfaces;
 
     /**
      * A combination of MFX_MEMTYPE_* describing the frame pool.

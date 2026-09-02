@@ -21,26 +21,29 @@ extern "C" {
 #include "core/actor.hpp"
 #include "util/queue.hpp"
 
-namespace irobot::video {
-    enum RecordFormat {
+namespace irobot::video
+{
+    enum RecordFormat
+    {
         RECORDER_FORMAT_AUTO,
         RECORDER_FORMAT_MP4,
         RECORDER_FORMAT_MKV,
     };
 
-    struct RecordPacket {
+    struct RecordPacket
+    {
         AVPacket packet;
-        struct RecordPacket *next;
+        struct RecordPacket* next;
     };
 
     struct RecordQueue QUEUE(struct RecordPacket);
 
-    class Recorder : public Actor {
+    class Recorder : public Actor
+    {
     public:
-
-        char *filename;
+        char* filename;
         enum RecordFormat format;
-        AVFormatContext *ctx;
+        AVFormatContext* ctx;
         struct Size declared_frame_size;
         bool header_written;
 
@@ -51,41 +54,39 @@ namespace irobot::video {
         // set its duration (next_pts - current_pts)
         // "previous" is only accessed from the recorder thread, so it does not
         // need to be protected by the mutex
-        struct RecordPacket *previous;
+        struct RecordPacket* previous;
 
-        bool Init(const char *filename,
+        bool Init(const char* filename,
                   enum RecordFormat format, struct Size declared_frame_size);
 
         void Destroy() override;
 
-        bool Open(const AVCodec *input_codec);
+        bool Open(const AVCodec* input_codec);
 
         void Close();
 
         bool Start() override;
 
-        bool Push(const AVPacket *packet);
+        bool Push(const AVPacket* packet);
 
-        bool Write(AVPacket *packet);
+        bool Write(AVPacket* packet);
 
-        static const AVOutputFormat *FindMuxer(const char *name);
+        static const AVOutputFormat* FindMuxer(const char* name);
 
-        static RecordPacket *RecordPacketNew(const AVPacket *packet);
+        static RecordPacket* RecordPacketNew(const AVPacket* packet);
 
-        static void RecordPacketDelete(struct RecordPacket *rec);
+        static void RecordPacketDelete(struct RecordPacket* rec);
 
-        static void RecorderQueueClear(struct RecordQueue *queue);
+        static void RecorderQueueClear(struct RecordQueue* queue);
 
-        static const char *RecorderGetFormatName(enum RecordFormat format);
+        static const char* RecorderGetFormatName(enum RecordFormat format);
 
-        static int RunRecorder(void *data);
+        static int RunRecorder(void* data);
 
     private:
+        bool WriteHeader(const AVPacket* packet);
 
-        bool WriteHeader(const AVPacket *packet);
-
-        void RescalePacket(AVPacket *packet);
-
+        void RescalePacket(AVPacket* packet);
     };
 }
 

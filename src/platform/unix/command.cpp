@@ -23,11 +23,14 @@ extern "C" {
 
 #include "util/log.hpp"
 
-namespace irobot::platform {
-    enum ProcessResult cmd_execute(const char *const argv[], pid_t *pid) {
+namespace irobot::platform
+{
+    enum ProcessResult cmd_execute(const char* const argv[], pid_t* pid)
+    {
         int fd[2];
 
-        if (pipe(fd) == -1) {
+        if (pipe(fd) == -1)
+        {
             perror("pipe");
             return PROCESS_ERROR_GENERIC;
         }
@@ -35,39 +38,51 @@ namespace irobot::platform {
         enum ProcessResult ret = PROCESS_SUCCESS;
 
         *pid = fork();
-        if (*pid == -1) {
+        if (*pid == -1)
+        {
             perror("fork");
             ret = PROCESS_ERROR_GENERIC;
             goto end;
         }
 
-        if (*pid > 0) {
+        if (*pid > 0)
+        {
             // parent close write side
             close(fd[1]);
             fd[1] = -1;
             // wait for EOF or receive errno from child
-            if (read(fd[0], &ret, sizeof(ret)) == -1) {
+            if (read(fd[0], &ret, sizeof(ret)) == -1)
+            {
                 perror("read");
                 ret = PROCESS_ERROR_GENERIC;
                 goto end;
             }
-        } else if (*pid == 0) {
+        }
+        else if (*pid == 0)
+        {
             // child close read side
             close(fd[0]);
-            if (fcntl(fd[1], F_SETFD, FD_CLOEXEC) == 0) {
-                execvp(argv[0], (char *const *) argv);
-                if (errno == ENOENT) {
+            if (fcntl(fd[1], F_SETFD, FD_CLOEXEC) == 0)
+            {
+                execvp(argv[0], (char*const *)argv);
+                if (errno == ENOENT)
+                {
                     ret = PROCESS_ERROR_MISSING_BINARY;
-                } else {
+                }
+                else
+                {
                     ret = PROCESS_ERROR_GENERIC;
                 }
                 perror("exec");
-            } else {
+            }
+            else
+            {
                 perror("fcntl");
                 ret = PROCESS_ERROR_GENERIC;
             }
             // send ret to the parent
-            if (write(fd[1], &ret, sizeof(ret)) == -1) {
+            if (write(fd[1], &ret, sizeof(ret)) == -1)
+            {
                 perror("write");
             }
             // close write side before exiting
@@ -75,35 +90,44 @@ namespace irobot::platform {
             _exit(1);
         }
 
-        end:
-        if (fd[0] != -1) {
+    end:
+        if (fd[0] != -1)
+        {
             close(fd[0]);
         }
-        if (fd[1] != -1) {
+        if (fd[1] != -1)
+        {
             close(fd[1]);
         }
         return ret;
     }
 
-    bool cmd_terminate(pid_t pid) {
-        if (pid <= 0) {
+    bool cmd_terminate(pid_t pid)
+    {
+        if (pid <= 0)
+        {
             LOGC("Requested to kill %d, this is an error. Please report the bug.\n",
-                 (int) pid);
+                 (int)pid);
             abort();
         }
         return kill(pid, SIGTERM) != -1;
     }
 
-    bool cmd_simple_wait(pid_t pid, int *exit_code) {
+    bool cmd_simple_wait(pid_t pid, int* exit_code)
+    {
         int status;
         int code;
-        if (waitpid(pid, &status, 0) == -1 || !WIFEXITED(status)) {
+        if (waitpid(pid, &status, 0) == -1 || !WIFEXITED(status))
+        {
             // could not wait, or exited unexpectedly, probably by a signal
             code = -1;
-        } else {
+        }
+        else
+        {
             code = WEXITSTATUS(status);
         }
-        if (exit_code) {
+        if (exit_code)
+        {
             *exit_code = code;
         }
 #ifndef NDEBUG
@@ -113,12 +137,14 @@ namespace irobot::platform {
 #endif
     }
 
-    char *get_executable_path() {
-// <https://stackoverflow.com/a/1024937/1987178>
+    char* get_executable_path()
+    {
+        // <https://stackoverflow.com/a/1024937/1987178>
 #ifdef __linux__
         char buf[PATH_MAX + 1]; // +1 for the null byte
         ssize_t len = readlink("/proc/self/exe", buf, PATH_MAX);
-        if (len == -1) {
+        if (len == -1)
+        {
             perror("readlink");
             return NULL;
         }
@@ -131,5 +157,4 @@ namespace irobot::platform {
         return nullptr;
 #endif
     }
-
 }

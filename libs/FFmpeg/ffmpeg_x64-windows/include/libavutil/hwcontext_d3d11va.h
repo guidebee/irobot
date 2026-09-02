@@ -42,7 +42,8 @@
 /**
  * This struct is allocated as AVHWDeviceContext.hwctx
  */
-typedef struct AVD3D11VADeviceContext {
+typedef struct AVD3D11VADeviceContext
+{
     /**
      * Device used for texture creation and access. This can also be used to
      * set the libavcodec decoding device.
@@ -53,7 +54,7 @@ typedef struct AVD3D11VADeviceContext {
      * Deallocating the AVHWDeviceContext will always release this interface,
      * and it does not matter whether it was user-allocated.
      */
-    ID3D11Device        *device;
+    ID3D11Device* device;
 
     /**
      * If unset, this will be set from the device field on init.
@@ -61,7 +62,7 @@ typedef struct AVD3D11VADeviceContext {
      * Deallocating the AVHWDeviceContext will always release this interface,
      * and it does not matter whether it was user-allocated.
      */
-    ID3D11DeviceContext *device_context;
+    ID3D11DeviceContext* device_context;
 
     /**
      * If unset, this will be set from the device field on init.
@@ -69,7 +70,7 @@ typedef struct AVD3D11VADeviceContext {
      * Deallocating the AVHWDeviceContext will always release this interface,
      * and it does not matter whether it was user-allocated.
      */
-    ID3D11VideoDevice   *video_device;
+    ID3D11VideoDevice* video_device;
 
     /**
      * If unset, this will be set from the device_context field on init.
@@ -77,7 +78,7 @@ typedef struct AVD3D11VADeviceContext {
      * Deallocating the AVHWDeviceContext will always release this interface,
      * and it does not matter whether it was user-allocated.
      */
-    ID3D11VideoContext  *video_context;
+    ID3D11VideoContext* video_context;
 
     /**
      * Callbacks for locking. They protect accesses to device_context and
@@ -91,9 +92,9 @@ typedef struct AVD3D11VADeviceContext {
      * The underlying lock must be recursive. lock_ctx is for free use by the
      * locking implementation.
      */
-    void (*lock)(void *lock_ctx);
-    void (*unlock)(void *lock_ctx);
-    void *lock_ctx;
+    void (*lock)(void* lock_ctx);
+    void (*unlock)(void* lock_ctx);
+    void* lock_ctx;
 } AVD3D11VADeviceContext;
 
 /**
@@ -106,7 +107,8 @@ typedef struct AVD3D11VADeviceContext {
  * This has no use outside of custom allocation, and AVFrame AVBufferRef do not
  * necessarily point to an instance of this struct.
  */
-typedef struct AVD3D11FrameDescriptor {
+typedef struct AVD3D11FrameDescriptor
+{
     /**
      * The texture in which the frame is located. The reference count is
      * managed by the AVBufferRef, and destroying the reference will release
@@ -114,7 +116,7 @@ typedef struct AVD3D11FrameDescriptor {
      *
      * Normally stored in AVFrame.data[0].
      */
-    ID3D11Texture2D *texture;
+    ID3D11Texture2D* texture;
 
     /**
      * The index into the array texture element representing the frame, or 0
@@ -128,7 +130,8 @@ typedef struct AVD3D11FrameDescriptor {
 /**
  * This struct is allocated as AVHWFramesContext.hwctx
  */
-typedef struct AVD3D11VAFramesContext {
+typedef struct AVD3D11VAFramesContext
+{
     /**
      * The canonical texture used for pool allocation. If this is set to NULL
      * on init, the hwframes implementation will allocate and set an array
@@ -149,7 +152,7 @@ typedef struct AVD3D11VAFramesContext {
      * requires a single array texture. It will create ID3D11VideoDecoderOutputView
      * objects for each array texture element on decoder initialization.
      */
-    ID3D11Texture2D *texture;
+    ID3D11Texture2D* texture;
 
     /**
      * D3D11_TEXTURE2D_DESC.BindFlags used for texture creation. The user must

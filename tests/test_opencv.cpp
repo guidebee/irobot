@@ -12,7 +12,12 @@
 
 using namespace cv;
 
-TEST_CASE("test opencv library", "[opencv]") {
+TEST_CASE (
+"test opencv library"
+,
+"[opencv]"
+)
+ {
     Mat A = Mat(3, 4, CV_32FC1);
     Mat B = Mat(4, 3, CV_32FC1);
     REQUIRE(A.rows == 3);

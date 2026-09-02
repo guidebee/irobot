@@ -26,16 +26,16 @@ extern "C" {
 #include "ui/input_manager.hpp"
 #include "video/recorder.hpp"
 
-namespace irobot {
-
-    class IRobotCore {
-
+namespace irobot
+{
+    class IRobotCore
+    {
     public:
-        const char *serial;
-        const char *crop;
-        const char *record_filename;
-        const char *window_title;
-        const char *push_target;
+        const char* serial;
+        const char* crop;
+        const char* record_filename;
+        const char* window_title;
+        const char* push_target;
         enum video::RecordFormat record_format;
         uint16_t port;
         uint16_t max_size;
@@ -63,45 +63,44 @@ namespace irobot {
 
         IRobotCore();
 
-        static int iRobotMain(int argc, char **argv);
+        static int iRobotMain(int argc, char** argv);
 
-        bool ParseArgs(int argc, char **argv);
+        bool ParseArgs(int argc, char** argv);
 
     private:
-
         bool Start();
 
-        static ProcessType SetShowTouchesEnabled(const char *serial, bool enabled);
+        static ProcessType SetShowTouchesEnabled(const char* serial, bool enabled);
 
         static void WaitShowTouches(ProcessType process);
 
         static SDL_LogPriority SDLPriorityFromAVLevel(int level);
 
-        static void AVLogCallback(void *avcl, int level,
-                                  const char *fmt, va_list vl);
+        static void AVLogCallback(void* avcl, int level,
+                                  const char* fmt, va_list vl);
 
-        static bool ParseIntegerArg(const char *s, long *out,
+        static bool ParseIntegerArg(const char* s, long* out,
                                     bool accept_suffix, long min,
-                                    long max, const char *name);
+                                    long max, const char* name);
 
-        static bool ParseBitRate(const char *s, uint32_t *bit_rate);
+        static bool ParseBitRate(const char* s, uint32_t* bit_rate);
 
-        static bool ParseMaxSize(const char *s, uint16_t *max_size);
+        static bool ParseMaxSize(const char* s, uint16_t* max_size);
 
-        static bool ParseMaxFps(const char *s, uint16_t *max_fps);
+        static bool ParseMaxFps(const char* s, uint16_t* max_fps);
 
-        static bool ParseWindowPosition(const char *s, int16_t *position);
+        static bool ParseWindowPosition(const char* s, int16_t* position);
 
-        static bool ParseWindowDimension(const char *s, uint16_t *dimension);
+        static bool ParseWindowDimension(const char* s, uint16_t* dimension);
 
-        static bool ParsePort(const char *s, uint16_t *port);
+        static bool ParsePort(const char* s, uint16_t* port);
 
-        static bool ParseRecordFormat(const char *opt_arg,
-                                      enum video::RecordFormat *format);
+        static bool ParseRecordFormat(const char* opt_arg,
+                                      enum video::RecordFormat* format);
 
-        static enum video::RecordFormat GuessRecordFormat(const char *filename);
+        static enum video::RecordFormat GuessRecordFormat(const char* filename);
 
-        static void PrintUsage(const char *arg0);
+        static void PrintUsage(const char* arg0);
 
         static void PrintVersion();
     };

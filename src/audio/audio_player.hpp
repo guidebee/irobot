@@ -10,25 +10,25 @@
 
 #include <cstdint>
 
-namespace irobot::audio {
-
+namespace irobot::audio
+{
     class AudioBuffer;
 
-    class AudioPlayer {
-
+    class AudioPlayer
+    {
     public:
-        AudioBuffer *audio_buffer = nullptr;
+        AudioBuffer* audio_buffer = nullptr;
         SDL_AudioDeviceID device = 0;
         uint8_t silence = 0;
 
-        void Init(AudioBuffer *buf);
+        void Init(AudioBuffer* buf);
 
         bool Open(int sample_rate, int channels);
 
         void Close();
 
     private:
-        static void SDLCALL AudioCallback(void *userdata, uint8_t *stream, int len);
+        static void SDLCALL AudioCallback(void* userdata, uint8_t* stream, int len);
     };
 }
 

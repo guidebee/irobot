@@ -39,10 +39,11 @@ typedef struct AVCUDADeviceContextInternal AVCUDADeviceContextInternal;
 /**
  * This struct is allocated as AVHWDeviceContext.hwctx
  */
-typedef struct AVCUDADeviceContext {
+typedef struct AVCUDADeviceContext
+{
     CUcontext cuda_ctx;
     CUstream stream;
-    AVCUDADeviceContextInternal *internal;
+    AVCUDADeviceContextInternal* internal;
 } AVCUDADeviceContext;
 
 /**

@@ -30,13 +30,12 @@
  * be used as output by the decoder.
  *
  */
-typedef struct AVMediaCodecContext {
-
+typedef struct AVMediaCodecContext
+{
     /**
      * android/view/Surface object reference.
      */
-    void *surface;
-
+    void* surface;
 } AVMediaCodecContext;
 
 /**
@@ -47,7 +46,7 @@ typedef struct AVMediaCodecContext {
  *
  * @return a pointer to a newly allocated AVMediaCodecContext on success, NULL otherwise
  */
-AVMediaCodecContext *av_mediacodec_alloc_context(void);
+AVMediaCodecContext* av_mediacodec_alloc_context(void);
 
 /**
  * Convenience function that sets up the MediaCodec context.
@@ -57,7 +56,7 @@ AVMediaCodecContext *av_mediacodec_alloc_context(void);
  * @param surface reference to an android/view/Surface
  * @return 0 on success, < 0 otherwise
  */
-int av_mediacodec_default_init(AVCodecContext *avctx, AVMediaCodecContext *ctx, void *surface);
+int av_mediacodec_default_init(AVCodecContext* avctx, AVMediaCodecContext* ctx, void* surface);
 
 /**
  * This function must be called to free the MediaCodec context initialized with
@@ -65,7 +64,7 @@ int av_mediacodec_default_init(AVCodecContext *avctx, AVMediaCodecContext *ctx, 
  *
  * @param avctx codec context
  */
-void av_mediacodec_default_free(AVCodecContext *avctx);
+void av_mediacodec_default_free(AVCodecContext * avctx);
 
 /**
  * Opaque structure representing a MediaCodec buffer to render.
@@ -83,7 +82,7 @@ typedef struct MediaCodecBuffer AVMediaCodecBuffer;
  * discard the buffer
  * @return 0 on success, < 0 otherwise
  */
-int av_mediacodec_release_buffer(AVMediaCodecBuffer *buffer, int render);
+int av_mediacodec_release_buffer(AVMediaCodecBuffer* buffer, int render);
 
 /**
  * Release a MediaCodec buffer and render it at the given time to the surface
@@ -96,6 +95,6 @@ int av_mediacodec_release_buffer(AVMediaCodecBuffer *buffer, int render);
  * @param time timestamp in nanoseconds of when to render the buffer
  * @return 0 on success, < 0 otherwise
  */
-int av_mediacodec_render_buffer_at_time(AVMediaCodecBuffer *buffer, int64_t time);
+int av_mediacodec_render_buffer_at_time(AVMediaCodecBuffer* buffer, int64_t time);
 
 #endif /* AVCODEC_MEDIACODEC_H */

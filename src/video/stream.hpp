@@ -29,46 +29,43 @@ extern "C" {
 #include "platform/net.hpp"
 #include "video/decoder.hpp"
 
-namespace irobot::video {
-
-    class VideoStream : public Actor {
-
+namespace irobot::video
+{
+    class VideoStream : public Actor
+    {
     public:
         socket_t video_socket = 0;
-        struct Decoder *decoder = nullptr;
-        struct Recorder *recorder = nullptr;
-        AVCodecContext *codec_ctx = nullptr;
-        AVCodecParserContext *parser = nullptr;
+        struct Decoder* decoder = nullptr;
+        struct Recorder* recorder = nullptr;
+        AVCodecContext* codec_ctx = nullptr;
+        AVCodecParserContext* parser = nullptr;
         // successive packets may need to be concatenated, until a non-config
         // packet is available
         bool has_pending = false;
         AVPacket pending{};
 
         void Init(socket_t socket,
-                  struct Decoder *pDecoder, Recorder *pRecorder);
+                  struct Decoder* pDecoder, Recorder* pRecorder);
 
         bool Start() override;
 
         void Stop() override;
 
-        bool ReceivePacket(AVPacket *packet);
+        bool ReceivePacket(AVPacket* packet);
 
-        bool PushPacket(AVPacket *packet);
+        bool PushPacket(AVPacket* packet);
 
         static void NotifyStopped();
 
-        static int RunStream(void *data);
+        static int RunStream(void* data);
 
     private:
+        bool ProcessConfigPacket(AVPacket* packet);
 
-        bool ProcessConfigPacket(AVPacket *packet);
+        bool ProcessFrame(AVPacket* packet);
 
-        bool ProcessFrame(AVPacket *packet);
-
-        bool Parse(AVPacket *packet);
-
+        bool Parse(AVPacket* packet);
     };
-
 }
 
 #endif //ANDROID_IROBOT_STREAM_HPP

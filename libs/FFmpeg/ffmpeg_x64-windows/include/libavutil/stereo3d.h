@@ -48,7 +48,8 @@
 /**
  * List of possible 3D Types
  */
-enum AVStereo3DType {
+enum AVStereo3DType
+{
     /**
      * Video is not stereoscopic (and metadata has to be there).
      */
@@ -144,7 +145,8 @@ enum AVStereo3DType {
 /**
  * List of possible view types.
  */
-enum AVStereo3DView {
+enum AVStereo3DView
+{
     /**
      * Frame contains two packed views.
      */
@@ -173,7 +175,8 @@ enum AVStereo3DView {
  * @note The struct must be allocated with av_stereo3d_alloc() and
  *       its size is not a part of the public ABI.
  */
-typedef struct AVStereo3D {
+typedef struct AVStereo3D
+{
     /**
      * How views are packed within the video.
      */
@@ -196,7 +199,7 @@ typedef struct AVStereo3D {
  *
  * @return An AVStereo3D filled with default values or NULL on failure.
  */
-AVStereo3D *av_stereo3d_alloc(void);
+AVStereo3D* av_stereo3d_alloc(void);
 
 /**
  * Allocate a complete AVFrameSideData and add it to the frame.
@@ -205,7 +208,7 @@ AVStereo3D *av_stereo3d_alloc(void);
  *
  * @return The AVStereo3D structure to be filled by caller.
  */
-AVStereo3D *av_stereo3d_create_side_data(AVFrame *frame);
+AVStereo3D* av_stereo3d_create_side_data(AVFrame * frame);
 
 /**
  * Provide a human-readable name of a given stereo3d type.
@@ -214,7 +217,7 @@ AVStereo3D *av_stereo3d_create_side_data(AVFrame *frame);
  *
  * @return The name of the stereo3d value, or "unknown".
  */
-const char *av_stereo3d_type_name(unsigned int type);
+const char* av_stereo3d_type_name(unsigned int type);
 
 /**
  * Get the AVStereo3DType form a human-readable name.
@@ -223,7 +226,7 @@ const char *av_stereo3d_type_name(unsigned int type);
  *
  * @return The AVStereo3DType value, or -1 if not found.
  */
-int av_stereo3d_from_name(const char *name);
+int av_stereo3d_from_name(const char* name);
 
 /**
  * @}

@@ -15,7 +15,12 @@
 using nlohmann::json;
 using namespace irobot::message;
 
-TEST_CASE("serialize inject keycode", "[message][ControlMessage]") {
+TEST_CASE (
+"serialize inject keycode"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_INJECT_KEYCODE,
             .inject_keycode = {
@@ -39,7 +44,12 @@ TEST_CASE("serialize inject keycode", "[message][ControlMessage]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("json serialize inject keycode", "[message][ControlMessage]") {
+TEST_CASE (
+"json serialize inject keycode"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_INJECT_KEYCODE,
             .inject_keycode = {
@@ -68,7 +78,12 @@ TEST_CASE("json serialize inject keycode", "[message][ControlMessage]") {
 }
 
 
-TEST_CASE("serialize inject text", "[message][ControlMessage]") {
+TEST_CASE (
+"serialize inject text"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_INJECT_TEXT,
             .inject_text = {
@@ -88,7 +103,12 @@ TEST_CASE("serialize inject text", "[message][ControlMessage]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize inject text long", "[message][ControlMessage]") {
+TEST_CASE (
+"serialize inject text long"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg{};
     msg.type = CONTROL_MSG_TYPE_INJECT_TEXT;
     char text[CONTROL_MSG_TEXT_MAX_LENGTH + 1];
@@ -109,7 +129,12 @@ TEST_CASE("serialize inject text long", "[message][ControlMessage]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize inject touch event", "[message][ControlMessage]") {
+TEST_CASE (
+"serialize inject touch event"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT,
             .inject_touch_event = {
@@ -149,7 +174,12 @@ TEST_CASE("serialize inject touch event", "[message][ControlMessage]") {
 }
 
 
-TEST_CASE("json serialize inject touch event", "[message][ControlMessage]") {
+TEST_CASE (
+"json serialize inject touch event"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT,
             .inject_touch_event = {
@@ -180,7 +210,12 @@ TEST_CASE("json serialize inject touch event", "[message][ControlMessage]") {
 
 }
 
-TEST_CASE("json serialize inject scroll event", "[message][ControlMessage]") {
+TEST_CASE (
+"json serialize inject scroll event"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT,
             .inject_scroll_event = {
@@ -223,7 +258,12 @@ TEST_CASE("json serialize inject scroll event", "[message][ControlMessage]") {
 }
 
 
-TEST_CASE("serialize inject scroll event", "[message][ControlMessage]") {
+TEST_CASE (
+"serialize inject scroll event"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT,
             .inject_scroll_event = {
@@ -257,7 +297,12 @@ TEST_CASE("serialize inject scroll event", "[message][ControlMessage]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize back or screen on", "[message][ControlMessage]") {
+TEST_CASE (
+"serialize back or screen on"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON,
     };
@@ -272,7 +317,12 @@ TEST_CASE("serialize back or screen on", "[message][ControlMessage]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize expand notification panel", "[message][ControlMessage]") {
+TEST_CASE (
+"serialize expand notification panel"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL,
     };
@@ -287,7 +337,12 @@ TEST_CASE("serialize expand notification panel", "[message][ControlMessage]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize collapse notification panel", "[message][ControlMessage]") {
+TEST_CASE (
+"serialize collapse notification panel"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL,
     };
@@ -302,7 +357,12 @@ TEST_CASE("serialize collapse notification panel", "[message][ControlMessage]") 
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize get clipboard", "[message][ControlMessage]") {
+TEST_CASE (
+"serialize get clipboard"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_GET_CLIPBOARD,
     };
@@ -317,7 +377,12 @@ TEST_CASE("serialize get clipboard", "[message][ControlMessage]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize set clipboard", "[message][ControlMessage]") {
+TEST_CASE (
+"serialize set clipboard"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_SET_CLIPBOARD,
             .inject_text = {
@@ -337,7 +402,12 @@ TEST_CASE("serialize set clipboard", "[message][ControlMessage]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize set screen power mode", "[message][ControlMessage]") {
+TEST_CASE (
+"serialize set screen power mode"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE,
             .set_screen_power_mode = {
@@ -356,7 +426,12 @@ TEST_CASE("serialize set screen power mode", "[message][ControlMessage]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("serialize rotate device", "[message][ControlMessage]") {
+TEST_CASE (
+"serialize rotate device"
+,
+"[message][ControlMessage]"
+)
+ {
     struct ControlMessage msg = {
             .type = CONTROL_MSG_TYPE_ROTATE_DEVICE,
     };
@@ -371,7 +446,12 @@ TEST_CASE("serialize rotate device", "[message][ControlMessage]") {
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
 
-TEST_CASE("deserialize clipboard", "[message][ControlMessage]") {
+TEST_CASE (
+"deserialize clipboard"
+,
+"[message][ControlMessage]"
+)
+ {
     const unsigned char input[] = {
             DEVICE_MSG_TYPE_CLIPBOARD,
             0x00, 0x03, // text length

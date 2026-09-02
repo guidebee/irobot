@@ -19,28 +19,28 @@ extern "C" {
 #include "core/actor.hpp"
 #include "platform/net.hpp"
 
-namespace irobot::audio {
-
+namespace irobot::audio
+{
     class AudioDecoder;
 
-    class AudioStream : public Actor {
-
+    class AudioStream : public Actor
+    {
     public:
         socket_t audio_socket = 0;
-        AudioDecoder *decoder = nullptr;
+        AudioDecoder* decoder = nullptr;
 
-        void Init(socket_t socket, AudioDecoder *pDecoder);
+        void Init(socket_t socket, AudioDecoder* pDecoder);
 
         bool Start() override;
 
         void Stop() override;
 
-        static int RunStream(void *data);
+        static int RunStream(void* data);
 
     private:
-        bool ReceiveCodecId(uint32_t *codec_id);
+        bool ReceiveCodecId(uint32_t* codec_id);
 
-        bool ReceivePacket(AVPacket *packet);
+        bool ReceivePacket(AVPacket* packet);
     };
 }
 

@@ -13,13 +13,14 @@
 #include "platform/net.hpp"
 #include "message/blob_msg.hpp"
 
-namespace irobot::agent {
-
-    class AgentStream : public Actor {
+namespace irobot::agent
+{
+    class AgentStream : public Actor
+    {
     public:
         socket_t video_socket = INVALID_SOCKET;
         socket_t video_server_socket = INVALID_SOCKET;
-        SDL_Thread *receiver_thread = nullptr;
+        SDL_Thread* receiver_thread = nullptr;
         message::BlobMessageQueue queue{};
 
         bool Init(socket_t server_socket);
@@ -32,30 +33,25 @@ namespace irobot::agent {
 
         bool Start() override;
 
-        bool PushMessage(const message::BlobMessage *msg);
+        bool PushMessage(const message::BlobMessage* msg);
 
-        bool ProcessMessage(message::BlobMessage *msg);
+        bool ProcessMessage(message::BlobMessage* msg);
 
-        static int RunStream(void *data);
+        static int RunStream(void* data);
 
-        static int RunAgentReceiver(void *data);
+        static int RunAgentReceiver(void* data);
 
         bool IsConnected();
 
         float GetTransferSpeed();
 
-
     private:
-
         int buffer_index = 0;
         unsigned long total_bytes = 0;
         unsigned long total_frame = 0;
         Uint32 start_ticks = 0;
         Uint32 last_ticks = 0;
-
-
     };
-
 }
 
 #endif //ANDROID_IROBOT_AGENT_STREAM_HPP

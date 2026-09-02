@@ -7,11 +7,13 @@
 #ifndef ANDROID_IROBOT_KEYCODES_HPP
 #define ANDROID_IROBOT_KEYCODES_HPP
 
-namespace irobot::android {
-/**
+namespace irobot::android
+{
+    /**
  * Key codes.
  */
-    enum AndroidKeycode {
+    enum AndroidKeycode
+    {
         /** Unknown key code. */
         AKEYCODE_UNKNOWN = 0,
         /** Soft Left key.

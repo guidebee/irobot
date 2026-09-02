@@ -58,7 +58,7 @@ struct AVSHA512;
 /**
  * Allocate an AVSHA512 context.
  */
-struct AVSHA512 *av_sha512_alloc(void);
+struct AVSHA512* av_sha512_alloc(void);
 
 /**
  * Initialize SHA-2 512 hashing.
@@ -88,7 +88,7 @@ void av_sha512_update(struct AVSHA512* context, const uint8_t* data, size_t len)
  * @param context hash function context
  * @param digest  buffer where output digest value is stored
  */
-void av_sha512_final(struct AVSHA512* context, uint8_t *digest);
+void av_sha512_final(struct AVSHA512* context, uint8_t* digest);
 
 /**
  * @}

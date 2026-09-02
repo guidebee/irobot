@@ -35,36 +35,39 @@
 
 #define INBUF_SIZE 4096
 
-static void pgm_save(unsigned char *buf, int wrap, int xsize, int ysize,
-                     char *filename)
+static void pgm_save(unsigned char* buf, int wrap, int xsize, int ysize,
+                     char* filename)
 {
-    FILE *f;
+    FILE* f;
     int i;
 
-    f = fopen(filename,"wb");
+    f = fopen(filename, "wb");
     fprintf(f, "P5\n%d %d\n%d\n", xsize, ysize, 255);
     for (i = 0; i < ysize; i++)
         fwrite(buf + i * wrap, 1, xsize, f);
     fclose(f);
 }
 
-static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
-                   const char *filename)
+static void decode(AVCodecContext* dec_ctx, AVFrame* frame, AVPacket* pkt,
+                   const char* filename)
 {
     char buf[1024];
     int ret;
 
     ret = avcodec_send_packet(dec_ctx, pkt);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         fprintf(stderr, "Error sending a packet for decoding\n");
         exit(1);
     }
 
-    while (ret >= 0) {
+    while (ret >= 0)
+    {
         ret = avcodec_receive_frame(dec_ctx, frame);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
             return;
-        else if (ret < 0) {
+        else if (ret < 0)
+        {
             fprintf(stderr, "Error during decoding\n");
             exit(1);
         }
@@ -80,26 +83,27 @@ static void decode(AVCodecContext *dec_ctx, AVFrame *frame, AVPacket *pkt,
     }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     const char *filename, *outfilename;
-    const AVCodec *codec;
-    AVCodecParserContext *parser;
-    AVCodecContext *c= NULL;
-    FILE *f;
-    AVFrame *frame;
+    const AVCodec* codec;
+    AVCodecParserContext* parser;
+    AVCodecContext* c = NULL;
+    FILE* f;
+    AVFrame* frame;
     uint8_t inbuf[INBUF_SIZE + AV_INPUT_BUFFER_PADDING_SIZE];
-    uint8_t *data;
-    size_t   data_size;
+    uint8_t* data;
+    size_t data_size;
     int ret;
-    AVPacket *pkt;
+    AVPacket* pkt;
 
-    if (argc <= 2) {
+    if (argc <= 2)
+    {
         fprintf(stderr, "Usage: %s <input file> <output file>\n"
                 "And check your input file is encoded by mpeg1video please.\n", argv[0]);
         exit(0);
     }
-    filename    = argv[1];
+    filename = argv[1];
     outfilename = argv[2];
 
     pkt = av_packet_alloc();
@@ -111,19 +115,22 @@ int main(int argc, char **argv)
 
     /* find the MPEG-1 video decoder */
     codec = avcodec_find_decoder(AV_CODEC_ID_MPEG1VIDEO);
-    if (!codec) {
+    if (!codec)
+    {
         fprintf(stderr, "Codec not found\n");
         exit(1);
     }
 
     parser = av_parser_init(codec->id);
-    if (!parser) {
+    if (!parser)
+    {
         fprintf(stderr, "parser not found\n");
         exit(1);
     }
 
     c = avcodec_alloc_context3(codec);
-    if (!c) {
+    if (!c)
+    {
         fprintf(stderr, "Could not allocate video codec context\n");
         exit(1);
     }
@@ -133,24 +140,28 @@ int main(int argc, char **argv)
        available in the bitstream. */
 
     /* open it */
-    if (avcodec_open2(c, codec, NULL) < 0) {
+    if (avcodec_open2(c, codec, NULL) < 0)
+    {
         fprintf(stderr, "Could not open codec\n");
         exit(1);
     }
 
     f = fopen(filename, "rb");
-    if (!f) {
+    if (!f)
+    {
         fprintf(stderr, "Could not open %s\n", filename);
         exit(1);
     }
 
     frame = av_frame_alloc();
-    if (!frame) {
+    if (!frame)
+    {
         fprintf(stderr, "Could not allocate video frame\n");
         exit(1);
     }
 
-    while (!feof(f)) {
+    while (!feof(f))
+    {
         /* read raw data from the input file */
         data_size = fread(inbuf, 1, INBUF_SIZE, f);
         if (!data_size)
@@ -158,14 +169,16 @@ int main(int argc, char **argv)
 
         /* use the parser to split the data into frames */
         data = inbuf;
-        while (data_size > 0) {
+        while (data_size > 0)
+        {
             ret = av_parser_parse2(parser, c, &pkt->data, &pkt->size,
                                    data, data_size, AV_NOPTS_VALUE, AV_NOPTS_VALUE, 0);
-            if (ret < 0) {
+            if (ret < 0)
+            {
                 fprintf(stderr, "Error while parsing\n");
                 exit(1);
             }
-            data      += ret;
+            data += ret;
             data_size -= ret;
 
             if (pkt->size)

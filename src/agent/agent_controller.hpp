@@ -13,20 +13,20 @@
 #include "message/control_msg.hpp"
 #include "util/cbuf.hpp"
 
-namespace irobot::agent {
-
-    class AgentController : public Actor {
-
+namespace irobot::agent
+{
+    class AgentController : public Actor
+    {
     public:
         socket_t control_socket = INVALID_SOCKET;
         socket_t control_server_socket = INVALID_SOCKET;
         message::ControlMessageQueue queue{};
-        SDL_Thread *record_thread = nullptr;
+        SDL_Thread* record_thread = nullptr;
         message::MessageHandler message_handler = nullptr;
-        void *entity = nullptr;
+        void* entity = nullptr;
 
         bool Init(socket_t server_socket,
-                  message::MessageHandler message_handler, void *entity);
+                  message::MessageHandler message_handler, void* entity);
 
         bool WaitForClientConnection();
 
@@ -36,19 +36,17 @@ namespace irobot::agent {
 
         void Destroy() override;
 
-        static int RunAgentController(void *data);
+        static int RunAgentController(void* data);
 
-        static int RunAgentRecorder(void *data);
+        static int RunAgentRecorder(void* data);
 
     private:
-        bool SendMessage(message::ControlMessage *msg);
+        bool SendMessage(message::ControlMessage* msg);
 
-        ssize_t ProcessMessages(const unsigned char *buf, size_t len);
+        ssize_t ProcessMessages(const unsigned char* buf, size_t len);
 
-        void ProcessMessage(message::ControlMessage *msg);
-
+        void ProcessMessage(message::ControlMessage* msg);
     };
-
 }
 
 #endif //ANDROID_IROBOT_AGENT_CONTROLLER_HPP

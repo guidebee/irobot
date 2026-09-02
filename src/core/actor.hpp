@@ -9,15 +9,14 @@
 #include <SDL2/SDL_mutex.h>
 #include <SDL2/SDL_thread.h>
 
-namespace irobot {
-
-    class Actor {
-
+namespace irobot
+{
+    class Actor
+    {
     public:
-
-        SDL_Thread *thread = nullptr;
-        SDL_mutex *mutex = nullptr;
-        SDL_cond *thread_cond = nullptr;
+        SDL_Thread* thread = nullptr;
+        SDL_mutex* mutex = nullptr;
+        SDL_cond* thread_cond = nullptr;
         bool stopped = false;
 
         virtual bool Init();
@@ -29,8 +28,6 @@ namespace irobot {
         virtual void Stop();
 
         virtual void Join();
-
     };
-
 }
 #endif //ANDROID_IROBOT_ACTOR_HPP

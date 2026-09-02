@@ -56,7 +56,7 @@ struct AVSHA;
 /**
  * Allocate an AVSHA context.
  */
-struct AVSHA *av_sha_alloc(void);
+struct AVSHA* av_sha_alloc(void);
 
 /**
  * Initialize SHA-1 or SHA-2 hashing.
@@ -75,9 +75,9 @@ int av_sha_init(struct AVSHA* context, int bits);
  * @param len     input data length
  */
 #if FF_API_CRYPTO_SIZE_T
-void av_sha_update(struct AVSHA *ctx, const uint8_t *data, unsigned int len);
+void av_sha_update(struct AVSHA* ctx, const uint8_t* data, unsigned int len);
 #else
-void av_sha_update(struct AVSHA *ctx, const uint8_t *data, size_t len);
+void av_sha_update(struct AVSHA* ctx, const uint8_t* data, size_t len);
 #endif
 
 /**
@@ -86,7 +86,7 @@ void av_sha_update(struct AVSHA *ctx, const uint8_t *data, size_t len);
  * @param context hash function context
  * @param digest  buffer where output digest value is stored
  */
-void av_sha_final(struct AVSHA* context, uint8_t *digest);
+void av_sha_final(struct AVSHA* context, uint8_t* digest);
 
 /**
  * @}

@@ -20,13 +20,15 @@
 #define DEFAULT_SERVER_PATH  "./server/" SERVER_FILENAME
 #define DEVICE_SERVER_PATH "/data/local/tmp/irobot-server.jar"
 
-namespace irobot {
-
+namespace irobot
+{
     using namespace irobot::platform;
 
-    const char *DeviceServer::GetServerPath() {
-        const char *server_path_env = getenv("IROBOT_SERVER_PATH");
-        if (server_path_env) {
+    const char* DeviceServer::GetServerPath()
+    {
+        const char* server_path_env = getenv("IROBOT_SERVER_PATH");
+        if (server_path_env)
+        {
             LOGD("Using IROBOT_SERVER_PATH: %s", server_path_env);
             // if the envvar is set, use it
             return server_path_env;
@@ -38,22 +40,24 @@ namespace irobot {
         return DEFAULT_SERVER_PATH;
 #else
         // use irobot-server in the same directory as the executable
-        char *executable_path = get_executable_path();
-        if (!executable_path) {
+        char* executable_path = get_executable_path();
+        if (!executable_path)
+        {
             LOGE("Could not get executable path, "
-                 "using " SERVER_FILENAME " from current directory");
+                "using " SERVER_FILENAME " from current directory");
             // not found, use current directory
             return SERVER_FILENAME;
         }
-        char *dir = dirname(executable_path);
+        char* dir = dirname(executable_path);
         size_t dirlen = strlen(dir);
 
         // sizeof(SERVER_FILENAME) gives statically the size including the null byte
         size_t len = dirlen + 1 + sizeof(SERVER_FILENAME);
-        char *server_path = SDL_malloc(len);
-        if (!server_path) {
+        char* server_path = SDL_malloc(len);
+        if (!server_path)
+        {
             LOGE("Could not alloc server path string, "
-                 "using " SERVER_FILENAME " from current directory");
+                "using " SERVER_FILENAME " from current directory");
             SDL_free(executable_path);
             return SERVER_FILENAME;
         }
@@ -70,9 +74,11 @@ namespace irobot {
 #endif
     }
 
-    bool DeviceServer::PushServer(const char *serial) {
-        const char *server_path = GetServerPath();
-        if (!is_regular_file(server_path)) {
+    bool DeviceServer::PushServer(const char* serial)
+    {
+        const char* server_path = GetServerPath();
+        if (!is_regular_file(server_path))
+        {
             LOGE("'%s' does not exist or is not a regular file\n", server_path);
             return false;
         }
@@ -80,28 +86,34 @@ namespace irobot {
         return process_check_success(process, "adb push");
     }
 
-    bool DeviceServer::EnableTunnelReverse(const char *serial, uint16_t local_port) {
+    bool DeviceServer::EnableTunnelReverse(const char* serial, uint16_t local_port)
+    {
         ProcessType process = adb_reverse(serial, SOCKET_NAME, local_port);
         return process_check_success(process, "adb reverse");
     }
 
-    bool DeviceServer::DisableTunnelReverse(const char *serial) {
+    bool DeviceServer::DisableTunnelReverse(const char* serial)
+    {
         ProcessType process = adb_reverse_remove(serial, SOCKET_NAME);
         return process_check_success(process, "adb reverse --remove");
     }
 
-    bool DeviceServer::EnableTunnelForward(const char *serial, uint16_t local_port) {
+    bool DeviceServer::EnableTunnelForward(const char* serial, uint16_t local_port)
+    {
         ProcessType process = adb_forward(serial, local_port, SOCKET_NAME);
         return process_check_success(process, "adb forward");
     }
 
-    bool DeviceServer::DisableTunnelForward(const char *serial, uint16_t local_port) {
+    bool DeviceServer::DisableTunnelForward(const char* serial, uint16_t local_port)
+    {
         ProcessType process = adb_forward_remove(serial, local_port);
         return process_check_success(process, "adb forward --remove");
     }
 
-    bool DeviceServer::EnableTunnel() {
-        if (EnableTunnelReverse(this->serial, this->local_port)) {
+    bool DeviceServer::EnableTunnel()
+    {
+        if (EnableTunnelReverse(this->serial, this->local_port))
+        {
             return true;
         }
 
@@ -110,20 +122,23 @@ namespace irobot {
         return EnableTunnelForward(this->serial, this->local_port);
     }
 
-    bool DeviceServer::DisableTunnel() {
-        if (this->tunnel_forward) {
+    bool DeviceServer::DisableTunnel()
+    {
+        if (this->tunnel_forward)
+        {
             return DisableTunnelForward(this->serial, this->local_port);
         }
         return DisableTunnelReverse(this->serial);
     }
 
-    ProcessType DeviceServer::ExecuteServer(const struct DeviceServerParameters *params) {
+    ProcessType DeviceServer::ExecuteServer(const struct DeviceServerParameters* params)
+    {
         char max_size_string[32];
         char bit_rate_string[32];
         char max_fps_string[32];
         char crop_string[128];
 
-        const char *cmd[32];
+        const char* cmd[32];
         int count = 0;
 
         cmd[count++] = "shell";
@@ -132,39 +147,46 @@ namespace irobot {
 #ifdef SERVER_DEBUGGER
 # define SERVER_DEBUGGER_PORT "5005"
         cmd[count++] = "-agentlib:jdwp=transport=dt_socket,suspend=y,server=y,address="
-                       SERVER_DEBUGGER_PORT;
+        SERVER_DEBUGGER_PORT;
 #endif
         cmd[count++] = "/"; // unused
         cmd[count++] = "com.guidebee.irobot.Server";
         cmd[count++] = IROBOT_SERVER_VERSION;
 
-        if (!params->audio) {
+        if (!params->audio)
+        {
             cmd[count++] = "audio=false";
         }
 
-        if (params->max_size) {
+        if (params->max_size)
+        {
             snprintf(max_size_string, sizeof(max_size_string),
                      "max_size=%" PRIu16, params->max_size);
             cmd[count++] = max_size_string;
         }
-        if (params->bit_rate) {
+        if (params->bit_rate)
+        {
             snprintf(bit_rate_string, sizeof(bit_rate_string),
                      "video_bit_rate=%" PRIu32, params->bit_rate);
             cmd[count++] = bit_rate_string;
         }
-        if (params->max_fps) {
+        if (params->max_fps)
+        {
             snprintf(max_fps_string, sizeof(max_fps_string),
                      "max_fps=%" PRIu16, params->max_fps);
             cmd[count++] = max_fps_string;
         }
-        if (this->tunnel_forward) {
+        if (this->tunnel_forward)
+        {
             cmd[count++] = "tunnel_forward=true";
         }
-        if (params->crop) {
+        if (params->crop)
+        {
             snprintf(crop_string, sizeof(crop_string), "crop=%s", params->crop);
             cmd[count++] = crop_string;
         }
-        if (!params->control) {
+        if (!params->control)
+        {
             cmd[count++] = "control=false";
         }
 
@@ -176,20 +198,24 @@ namespace irobot {
     }
 
 
-    socket_t DeviceServer::ListenOnPort(uint16_t port) {
+    socket_t DeviceServer::ListenOnPort(uint16_t port)
+    {
         return net_listen(IPV4_LOCALHOST, port, 1);
     }
 
-    socket_t DeviceServer::ConnectAndReadByte(uint16_t port) {
+    socket_t DeviceServer::ConnectAndReadByte(uint16_t port)
+    {
         socket_t socket = net_connect(IPV4_LOCALHOST, port);
-        if (socket == INVALID_SOCKET) {
+        if (socket == INVALID_SOCKET)
+        {
             return INVALID_SOCKET;
         }
 
         char byte;
         // the connection may succeed even if the server behind the "adb tunnel"
         // is not listening, so read one byte to detect a working connection
-        if (net_recv(socket, &byte, 1) != 1) {
+        if (net_recv(socket, &byte, 1) != 1)
+        {
             // the server is not listening yet behind the adb tunnel
             net_close(socket);
             return INVALID_SOCKET;
@@ -197,32 +223,40 @@ namespace irobot {
         return socket;
     }
 
-    socket_t DeviceServer::ConnectToServer(uint16_t port, uint32_t attempts, uint32_t delay) {
-        do {
-            LOGD("Remaining connection attempts: %d", (int) attempts);
+    socket_t DeviceServer::ConnectToServer(uint16_t port, uint32_t attempts, uint32_t delay)
+    {
+        do
+        {
+            LOGD("Remaining connection attempts: %d", (int)attempts);
             socket_t socket = ConnectAndReadByte(port);
-            if (socket != INVALID_SOCKET) {
+            if (socket != INVALID_SOCKET)
+            {
                 // it worked!
                 return socket;
             }
-            if (attempts) {
+            if (attempts)
+            {
                 SDL_Delay(delay);
             }
-        } while (--attempts > 0);
+        }
+        while (--attempts > 0);
         return INVALID_SOCKET;
     }
 
-    void DeviceServer::CloseSocket(socket_t *socket) {
+    void DeviceServer::CloseSocket(socket_t* socket)
+    {
         assert(*socket != INVALID_SOCKET);
         net_shutdown(*socket, SHUT_RDWR);
-        if (!net_close(*socket)) {
+        if (!net_close(*socket))
+        {
             LOGW("Could not close socket");
             return;
         }
         *socket = INVALID_SOCKET;
     }
 
-    void DeviceServer::Init() {
+    void DeviceServer::Init()
+    {
         this->serial = nullptr;
         this->process = PROCESS_NONE;
         this->server_socket = INVALID_SOCKET;
@@ -235,31 +269,37 @@ namespace irobot {
         this->audio = false;
     }
 
-    bool DeviceServer::Start(const char *pSerial,
-                             const DeviceServerParameters *params) {
+    bool DeviceServer::Start(const char* pSerial,
+                             const DeviceServerParameters* params)
+    {
         this->local_port = params->local_port;
         this->audio = params->audio;
 
-        if (pSerial) {
+        if (pSerial)
+        {
             this->serial = SDL_strdup(pSerial);
-            if (!this->serial) {
+            if (!this->serial)
+            {
                 return false;
             }
         }
 
-        if (!PushServer(pSerial)) {
+        if (!PushServer(pSerial))
+        {
             SDL_free(this->serial);
             return false;
         }
 
-        if (!EnableTunnel()) {
+        if (!EnableTunnel())
+        {
             SDL_free(this->serial);
             return false;
         }
 
         // if "adb reverse" does not work (e.g. over "adb connect"), it fallbacks to
         // "adb forward", so the app socket is the client
-        if (!this->tunnel_forward) {
+        if (!this->tunnel_forward)
+        {
             // At the application level, the device part is "the server" because it
             // serves video stream and control. However, at the network level, the
             // client listens and the server connects to the client. That way, the
@@ -268,9 +308,10 @@ namespace irobot {
             // device.
 
             this->server_socket = ListenOnPort(params->local_port);
-            if (this->server_socket == INVALID_SOCKET) {
+            if (this->server_socket == INVALID_SOCKET)
+            {
                 LOGE("Could not listen on port %"
-                             PRIu16, params->local_port);
+                     PRIu16, params->local_port);
                 DisableTunnel();
                 SDL_free(this->serial);
                 return false;
@@ -281,8 +322,10 @@ namespace irobot {
         // server will connect to our server socket
         this->process = ExecuteServer(params);
 
-        if (this->process == PROCESS_NONE) {
-            if (!this->tunnel_forward) {
+        if (this->process == PROCESS_NONE)
+        {
+            if (!this->tunnel_forward)
+            {
                 CloseSocket(&this->server_socket);
             }
             DisableTunnel();
@@ -296,51 +339,62 @@ namespace irobot {
     }
 
 
-    bool DeviceServer::ConnectTo() {
-
-        if (!this->tunnel_forward) {
+    bool DeviceServer::ConnectTo()
+    {
+        if (!this->tunnel_forward)
+        {
             this->video_socket = net_accept(this->server_socket);
-            if (this->video_socket == INVALID_SOCKET) {
+            if (this->video_socket == INVALID_SOCKET)
+            {
                 return false;
             }
 
-            if (this->audio) {
+            if (this->audio)
+            {
                 this->audio_socket = net_accept(this->server_socket);
-                if (this->audio_socket == INVALID_SOCKET) {
+                if (this->audio_socket == INVALID_SOCKET)
+                {
                     // the video_socket will be cleaned up on destroy
                     return false;
                 }
             }
 
             this->control_socket = net_accept(this->server_socket);
-            if (this->control_socket == INVALID_SOCKET) {
+            if (this->control_socket == INVALID_SOCKET)
+            {
                 // the video_socket/audio_socket will be cleaned up on destroy
                 return false;
             }
 
             // we don't need the server socket anymore
             CloseSocket(&this->server_socket);
-        } else {
+        }
+        else
+        {
             uint32_t attempts = 100;
             uint32_t delay = 100; // ms
             this->video_socket =
-                    ConnectToServer(this->local_port, attempts, delay);
-            if (this->video_socket == INVALID_SOCKET) {
+                ConnectToServer(this->local_port, attempts, delay);
+            if (this->video_socket == INVALID_SOCKET)
+            {
                 return false;
             }
 
             // we know that the device is listening, we don't need several attempts
-            if (this->audio) {
+            if (this->audio)
+            {
                 this->audio_socket =
-                        net_connect(IPV4_LOCALHOST, this->local_port);
-                if (this->audio_socket == INVALID_SOCKET) {
+                    net_connect(IPV4_LOCALHOST, this->local_port);
+                if (this->audio_socket == INVALID_SOCKET)
+                {
                     return false;
                 }
             }
 
             this->control_socket =
-                    net_connect(IPV4_LOCALHOST, this->local_port);
-            if (this->control_socket == INVALID_SOCKET) {
+                net_connect(IPV4_LOCALHOST, this->local_port);
+            if (this->control_socket == INVALID_SOCKET)
+            {
                 return false;
             }
         }
@@ -352,37 +406,44 @@ namespace irobot {
         return true;
     }
 
-    void DeviceServer::Stop() {
-
-        if (this->server_socket != INVALID_SOCKET) {
+    void DeviceServer::Stop()
+    {
+        if (this->server_socket != INVALID_SOCKET)
+        {
             CloseSocket(&this->server_socket);
         }
-        if (this->video_socket != INVALID_SOCKET) {
+        if (this->video_socket != INVALID_SOCKET)
+        {
             CloseSocket(&this->video_socket);
         }
-        if (this->audio_socket != INVALID_SOCKET) {
+        if (this->audio_socket != INVALID_SOCKET)
+        {
             CloseSocket(&this->audio_socket);
         }
-        if (this->control_socket != INVALID_SOCKET) {
+        if (this->control_socket != INVALID_SOCKET)
+        {
             CloseSocket(&this->control_socket);
         }
 
         assert(this->process != PROCESS_NONE);
 
-        if (!cmd_terminate(this->process)) {
+        if (!cmd_terminate(this->process))
+        {
             LOGW("Could not terminate server");
         }
 
         cmd_simple_wait(this->process, nullptr); // ignore exit code
         LOGD("Server terminated");
 
-        if (this->tunnel_enabled) {
+        if (this->tunnel_enabled)
+        {
             // ignore failure
             DisableTunnel();
         }
     }
 
-    void DeviceServer::Destroy() {
+    void DeviceServer::Destroy()
+    {
         SDL_free(this->serial);
     }
 }

@@ -33,7 +33,8 @@
  *             callback
  * - encoding: hwaccel_context must be set before avcodec_open2()
  */
-typedef struct AVQSVContext {
+typedef struct AVQSVContext
+{
     /**
      * If non-NULL, the session to use for encoding or decoding.
      * Otherwise, libavcodec will try to create an internal session.
@@ -48,8 +49,8 @@ typedef struct AVQSVContext {
     /**
      * Extra buffers to pass to encoder or decoder initialization.
      */
-    mfxExtBuffer **ext_buffers;
-    int         nb_ext_buffers;
+    mfxExtBuffer** ext_buffers;
+    int nb_ext_buffers;
 
     /**
      * Encoding only. If this field is set to non-zero by the caller, libavcodec
@@ -87,7 +88,7 @@ typedef struct AVQSVContext {
      *
      * The buffer data is an nb_opaque_surfaces-sized array of mfxFrameSurface1.
      */
-    AVBufferRef *opaque_surfaces;
+    AVBufferRef* opaque_surfaces;
 
     /**
      * Encoding only, and only if opaque_alloc is set to non-zero. On return
@@ -102,6 +103,6 @@ typedef struct AVQSVContext {
  *
  * It must be freed by the caller with av_free().
  */
-AVQSVContext *av_qsv_alloc_context(void);
+AVQSVContext* av_qsv_alloc_context(void);
 
 #endif /* AVCODEC_QSV_H */

@@ -36,27 +36,29 @@
 /**
  * This struct is allocated as AVHWDeviceContext.hwctx
  */
-typedef struct AVDXVA2DeviceContext {
-    IDirect3DDeviceManager9 *devmgr;
+typedef struct AVDXVA2DeviceContext
+{
+    IDirect3DDeviceManager9* devmgr;
 } AVDXVA2DeviceContext;
 
 /**
  * This struct is allocated as AVHWFramesContext.hwctx
  */
-typedef struct AVDXVA2FramesContext {
+typedef struct AVDXVA2FramesContext
+{
     /**
      * The surface type (e.g. DXVA2_VideoProcessorRenderTarget or
      * DXVA2_VideoDecoderRenderTarget). Must be set by the caller.
      */
-    DWORD               surface_type;
+    DWORD surface_type;
 
     /**
      * The surface pool. When an external pool is not provided by the caller,
      * this will be managed (allocated and filled on init, freed on uninit) by
      * libavutil.
      */
-    IDirect3DSurface9 **surfaces;
-    int              nb_surfaces;
+    IDirect3DSurface9** surfaces;
+    int nb_surfaces;
 
     /**
      * Certain drivers require the decoder to be destroyed before the surfaces.
@@ -69,7 +71,7 @@ typedef struct AVDXVA2FramesContext {
      * This is for convenience only. Some code uses other methods to manage the
      * decoder reference.
      */
-    IDirectXVideoDecoder *decoder_to_release;
+    IDirectXVideoDecoder* decoder_to_release;
 } AVDXVA2FramesContext;
 
 #endif /* AVUTIL_HWCONTEXT_DXVA2_H */

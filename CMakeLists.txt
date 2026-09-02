@@ -60,7 +60,7 @@ SET(COMMON_SOURCE_HEADERS
         ${CMAKE_HOME_DIRECTORY}/src/core/irobot_core.hpp
         ${CMAKE_HOME_DIRECTORY}/src/platform/command.hpp
         ${CMAKE_HOME_DIRECTORY}/src/platform/net.hpp
-        )
+)
 
 SET(COMMON_SOURCES
         ${COMMON_SOURCE_HEADERS}
@@ -92,7 +92,7 @@ SET(COMMON_SOURCES
         ${CMAKE_HOME_DIRECTORY}/src/core/irobot_core.cpp
         ${CMAKE_HOME_DIRECTORY}/src/platform/command.cpp
         ${CMAKE_HOME_DIRECTORY}/src/platform/net.cpp
-        )
+)
 
 
 if (WIN32)
@@ -126,26 +126,26 @@ function(APP name)
 
         # Copy MinGW runtime and FFmpeg DLLs next to the executable
         set(FFMPEG_BIN_DIR "${CMAKE_HOME_DIRECTORY}/libs/FFmpeg/ffmpeg_x64-windows/bin")
-        foreach(DLL avcodec-58 avformat-58 avutil-56 swscale-5 swresample-3 avdevice-58 avfilter-7)
+        foreach (DLL avcodec-58 avformat-58 avutil-56 swscale-5 swresample-3 avdevice-58 avfilter-7)
             add_custom_command(TARGET ${APP_TARGET} POST_BUILD
-                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
                     "${FFMPEG_BIN_DIR}/${DLL}.dll"
                     "$<TARGET_FILE_DIR:${APP_TARGET}>")
-        endforeach()
+        endforeach ()
 
         get_filename_component(MINGW_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
-        foreach(DLL libgcc_s_seh-1 libstdc++-6 libwinpthread-1)
-            if(EXISTS "${MINGW_BIN_DIR}/${DLL}.dll")
+        foreach (DLL libgcc_s_seh-1 libstdc++-6 libwinpthread-1)
+            if (EXISTS "${MINGW_BIN_DIR}/${DLL}.dll")
                 add_custom_command(TARGET ${APP_TARGET} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        COMMAND ${CMAKE_COMMAND} -E copy_if_different
                         "${MINGW_BIN_DIR}/${DLL}.dll"
                         "$<TARGET_FILE_DIR:${APP_TARGET}>")
-            endif()
-        endforeach()
+            endif ()
+        endforeach ()
     endif ()
 
     add_custom_command(TARGET ${APP_TARGET} POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E copy_directory
+            COMMAND ${CMAKE_COMMAND} -E copy_directory
             "${CMAKE_HOME_DIRECTORY}/server"
             "$<TARGET_FILE_DIR:${APP_TARGET}>/server")
 

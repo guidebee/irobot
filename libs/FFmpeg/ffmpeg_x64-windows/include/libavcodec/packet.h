@@ -37,7 +37,8 @@
  * Types and functions for working with AVPacket.
  * @{
  */
-enum AVPacketSideDataType {
+enum AVPacketSideDataType
+{
     /**
      * An AV_PKT_DATA_PALETTE side data packet contains exactly AVPALETTE_SIZE
      * bytes worth of palette. This side data signals that a new palette is
@@ -303,12 +304,13 @@ enum AVPacketSideDataType {
 
 #define AV_PKT_DATA_QUALITY_FACTOR AV_PKT_DATA_QUALITY_STATS //DEPRECATED
 
-typedef struct AVPacketSideData {
-    uint8_t *data;
+typedef struct AVPacketSideData
+{
+    uint8_t* data;
 #if FF_API_BUFFER_SIZE_T
-    int      size;
+    int size;
 #else
-    size_t   size;
+    size_t size;
 #endif
     enum AVPacketSideDataType type;
 } AVPacketSideData;
@@ -343,13 +345,14 @@ typedef struct AVPacketSideData {
  * @see av_packet_ref
  * @see av_packet_unref
  */
-typedef struct AVPacket {
+typedef struct AVPacket
+{
     /**
      * A reference to the reference-counted buffer where the packet data is
      * stored.
      * May be NULL, then the packet data is not reference-counted.
      */
-    AVBufferRef *buf;
+    AVBufferRef* buf;
     /**
      * Presentation timestamp in AVStream->time_base units; the time at which
      * the decompressed packet will be presented to the user.
@@ -366,18 +369,18 @@ typedef struct AVPacket {
      * Can be AV_NOPTS_VALUE if it is not stored in the file.
      */
     int64_t dts;
-    uint8_t *data;
-    int   size;
-    int   stream_index;
+    uint8_t* data;
+    int size;
+    int stream_index;
     /**
      * A combination of AV_PKT_FLAG values
      */
-    int   flags;
+    int flags;
     /**
      * Additional packet data that can be provided by the container.
      * Packet can contain several types of side information.
      */
-    AVPacketSideData *side_data;
+    AVPacketSideData* side_data;
     int side_data_elems;
 
     /**
@@ -386,7 +389,7 @@ typedef struct AVPacket {
      */
     int64_t duration;
 
-    int64_t pos;                            ///< byte position in stream, -1 if unknown
+    int64_t pos; ///< byte position in stream, -1 if unknown
 
 #if FF_API_CONVERGENCE_DURATION
     /**
@@ -401,9 +404,10 @@ typedef struct AVPacket {
 
 #if FF_API_INIT_PACKET
 attribute_deprecated
-typedef struct AVPacketList {
+typedef struct AVPacketList
+{
     AVPacket pkt;
-    struct AVPacketList *next;
+    struct AVPacketList* next;
 } AVPacketList;
 #endif
 
@@ -428,11 +432,12 @@ typedef struct AVPacketList {
  */
 #define AV_PKT_FLAG_DISPOSABLE 0x0010
 
-enum AVSideDataParamChangeFlags {
-    AV_SIDE_DATA_PARAM_CHANGE_CHANNEL_COUNT  = 0x0001,
+enum AVSideDataParamChangeFlags
+{
+    AV_SIDE_DATA_PARAM_CHANGE_CHANNEL_COUNT = 0x0001,
     AV_SIDE_DATA_PARAM_CHANGE_CHANNEL_LAYOUT = 0x0002,
-    AV_SIDE_DATA_PARAM_CHANGE_SAMPLE_RATE    = 0x0004,
-    AV_SIDE_DATA_PARAM_CHANGE_DIMENSIONS     = 0x0008,
+    AV_SIDE_DATA_PARAM_CHANGE_SAMPLE_RATE = 0x0004,
+    AV_SIDE_DATA_PARAM_CHANGE_DIMENSIONS = 0x0008,
 };
 
 /**
@@ -446,7 +451,7 @@ enum AVSideDataParamChangeFlags {
  *
  * @see av_new_packet
  */
-AVPacket *av_packet_alloc(void);
+AVPacket* av_packet_alloc(void);
 
 /**
  * Create a new packet that references the same data as src.
@@ -458,7 +463,7 @@ AVPacket *av_packet_alloc(void);
  * @see av_packet_alloc
  * @see av_packet_ref
  */
-AVPacket *av_packet_clone(const AVPacket *src);
+AVPacket* av_packet_clone(const AVPacket* src);
 
 /**
  * Free the packet, if the packet is reference counted, it will be
@@ -467,7 +472,7 @@ AVPacket *av_packet_clone(const AVPacket *src);
  * @param pkt packet to be freed. The pointer will be set to NULL.
  * @note passing NULL is a no-op.
  */
-void av_packet_free(AVPacket **pkt);
+void av_packet_free(AVPacket** pkt);
 
 #if FF_API_INIT_PACKET
 /**
@@ -485,7 +490,7 @@ void av_packet_free(AVPacket **pkt);
                sizeof(AVPacket) will not be a part of the ABI anymore.
  */
 attribute_deprecated
-void av_init_packet(AVPacket *pkt);
+void av_init_packet(AVPacket* pkt);
 #endif
 
 /**
@@ -496,7 +501,7 @@ void av_init_packet(AVPacket *pkt);
  * @param size wanted payload size
  * @return 0 if OK, AVERROR_xxx otherwise
  */
-int av_new_packet(AVPacket *pkt, int size);
+int av_new_packet(AVPacket* pkt, int size);
 
 /**
  * Reduce packet size, correctly zeroing padding
@@ -504,7 +509,7 @@ int av_new_packet(AVPacket *pkt, int size);
  * @param pkt packet
  * @param size new size
  */
-void av_shrink_packet(AVPacket *pkt, int size);
+void av_shrink_packet(AVPacket* pkt, int size);
 
 /**
  * Increase packet size, correctly zeroing padding
@@ -512,7 +517,7 @@ void av_shrink_packet(AVPacket *pkt, int size);
  * @param pkt packet
  * @param grow_by number of bytes by which to increase the size of the packet
  */
-int av_grow_packet(AVPacket *pkt, int grow_by);
+int av_grow_packet(AVPacket* pkt, int grow_by);
 
 /**
  * Initialize a reference-counted packet from av_malloc()ed data.
@@ -527,7 +532,7 @@ int av_grow_packet(AVPacket *pkt, int grow_by);
  *
  * @return 0 on success, a negative AVERROR on error
  */
-int av_packet_from_data(AVPacket *pkt, uint8_t *data, int size);
+int av_packet_from_data(AVPacket* pkt, uint8_t* data, int size);
 
 #if FF_API_AVPACKET_OLD_API
 /**
@@ -537,7 +542,7 @@ int av_packet_from_data(AVPacket *pkt, uint8_t *data, int size);
  * @deprecated Use av_packet_ref or av_packet_make_refcounted
  */
 attribute_deprecated
-int av_dup_packet(AVPacket *pkt);
+int av_dup_packet(AVPacket* pkt);
 /**
  * Copy packet, including contents
  *
@@ -546,7 +551,7 @@ int av_dup_packet(AVPacket *pkt);
  * @deprecated Use av_packet_ref
  */
 attribute_deprecated
-int av_copy_packet(AVPacket *dst, const AVPacket *src);
+int av_copy_packet(AVPacket* dst, const AVPacket* src);
 
 /**
  * Copy packet side data
@@ -556,7 +561,7 @@ int av_copy_packet(AVPacket *dst, const AVPacket *src);
  * @deprecated Use av_packet_copy_props
  */
 attribute_deprecated
-int av_copy_packet_side_data(AVPacket *dst, const AVPacket *src);
+int av_copy_packet_side_data(AVPacket* dst, const AVPacket* src);
 
 /**
  * Free a packet.
@@ -566,7 +571,7 @@ int av_copy_packet_side_data(AVPacket *dst, const AVPacket *src);
  * @param pkt packet to free
  */
 attribute_deprecated
-void av_free_packet(AVPacket *pkt);
+void av_free_packet(AVPacket* pkt);
 #endif
 /**
  * Allocate new information of a packet.
@@ -576,7 +581,7 @@ void av_free_packet(AVPacket *pkt);
  * @param size side information size
  * @return pointer to fresh allocated data or NULL otherwise
  */
-uint8_t* av_packet_new_side_data(AVPacket *pkt, enum AVPacketSideDataType type,
+uint8_t* av_packet_new_side_data(AVPacket* pkt, enum AVPacketSideDataType type,
 #if FF_API_BUFFER_SIZE_T
                                  int size);
 #else
@@ -596,8 +601,8 @@ uint8_t* av_packet_new_side_data(AVPacket *pkt, enum AVPacketSideDataType type,
  *         failure. On failure, the packet is unchanged and the data remains
  *         owned by the caller.
  */
-int av_packet_add_side_data(AVPacket *pkt, enum AVPacketSideDataType type,
-                            uint8_t *data, size_t size);
+int av_packet_add_side_data(AVPacket* pkt, enum AVPacketSideDataType type,
+                            uint8_t* data, size_t size);
 
 /**
  * Shrink the already allocated side data buffer
@@ -607,7 +612,7 @@ int av_packet_add_side_data(AVPacket *pkt, enum AVPacketSideDataType type,
  * @param size new side information size
  * @return 0 on success, < 0 on failure
  */
-int av_packet_shrink_side_data(AVPacket *pkt, enum AVPacketSideDataType type,
+int av_packet_shrink_side_data(AVPacket* pkt, enum AVPacketSideDataType type,
 #if FF_API_BUFFER_SIZE_T
                                int size);
 #else
@@ -623,22 +628,22 @@ int av_packet_shrink_side_data(AVPacket *pkt, enum AVPacketSideDataType type,
  *             or to zero if the desired side data is not present.
  * @return pointer to data if present or NULL otherwise
  */
-uint8_t* av_packet_get_side_data(const AVPacket *pkt, enum AVPacketSideDataType type,
+uint8_t* av_packet_get_side_data(const AVPacket* pkt, enum AVPacketSideDataType type,
 #if FF_API_BUFFER_SIZE_T
-                                 int *size);
+                                 int* size);
 #else
-                                 size_t *size);
+                                 size_t* size);
 #endif
 
 #if FF_API_MERGE_SD_API
 attribute_deprecated
-int av_packet_merge_side_data(AVPacket *pkt);
+int av_packet_merge_side_data(AVPacket* pkt);
 
 attribute_deprecated
-int av_packet_split_side_data(AVPacket *pkt);
+int av_packet_split_side_data(AVPacket* pkt);
 #endif
 
-const char *av_packet_side_data_name(enum AVPacketSideDataType type);
+const char* av_packet_side_data_name(enum AVPacketSideDataType type);
 
 /**
  * Pack a dictionary for use in side_data.
@@ -648,9 +653,9 @@ const char *av_packet_side_data_name(enum AVPacketSideDataType type);
  * @return pointer to data if successful, NULL otherwise
  */
 #if FF_API_BUFFER_SIZE_T
-uint8_t *av_packet_pack_dictionary(AVDictionary *dict, int *size);
+uint8_t* av_packet_pack_dictionary(AVDictionary* dict, int* size);
 #else
-uint8_t *av_packet_pack_dictionary(AVDictionary *dict, size_t *size);
+uint8_t* av_packet_pack_dictionary(AVDictionary * dict, size_t * size);
 #endif
 /**
  * Unpack a dictionary from side_data.
@@ -661,10 +666,10 @@ uint8_t *av_packet_pack_dictionary(AVDictionary *dict, size_t *size);
  * @return 0 on success, < 0 on failure
  */
 #if FF_API_BUFFER_SIZE_T
-int av_packet_unpack_dictionary(const uint8_t *data, int size, AVDictionary **dict);
+int av_packet_unpack_dictionary(const uint8_t* data, int size, AVDictionary** dict);
 #else
-int av_packet_unpack_dictionary(const uint8_t *data, size_t size,
-                                AVDictionary **dict);
+int av_packet_unpack_dictionary(const uint8_t* data, size_t size,
+                                AVDictionary** dict);
 #endif
 
 /**
@@ -673,7 +678,7 @@ int av_packet_unpack_dictionary(const uint8_t *data, size_t size,
  *
  * @param pkt packet
  */
-void av_packet_free_side_data(AVPacket *pkt);
+void av_packet_free_side_data(AVPacket* pkt);
 
 /**
  * Setup a new reference to the data described by a given packet
@@ -692,7 +697,7 @@ void av_packet_free_side_data(AVPacket *pkt);
  * @return 0 on success, a negative AVERROR on error. On error, dst
  *         will be blank (as if returned by av_packet_alloc()).
  */
-int av_packet_ref(AVPacket *dst, const AVPacket *src);
+int av_packet_ref(AVPacket* dst, const AVPacket* src);
 
 /**
  * Wipe the packet.
@@ -702,7 +707,7 @@ int av_packet_ref(AVPacket *dst, const AVPacket *src);
  *
  * @param pkt The packet to be unreferenced.
  */
-void av_packet_unref(AVPacket *pkt);
+void av_packet_unref(AVPacket* pkt);
 
 /**
  * Move every field in src to dst and reset src.
@@ -712,7 +717,7 @@ void av_packet_unref(AVPacket *pkt);
  * @param src Source packet, will be reset
  * @param dst Destination packet
  */
-void av_packet_move_ref(AVPacket *dst, AVPacket *src);
+void av_packet_move_ref(AVPacket* dst, AVPacket* src);
 
 /**
  * Copy only "properties" fields from src to dst.
@@ -725,7 +730,7 @@ void av_packet_move_ref(AVPacket *dst, AVPacket *src);
  *
  * @return 0 on success AVERROR on failure.
  */
-int av_packet_copy_props(AVPacket *dst, const AVPacket *src);
+int av_packet_copy_props(AVPacket* dst, const AVPacket* src);
 
 /**
  * Ensure the data described by a given packet is reference counted.
@@ -741,7 +746,7 @@ int av_packet_copy_props(AVPacket *dst, const AVPacket *src);
  * @return 0 on success, a negative AVERROR on error. On failure, the
  *         packet is unchanged.
  */
-int av_packet_make_refcounted(AVPacket *pkt);
+int av_packet_make_refcounted(AVPacket* pkt);
 
 /**
  * Create a writable reference for the data described by a given packet,
@@ -752,7 +757,7 @@ int av_packet_make_refcounted(AVPacket *pkt);
  * @return 0 on success, a negative AVERROR on failure. On failure, the
  *         packet is unchanged.
  */
-int av_packet_make_writable(AVPacket *pkt);
+int av_packet_make_writable(AVPacket* pkt);
 
 /**
  * Convert valid timing fields (timestamps / durations) in a packet from one
@@ -765,7 +770,7 @@ int av_packet_make_writable(AVPacket *pkt);
  * @param tb_dst destination timebase, to which the timing fields will be
  *               converted
  */
-void av_packet_rescale_ts(AVPacket *pkt, AVRational tb_src, AVRational tb_dst);
+void av_packet_rescale_ts(AVPacket* pkt, AVRational tb_src, AVRational tb_dst);
 
 /**
  * @}

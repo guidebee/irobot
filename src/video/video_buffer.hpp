@@ -23,26 +23,28 @@ extern "C" {
 
 #include "fps_counter.hpp"
 
-namespace irobot::video {
+namespace irobot::video
+{
     // forward declarations
     typedef struct AVFrame AVFrame;
 
-    class VideoBuffer {
+    class VideoBuffer
+    {
     public:
-        AVFrame *decoding_frame;
-        AVFrame *rendering_frame;
-        SDL_mutex *mutex;
+        AVFrame* decoding_frame;
+        AVFrame* rendering_frame;
+        SDL_mutex* mutex;
         bool render_expired_frames;
         bool interrupted;
-        SDL_cond *rendering_frame_consumed_cond;
+        SDL_cond* rendering_frame_consumed_cond;
         bool rendering_frame_consumed;
-        struct FpsCounter *fps_counter;
+        struct FpsCounter* fps_counter;
         int frame_number;
 
-        AVFrame *rgb_frame;
-        uint8_t *buffer;
+        AVFrame* rgb_frame;
+        uint8_t* buffer;
 
-        bool Init(struct FpsCounter *fps_counter,
+        bool Init(struct FpsCounter* fps_counter,
                   bool render_expired_frames);
 
         void Destroy();
@@ -51,21 +53,19 @@ namespace irobot::video {
         // set the decoded frame as ready for rendering
         // this function locks frames->mutex during its execution
         // the output flag is set to report whether the previous frame has been skipped
-        void OfferDecodedFrame(bool *previous_frame_skipped);
+        void OfferDecodedFrame(bool* previous_frame_skipped);
 
         // mark the rendering frame as consumed and return it
         // MUST be called with frames->mutex locked!!!
         // the caller is expected to render the returned frame to some texture before
         // unlocking frames->mutex
-        const AVFrame *ConsumeRenderedFrame();
+        const AVFrame* ConsumeRenderedFrame();
 
         // wake up and avoid any blocking call
         void Interrupt();
 
     private:
         void SwapFrames();
-
     };
-
 }
 #endif //ANDROID_IROBOT_VIDEO_BUFFER_HPP

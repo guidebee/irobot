@@ -27,7 +27,8 @@
 /**
  * Option for overlapping elliptical pixel selectors in an image.
  */
-enum AVHDRPlusOverlapProcessOption {
+enum AVHDRPlusOverlapProcessOption
+{
     AV_HDR_PLUS_OVERLAP_PROCESS_WEIGHTED_AVERAGING = 0,
     AV_HDR_PLUS_OVERLAP_PROCESS_LAYERING = 1,
 };
@@ -36,7 +37,8 @@ enum AVHDRPlusOverlapProcessOption {
  * Represents the percentile at a specific percentage in
  * a distribution.
  */
-typedef struct AVHDRPlusPercentile {
+typedef struct AVHDRPlusPercentile
+{
     /**
      * The percentage value corresponding to a specific percentile linearized
      * RGB value in the processing window in the scene. The value shall be in
@@ -56,7 +58,8 @@ typedef struct AVHDRPlusPercentile {
  * Color transform parameters at a processing window in a dynamic metadata for
  * SMPTE 2094-40.
  */
-typedef struct AVHDRPlusColorTransformParams {
+typedef struct AVHDRPlusColorTransformParams
+{
     /**
      * The relative x coordinate of the top left pixel of the processing
      * window. The value shall be in the range of 0 and 1, inclusive and
@@ -240,7 +243,8 @@ typedef struct AVHDRPlusColorTransformParams {
  * av_dynamic_hdr_plus_alloc() and its size is not a part of
  * the public ABI.
  */
-typedef struct AVDynamicHDRPlus {
+typedef struct AVDynamicHDRPlus
+{
     /**
      * Country code by Rec. ITU-T T.35 Annex A. The value shall be 0xB5.
      */
@@ -329,7 +333,7 @@ typedef struct AVDynamicHDRPlus {
  * @return An AVDynamicHDRPlus filled with default values or NULL
  *         on failure.
  */
-AVDynamicHDRPlus *av_dynamic_hdr_plus_alloc(size_t *size);
+AVDynamicHDRPlus* av_dynamic_hdr_plus_alloc(size_t* size);
 
 /**
  * Allocate a complete AVDynamicHDRPlus and add it to the frame.
@@ -338,6 +342,6 @@ AVDynamicHDRPlus *av_dynamic_hdr_plus_alloc(size_t *size);
  * @return The AVDynamicHDRPlus structure to be filled by caller or NULL
  *         on failure.
  */
-AVDynamicHDRPlus *av_dynamic_hdr_plus_create_side_data(AVFrame *frame);
+AVDynamicHDRPlus* av_dynamic_hdr_plus_create_side_data(AVFrame * frame);
 
 #endif /* AVUTIL_HDR_DYNAMIC_METADATA_H */

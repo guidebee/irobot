@@ -32,7 +32,8 @@
  * added in future.
  */
 
-enum {
+enum
+{
     /**
      * The maximum number of layers/planes in a DRM frame.
      */
@@ -45,7 +46,8 @@ enum {
  * Describes a single DRM object, addressing it as a PRIME file
  * descriptor.
  */
-typedef struct AVDRMObjectDescriptor {
+typedef struct AVDRMObjectDescriptor
+{
     /**
      * DRM PRIME fd for the object.
      */
@@ -71,7 +73,8 @@ typedef struct AVDRMObjectDescriptor {
  * Describes a single plane of a layer, which is contained within
  * a single object.
  */
-typedef struct AVDRMPlaneDescriptor {
+typedef struct AVDRMPlaneDescriptor
+{
     /**
      * Index of the object containing this plane in the objects
      * array of the enclosing frame descriptor.
@@ -93,7 +96,8 @@ typedef struct AVDRMPlaneDescriptor {
  * Describes a single layer within a frame.  This has the structure
  * defined by its format, and will contain one or more planes.
  */
-typedef struct AVDRMLayerDescriptor {
+typedef struct AVDRMLayerDescriptor
+{
     /**
      * Format of the layer (DRM_FORMAT_*).
      */
@@ -130,7 +134,8 @@ typedef struct AVDRMLayerDescriptor {
  * increasing plane index must be the same as the order which would
  * be used for the data pointers in the equivalent software format.
  */
-typedef struct AVDRMFrameDescriptor {
+typedef struct AVDRMFrameDescriptor
+{
     /**
      * Number of DRM objects making up this frame.
      */
@@ -154,7 +159,8 @@ typedef struct AVDRMFrameDescriptor {
  *
  * Allocated as AVHWDeviceContext.hwctx.
  */
-typedef struct AVDRMDeviceContext {
+typedef struct AVDRMDeviceContext
+{
     /**
      * File descriptor of DRM device.
      *

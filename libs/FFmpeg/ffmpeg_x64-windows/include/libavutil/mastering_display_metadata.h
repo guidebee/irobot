@@ -35,7 +35,8 @@
  * @note The struct should be allocated with av_mastering_display_metadata_alloc()
  *       and its size is not a part of the public ABI.
  */
-typedef struct AVMasteringDisplayMetadata {
+typedef struct AVMasteringDisplayMetadata
+{
     /**
      * CIE 1931 xy chromaticity coords of color primaries (r, g, b order).
      */
@@ -65,7 +66,6 @@ typedef struct AVMasteringDisplayMetadata {
      * Flag indicating whether the luminance (min_ and max_) have been set.
      */
     int has_luminance;
-
 } AVMasteringDisplayMetadata;
 
 /**
@@ -75,7 +75,7 @@ typedef struct AVMasteringDisplayMetadata {
  * @return An AVMasteringDisplayMetadata filled with default values or NULL
  *         on failure.
  */
-AVMasteringDisplayMetadata *av_mastering_display_metadata_alloc(void);
+AVMasteringDisplayMetadata* av_mastering_display_metadata_alloc(void);
 
 /**
  * Allocate a complete AVMasteringDisplayMetadata and add it to the frame.
@@ -84,7 +84,7 @@ AVMasteringDisplayMetadata *av_mastering_display_metadata_alloc(void);
  *
  * @return The AVMasteringDisplayMetadata structure to be filled by caller.
  */
-AVMasteringDisplayMetadata *av_mastering_display_metadata_create_side_data(AVFrame *frame);
+AVMasteringDisplayMetadata* av_mastering_display_metadata_create_side_data(AVFrame * frame);
 
 /**
  * Content light level needed by to transmit HDR over HDMI (CTA-861.3).
@@ -95,7 +95,8 @@ AVMasteringDisplayMetadata *av_mastering_display_metadata_create_side_data(AVFra
  * @note The struct should be allocated with av_content_light_metadata_alloc()
  *       and its size is not a part of the public ABI.
  */
-typedef struct AVContentLightMetadata {
+typedef struct AVContentLightMetadata
+{
     /**
      * Max content light level (cd/m^2).
      */
@@ -114,7 +115,7 @@ typedef struct AVContentLightMetadata {
  * @return An AVContentLightMetadata filled with default values or NULL
  *         on failure.
  */
-AVContentLightMetadata *av_content_light_metadata_alloc(size_t *size);
+AVContentLightMetadata* av_content_light_metadata_alloc(size_t* size);
 
 /**
  * Allocate a complete AVContentLightMetadata and add it to the frame.
@@ -123,6 +124,6 @@ AVContentLightMetadata *av_content_light_metadata_alloc(size_t *size);
  *
  * @return The AVContentLightMetadata structure to be filled by caller.
  */
-AVContentLightMetadata *av_content_light_metadata_create_side_data(AVFrame *frame);
+AVContentLightMetadata* av_content_light_metadata_create_side_data(AVFrame * frame);
 
 #endif /* AVUTIL_MASTERING_DISPLAY_METADATA_H */

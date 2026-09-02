@@ -6,12 +6,18 @@
 #include <catch2/catch_all.hpp>
 #include "util/queue.hpp"
 
-struct foo {
+struct foo
+{
     int value;
-    struct foo *next;
+    struct foo* next;
 };
 
-TEST_CASE("utility queue", "[util][queue]") {
+TEST_CASE (
+"utility queue"
+,
+"[util][queue]"
+)
+ {
     struct my_queue QUEUE(struct foo) queue{};
     queue_init(&queue);
 

@@ -10,7 +10,12 @@
 using namespace irobot;
 using namespace irobot::ui;
 
-TEST_CASE("flag version", "[ui][cli]") {
+TEST_CASE (
+"flag version"
+,
+"[ui][cli]"
+)
+ {
     struct IRobotCore args = {
 
     };
@@ -24,7 +29,12 @@ TEST_CASE("flag version", "[ui][cli]") {
     REQUIRE(args.version);
 }
 
-TEST_CASE("flag help", "[ui][cli]") {
+TEST_CASE (
+"flag help"
+,
+"[ui][cli]"
+)
+ {
     struct IRobotCore args = {
 
     };
@@ -38,7 +48,12 @@ TEST_CASE("flag help", "[ui][cli]") {
     REQUIRE(args.version);
 }
 
-TEST_CASE("options", "[ui][cli]") {
+TEST_CASE (
+"options"
+,
+"[ui][cli]"
+)
+ {
     struct IRobotCore args = {
 
     };
@@ -98,7 +113,12 @@ TEST_CASE("options", "[ui][cli]") {
     REQUIRE(opts->window_borderless);
 }
 
-TEST_CASE("options2", "[ui][cli]") {
+TEST_CASE (
+"options2"
+,
+"[ui][cli]"
+)
+ {
     struct IRobotCore args = {
 
     };

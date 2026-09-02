@@ -4,7 +4,7 @@
 
 #include "core/irobot_core.hpp"
 
-int main(int argc, char *argv[]) {
+int main(int argc, char* argv[])
+{
     return irobot::IRobotCore::iRobotMain(argc, argv);
 }
-

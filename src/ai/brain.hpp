@@ -13,12 +13,12 @@
 
 #include "video/video_buffer.hpp"
 
-namespace irobot::ai {
+namespace irobot::ai
+{
     void SaveFrame(video::VideoBuffer video_buffer);
 
     cv::Mat ConvertToMat(video::VideoBuffer video_buffer,
                          int max_size, bool color);
-
 }
 
 #endif //ANDROID_IROBOT_BRAIN_HPP

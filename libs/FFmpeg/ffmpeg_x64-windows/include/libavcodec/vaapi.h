@@ -53,14 +53,15 @@
  *
  * Deprecated: use AVCodecContext.hw_frames_ctx instead.
  */
-struct attribute_deprecated vaapi_context {
+struct attribute_deprecated vaapi_context
+{
     /**
      * Window system dependent data
      *
      * - encoding: unused
      * - decoding: Set by user
      */
-    void *display;
+    void* display;
 
     /**
      * Configuration ID

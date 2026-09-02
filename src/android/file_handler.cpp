@@ -13,27 +13,32 @@
 
 #define DEFAULT_PUSH_TARGET "/sdcard/"
 
-namespace irobot::android {
-
-    bool FileHandler::Init(const char *pSerial,
-                           const char *pPush_target) {
-
+namespace irobot::android
+{
+    bool FileHandler::Init(const char* pSerial,
+                           const char* pPush_target)
+    {
         cbuf_init(&this->queue);
 
         bool initialized = Actor::Init();
-        if (!initialized) {
+        if (!initialized)
+        {
             return false;
         }
 
-        if (pSerial) {
+        if (pSerial)
+        {
             this->serial = SDL_strdup(pSerial);
-            if (!this->serial) {
+            if (!this->serial)
+            {
                 LOGW("Could not strdup serial");
                 SDL_DestroyCond(this->thread_cond);
                 SDL_DestroyMutex(this->mutex);
                 return false;
             }
-        } else {
+        }
+        else
+        {
             this->serial = nullptr;
         }
 
@@ -44,20 +49,25 @@ namespace irobot::android {
         return true;
     }
 
-    void FileHandler::Destroy() {
+    void FileHandler::Destroy()
+    {
         Actor::Destroy();
         SDL_free(this->serial);
         FileHandlerRequest req{};
-        while (cbuf_take(&this->queue, &req)) {
+        while (cbuf_take(&this->queue, &req))
+        {
             req.destroy();
         }
     }
 
     bool FileHandler::Request(
-            FileHandlerActionType action, char *file) {
+        FileHandlerActionType action, char* file)
+    {
         // start file_handler if it's used for the first time
-        if (!this->initialized) {
-            if (!this->Start()) {
+        if (!this->initialized)
+        {
+            if (!this->Start())
+            {
                 return false;
             }
             this->initialized = true;
@@ -65,14 +75,15 @@ namespace irobot::android {
         LOGI("Request to %s %s", action == ACTION_INSTALL_APK ? "install" : "push",
              file);
         struct FileHandlerRequest req = {
-                .action = action,
-                .file = file,
+            .action = action,
+            .file = file,
         };
 
         util::mutex_lock(this->mutex);
         bool was_empty = cbuf_is_empty(&this->queue);
         bool res = cbuf_push(&this->queue, req);
-        if (was_empty) {
+        if (was_empty)
+        {
             util::cond_signal(this->thread_cond);
         }
         util::mutex_unlock(this->mutex);
@@ -80,23 +91,28 @@ namespace irobot::android {
     }
 
 
-    bool FileHandler::Start() {
+    bool FileHandler::Start()
+    {
         LOGD("Starting file_handler thread");
         this->thread = SDL_CreateThread(FileHandler::RunFileHandler, "file_handler",
                                         this);
-        if (!this->thread) {
+        if (!this->thread)
+        {
             LOGC("Could not start file_handler thread");
             return false;
         }
         return true;
     }
 
-    void FileHandler::Stop() {
+    void FileHandler::Stop()
+    {
         util::mutex_lock(this->mutex);
         this->stopped = true;
         util::cond_signal(this->thread_cond);
-        if (this->current_process != PROCESS_NONE) {
-            if (!irobot::platform::cmd_terminate(this->current_process)) {
+        if (this->current_process != PROCESS_NONE)
+        {
+            if (!irobot::platform::cmd_terminate(this->current_process))
+            {
                 LOGW("Could not terminate install process");
             }
             irobot::platform::cmd_simple_wait(this->current_process, nullptr);
@@ -106,16 +122,20 @@ namespace irobot::android {
     }
 
 
-    int FileHandler::RunFileHandler(void *data) {
-        auto *file_handler = (FileHandler *) data;
+    int FileHandler::RunFileHandler(void* data)
+    {
+        auto* file_handler = (FileHandler*)data;
 
-        for (;;) {
+        for (;;)
+        {
             util::mutex_lock(file_handler->mutex);
             file_handler->current_process = PROCESS_NONE;
-            while (!file_handler->stopped && cbuf_is_empty(&file_handler->queue)) {
+            while (!file_handler->stopped && cbuf_is_empty(&file_handler->queue))
+            {
                 util::cond_wait(file_handler->thread_cond, file_handler->mutex);
             }
-            if (file_handler->stopped) {
+            if (file_handler->stopped)
+            {
                 // stop immediately, do not process further events
                 util::mutex_unlock(file_handler->mutex);
                 break;
@@ -123,13 +143,16 @@ namespace irobot::android {
             FileHandlerRequest req{};
             bool non_empty = cbuf_take(&file_handler->queue, &req);
             assert(non_empty);
-            (void) non_empty;
+            (void)non_empty;
 
             ProcessType process;
-            if (req.action == ACTION_INSTALL_APK) {
+            if (req.action == ACTION_INSTALL_APK)
+            {
                 LOGI("Installing %s...", req.file);
                 process = InstallApk(file_handler->serial, req.file);
-            } else {
+            }
+            else
+            {
                 LOGI("Pushing %s...", req.file);
                 process = PushFile(file_handler->serial, req.file,
                                    file_handler->push_target);
@@ -137,17 +160,26 @@ namespace irobot::android {
             file_handler->current_process = process;
             util::mutex_unlock(file_handler->mutex);
 
-            if (req.action == ACTION_INSTALL_APK) {
-                if (irobot::platform::process_check_success(process, "adb install")) {
+            if (req.action == ACTION_INSTALL_APK)
+            {
+                if (irobot::platform::process_check_success(process, "adb install"))
+                {
                     LOGI("%s successfully installed", req.file);
-                } else {
+                }
+                else
+                {
                     LOGE("Failed to install %s", req.file);
                 }
-            } else {
-                if (irobot::platform::process_check_success(process, "adb push")) {
+            }
+            else
+            {
+                if (irobot::platform::process_check_success(process, "adb push"))
+                {
                     LOGI("%s successfully pushed to %s", req.file,
                          file_handler->push_target);
-                } else {
+                }
+                else
+                {
                     LOGE("Failed to push %s to %s", req.file,
                          file_handler->push_target);
                 }
@@ -158,13 +190,14 @@ namespace irobot::android {
         return 0;
     }
 
-    ProcessType FileHandler::InstallApk(const char *serial, const char *file) {
+    ProcessType FileHandler::InstallApk(const char* serial, const char* file)
+    {
         return platform::adb_install(serial, file);
     }
 
-    ProcessType FileHandler::PushFile(const char *serial,
-                                      const char *file, const char *push_target) {
+    ProcessType FileHandler::PushFile(const char* serial,
+                                      const char* file, const char* push_target)
+    {
         return platform::adb_push(serial, file, push_target);
     }
-
 }

@@ -13,12 +13,11 @@
 #include "config.hpp"
 #include "core/actor.hpp"
 
-namespace irobot::video {
-
-    class FpsCounter : public Actor {
-
+namespace irobot::video
+{
+    class FpsCounter : public Actor
+    {
     public:
-
         // atomic so that we can check without locking the mutex
         // if the FPS counter is disabled, we don't want to lock unnecessarily
         SDL_atomic_t started{};
@@ -47,12 +46,10 @@ namespace irobot::video {
 
         void CheckIntervalExpired(uint32_t now);
 
-        static int RunFpsCounter(void *data);
+        static int RunFpsCounter(void* data);
 
     private:
         void display_fps();
-
     };
-
 }
 #endif //ANDROID_IROBOT_FPS_COUNTER_HPP

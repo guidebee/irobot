@@ -8,24 +8,27 @@
 #include "audio_buffer.hpp"
 #include "util/log.hpp"
 
-namespace irobot::audio {
-
-    void AudioPlayer::Init(AudioBuffer *buf) {
+namespace irobot::audio
+{
+    void AudioPlayer::Init(AudioBuffer* buf)
+    {
         this->audio_buffer = buf;
         this->device = 0;
     }
 
-    void SDLCALL AudioPlayer::AudioCallback(void *userdata, uint8_t *stream, int len) {
-        auto *player = (AudioPlayer *) userdata;
-        player->audio_buffer->Read(stream, (size_t) len, player->silence);
+    void SDLCALL AudioPlayer::AudioCallback(void* userdata, uint8_t* stream, int len)
+    {
+        auto* player = (AudioPlayer*)userdata;
+        player->audio_buffer->Read(stream, (size_t)len, player->silence);
     }
 
-    bool AudioPlayer::Open(int sample_rate, int channels) {
+    bool AudioPlayer::Open(int sample_rate, int channels)
+    {
         SDL_AudioSpec desired;
         SDL_zero(desired);
         desired.freq = sample_rate;
         desired.format = AUDIO_S16SYS;
-        desired.channels = (Uint8) channels;
+        desired.channels = (Uint8)channels;
         // ~21ms at 48kHz: low enough latency, large enough to avoid glitches
         desired.samples = 1024;
         desired.callback = AudioCallback;
@@ -36,7 +39,8 @@ namespace irobot::audio {
         // samples at this rate/channel count, so SDL must not silently
         // substitute a different one
         this->device = SDL_OpenAudioDevice(nullptr, 0, &desired, &obtained, 0);
-        if (!this->device) {
+        if (!this->device)
+        {
             LOGE("Could not open audio device: %s", SDL_GetError());
             return false;
         }
@@ -47,8 +51,10 @@ namespace irobot::audio {
         return true;
     }
 
-    void AudioPlayer::Close() {
-        if (this->device) {
+    void AudioPlayer::Close()
+    {
+        if (this->device)
+        {
             SDL_CloseAudioDevice(this->device);
             this->device = 0;
         }

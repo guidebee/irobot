@@ -33,8 +33,8 @@
  * @{
  */
 
-enum {
-
+enum
+{
     /**
      * Do not check for format changes.
      */
@@ -51,7 +51,6 @@ enum {
      * copy the frame data.
      */
     AV_BUFFERSRC_FLAG_KEEP_REF = 8,
-
 };
 
 /**
@@ -61,7 +60,7 @@ enum {
  * frame is present in the buffer.
  * The number is reset when a frame is added.
  */
-unsigned av_buffersrc_get_nb_failed_requests(AVFilterContext *buffer_src);
+unsigned av_buffersrc_get_nb_failed_requests(AVFilterContext * buffer_src);
 
 /**
  * This structure contains the parameters describing the frames that will be
@@ -70,7 +69,8 @@ unsigned av_buffersrc_get_nb_failed_requests(AVFilterContext *buffer_src);
  * It should be allocated with av_buffersrc_parameters_alloc() and freed with
  * av_free(). All the allocated fields in it remain owned by the caller.
  */
-typedef struct AVBufferSrcParameters {
+typedef struct AVBufferSrcParameters
+{
     /**
      * video: the pixel format, value corresponds to enum AVPixelFormat
      * audio: the sample format, value corresponds to enum AVSampleFormat
@@ -103,7 +103,7 @@ typedef struct AVBufferSrcParameters {
      * Video with a hwaccel pixel format only. This should be a reference to an
      * AVHWFramesContext instance describing the input frames.
      */
-    AVBufferRef *hw_frames_ctx;
+    AVBufferRef* hw_frames_ctx;
 
     /**
      * Audio only, the audio sampling rate in samples per second.
@@ -120,7 +120,7 @@ typedef struct AVBufferSrcParameters {
  * Allocate a new AVBufferSrcParameters instance. It should be freed by the
  * caller with av_free().
  */
-AVBufferSrcParameters *av_buffersrc_parameters_alloc(void);
+AVBufferSrcParameters* av_buffersrc_parameters_alloc(void);
 
 /**
  * Initialize the buffersrc or abuffersrc filter with the provided parameters.
@@ -135,7 +135,7 @@ AVBufferSrcParameters *av_buffersrc_parameters_alloc(void);
  *              copies or references when necessary.
  * @return 0 on success, a negative AVERROR code on failure.
  */
-int av_buffersrc_parameters_set(AVFilterContext *ctx, AVBufferSrcParameters *param);
+int av_buffersrc_parameters_set(AVFilterContext * ctx, AVBufferSrcParameters * param);
 
 /**
  * Add a frame to the buffer source.
@@ -151,7 +151,7 @@ int av_buffersrc_parameters_set(AVFilterContext *ctx, AVBufferSrcParameters *par
  * AV_BUFFERSRC_FLAG_KEEP_REF flag.
  */
 av_warn_unused_result
-int av_buffersrc_write_frame(AVFilterContext *ctx, const AVFrame *frame);
+int av_buffersrc_write_frame(AVFilterContext* ctx, const AVFrame* frame);
 
 /**
  * Add a frame to the buffer source.
@@ -172,7 +172,7 @@ int av_buffersrc_write_frame(AVFilterContext *ctx, const AVFrame *frame);
  * AV_BUFFERSRC_FLAG_KEEP_REF flag.
  */
 av_warn_unused_result
-int av_buffersrc_add_frame(AVFilterContext *ctx, AVFrame *frame);
+int av_buffersrc_add_frame(AVFilterContext * ctx, AVFrame * frame);
 
 /**
  * Add a frame to the buffer source.
@@ -190,8 +190,8 @@ int av_buffersrc_add_frame(AVFilterContext *ctx, AVFrame *frame);
  *                    in case of failure
  */
 av_warn_unused_result
-int av_buffersrc_add_frame_flags(AVFilterContext *buffer_src,
-                                 AVFrame *frame, int flags);
+int av_buffersrc_add_frame_flags(AVFilterContext* buffer_src,
+                                 AVFrame* frame, int flags);
 
 /**
  * Close the buffer source after EOF.
@@ -200,7 +200,7 @@ int av_buffersrc_add_frame_flags(AVFilterContext *buffer_src,
  * except it takes the timestamp of the EOF, i.e. the timestamp of the end
  * of the last frame.
  */
-int av_buffersrc_close(AVFilterContext *ctx, int64_t pts, unsigned flags);
+int av_buffersrc_close(AVFilterContext* ctx, int64_t pts, unsigned flags);
 
 /**
  * @}

@@ -24,19 +24,23 @@
 
 typedef struct AVTXContext AVTXContext;
 
-typedef struct AVComplexFloat {
+typedef struct AVComplexFloat
+{
     float re, im;
 } AVComplexFloat;
 
-typedef struct AVComplexDouble {
+typedef struct AVComplexDouble
+{
     double re, im;
 } AVComplexDouble;
 
-typedef struct AVComplexInt32 {
+typedef struct AVComplexInt32
+{
     int32_t re, im;
 } AVComplexInt32;
 
-enum AVTXType {
+enum AVTXType
+{
     /**
      * Standard complex to complex FFT with sample data type AVComplexFloat.
      * Output is not 1/len normalized. Scaling currently unsupported.
@@ -96,12 +100,13 @@ enum AVTXType {
  * architecture.
  * The stride must follow the constraints the transform type has specified.
  */
-typedef void (*av_tx_fn)(AVTXContext *s, void *out, void *in, ptrdiff_t stride);
+typedef void (*av_tx_fn)(AVTXContext* s, void* out, void* in, ptrdiff_t stride);
 
 /**
  * Flags for av_tx_init()
  */
-enum AVTXFlags {
+enum AVTXFlags
+{
     /**
      * Performs an in-place transformation on the input. The output argument
      * of av_tn_fn() MUST match the input. May be unsupported or slower for some
@@ -124,12 +129,12 @@ enum AVTXFlags {
  *
  * @return 0 on success, negative error code on failure
  */
-int av_tx_init(AVTXContext **ctx, av_tx_fn *tx, enum AVTXType type,
-               int inv, int len, const void *scale, uint64_t flags);
+int av_tx_init(AVTXContext** ctx, av_tx_fn* tx, enum AVTXType type,
+               int inv, int len, const void* scale, uint64_t flags);
 
 /**
  * Frees a context and sets ctx to NULL, does nothing when ctx == NULL
  */
-void av_tx_uninit(AVTXContext **ctx);
+void av_tx_uninit(AVTXContext** ctx);
 
 #endif /* AVUTIL_TX_H */

@@ -36,7 +36,7 @@ target_include_directories(FFmpeg INTERFACE
         ${SWSCALE_INCLUDE_DIR}
         ${AVFILTER_INCLUDE_DIR}
         ${SWRESAMPLE_INCLUDE_DIR}
-        )
+)
 
 target_link_libraries(FFmpeg INTERFACE
         ${AVCODEC_LIBRARY}
@@ -46,4 +46,4 @@ target_link_libraries(FFmpeg INTERFACE
         ${SWSCALE_LIBRARY}
         ${AVFILTER_LIBRARY}
         ${SWRESAMPLE_LIBRARY}
-        )
+)

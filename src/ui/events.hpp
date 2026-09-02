@@ -13,9 +13,10 @@
 #define EVENT_END_RECORD_UI_EVENT       (SDL_USEREVENT + 5)
 #define EVENT_NEW_DATA_STREAM_CONNECTION                 (SDL_USEREVENT + 6)
 
-namespace irobot::ui {
-
-    enum EventResult {
+namespace irobot::ui
+{
+    enum EventResult
+    {
         EVENT_RESULT_CONTINUE,
         EVENT_RESULT_STOPPED_BY_USER,
         EVENT_RESULT_STOPPED_BY_EOS,

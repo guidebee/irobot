@@ -7,26 +7,30 @@
 
 #include <csignal>
 
-namespace irobot::platform {
-    bool net_init() {
+namespace irobot::platform
+{
+    bool net_init()
+    {
         // do nothing
         signal(SIGPIPE, SIG_IGN);
         return true;
     }
 
-    void net_cleanup() {
+    void net_cleanup()
+    {
         // do nothing
     }
 
-    bool net_close(socket_t socket) {
+    bool net_close(socket_t socket)
+    {
         return !close(socket);
     }
 
-    bool net_try_recv(socket_t socket) {
+    bool net_try_recv(socket_t socket)
+    {
         char buf[1];
-        recv(socket, (char *) buf, 1, MSG_PEEK | MSG_DONTWAIT);
+        recv(socket, (char*)buf, 1, MSG_PEEK | MSG_DONTWAIT);
 
         return errno > 34 && errno < 45;
     }
-
 }

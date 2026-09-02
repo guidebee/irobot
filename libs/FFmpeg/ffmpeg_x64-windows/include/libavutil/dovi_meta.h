@@ -48,7 +48,8 @@
  * @note The struct must be allocated with av_dovi_alloc() and
  *       its size is not a part of the public ABI.
  */
-typedef struct AVDOVIDecoderConfigurationRecord {
+typedef struct AVDOVIDecoderConfigurationRecord
+{
     uint8_t dv_version_major;
     uint8_t dv_version_minor;
     uint8_t dv_profile;
@@ -65,6 +66,6 @@ typedef struct AVDOVIDecoderConfigurationRecord {
  *
  * @return the newly allocated struct or NULL on failure
  */
-AVDOVIDecoderConfigurationRecord *av_dovi_alloc(size_t *size);
+AVDOVIDecoderConfigurationRecord* av_dovi_alloc(size_t* size);
 
 #endif /* AVUTIL_DOVI_META_H */

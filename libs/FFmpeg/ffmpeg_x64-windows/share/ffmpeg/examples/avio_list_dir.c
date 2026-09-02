@@ -24,9 +24,10 @@
 #include <libavformat/avformat.h>
 #include <libavformat/avio.h>
 
-static const char *type_string(int type)
+static const char* type_string(int type)
 {
-    switch (type) {
+    switch (type)
+    {
     case AVIO_ENTRY_DIRECTORY:
         return "<DIR>";
     case AVIO_ENTRY_FILE:
@@ -54,29 +55,35 @@ static const char *type_string(int type)
     return "<UNKNOWN>";
 }
 
-static int list_op(const char *input_dir)
+static int list_op(const char* input_dir)
 {
-    AVIODirEntry *entry = NULL;
-    AVIODirContext *ctx = NULL;
+    AVIODirEntry* entry = NULL;
+    AVIODirContext* ctx = NULL;
     int cnt, ret;
     char filemode[4], uid_and_gid[20];
 
-    if ((ret = avio_open_dir(&ctx, input_dir, NULL)) < 0) {
+    if ((ret = avio_open_dir(&ctx, input_dir, NULL)) < 0)
+    {
         av_log(NULL, AV_LOG_ERROR, "Cannot open directory: %s.\n", av_err2str(ret));
         goto fail;
     }
 
     cnt = 0;
-    for (;;) {
-        if ((ret = avio_read_dir(ctx, &entry)) < 0) {
+    for (;;)
+    {
+        if ((ret = avio_read_dir(ctx, &entry)) < 0)
+        {
             av_log(NULL, AV_LOG_ERROR, "Cannot list directory: %s.\n", av_err2str(ret));
             goto fail;
         }
         if (!entry)
             break;
-        if (entry->filemode == -1) {
+        if (entry->filemode == -1)
+        {
             snprintf(filemode, 4, "???");
-        } else {
+        }
+        else
+        {
             snprintf(filemode, 4, "%3"PRIo64, entry->filemode);
         }
         snprintf(uid_and_gid, 20, "%"PRId64"(%"PRId64")", entry->user_id, entry->group_id);
@@ -97,25 +104,26 @@ static int list_op(const char *input_dir)
         cnt++;
     };
 
-  fail:
+fail:
     avio_close_dir(&ctx);
     return ret;
 }
 
-static void usage(const char *program_name)
+static void usage(const char* program_name)
 {
     fprintf(stderr, "usage: %s input_dir\n"
             "API example program to show how to list files in directory "
             "accessed through AVIOContext.\n", program_name);
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     int ret;
 
     av_log_set_level(AV_LOG_DEBUG);
 
-    if (argc < 2) {
+    if (argc < 2)
+    {
         usage(argv[0]);
         return 1;
     }

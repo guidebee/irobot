@@ -25,7 +25,8 @@
 #include "libavutil/avassert.h"
 #include "libavutil/frame.h"
 
-enum AVVideoEncParamsType {
+enum AVVideoEncParamsType
+{
     AV_VIDEO_ENC_PARAMS_NONE = -1,
     /**
      * VP9 stores:
@@ -70,7 +71,8 @@ enum AVVideoEncParamsType {
  * with an optional array of per-block AVVideoBlockParams descriptors.
  * Must be allocated with av_video_enc_params_alloc().
  */
-typedef struct AVVideoEncParams {
+typedef struct AVVideoEncParams
+{
     /**
      * Number of blocks in the array.
      *
@@ -117,7 +119,8 @@ typedef struct AVVideoEncParams {
  * sizeof(AVVideoBlockParams) is not a part of the ABI and new fields may be
  * added to it.
  */
-typedef struct AVVideoBlockParams {
+typedef struct AVVideoBlockParams
+{
     /**
      * Distance in luma pixels from the top-left corner of the visible frame
      * to the top-left corner of the block.
@@ -140,11 +143,11 @@ typedef struct AVVideoBlockParams {
  * Get the block at the specified {@code idx}. Must be between 0 and nb_blocks.
  */
 static av_always_inline AVVideoBlockParams*
-av_video_enc_params_block(AVVideoEncParams *par, unsigned int idx)
+av_video_enc_params_block(AVVideoEncParams* par, unsigned int idx)
 {
     av_assert0(idx < par->nb_blocks);
-    return (AVVideoBlockParams *)((uint8_t *)par + par->blocks_offset +
-                                  idx * par->block_size);
+    return (AVVideoBlockParams*)((uint8_t*)par + par->blocks_offset +
+        idx * par->block_size);
 }
 
 /**
@@ -155,8 +158,8 @@ av_video_enc_params_block(AVVideoEncParams *par, unsigned int idx)
  * @param out_size if non-NULL, the size in bytes of the resulting data array is
  * written here.
  */
-AVVideoEncParams *av_video_enc_params_alloc(enum AVVideoEncParamsType type,
-                                            unsigned int nb_blocks, size_t *out_size);
+AVVideoEncParams* av_video_enc_params_alloc(enum AVVideoEncParamsType type,
+                                            unsigned int nb_blocks, size_t* out_size);
 
 /**
  * Allocates memory for AVEncodeInfoFrame plus an array of
@@ -165,7 +168,7 @@ AVVideoEncParams *av_video_enc_params_alloc(enum AVVideoEncParamsType type,
  * and initializes the variables.
  */
 AVVideoEncParams*
-av_video_enc_params_create_side_data(AVFrame *frame, enum AVVideoEncParamsType type,
+av_video_enc_params_create_side_data(AVFrame* frame, enum AVVideoEncParamsType type,
                                      unsigned int nb_blocks);
 
 #endif /* AVUTIL_VIDEO_ENC_PARAMS_H */

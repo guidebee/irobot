@@ -36,8 +36,8 @@
 #include <libavutil/opt.h>
 #include <libavutil/imgutils.h>
 
-static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
-                   FILE *outfile)
+static void encode(AVCodecContext* enc_ctx, AVFrame* frame, AVPacket* pkt,
+                   FILE* outfile)
 {
     int ret;
 
@@ -46,16 +46,19 @@ static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
         printf("Send frame %3"PRId64"\n", frame->pts);
 
     ret = avcodec_send_frame(enc_ctx, frame);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         fprintf(stderr, "Error sending a frame for encoding\n");
         exit(1);
     }
 
-    while (ret >= 0) {
+    while (ret >= 0)
+    {
         ret = avcodec_receive_packet(enc_ctx, pkt);
         if (ret == AVERROR(EAGAIN) || ret == AVERROR_EOF)
             return;
-        else if (ret < 0) {
+        else if (ret < 0)
+        {
             fprintf(stderr, "Error during encoding\n");
             exit(1);
         }
@@ -66,18 +69,19 @@ static void encode(AVCodecContext *enc_ctx, AVFrame *frame, AVPacket *pkt,
     }
 }
 
-int main(int argc, char **argv)
+int main(int argc, char** argv)
 {
     const char *filename, *codec_name;
-    const AVCodec *codec;
-    AVCodecContext *c= NULL;
+    const AVCodec* codec;
+    AVCodecContext* c = NULL;
     int i, ret, x, y;
-    FILE *f;
-    AVFrame *frame;
-    AVPacket *pkt;
-    uint8_t endcode[] = { 0, 0, 1, 0xb7 };
+    FILE* f;
+    AVFrame* frame;
+    AVPacket* pkt;
+    uint8_t endcode[] = {0, 0, 1, 0xb7};
 
-    if (argc <= 2) {
+    if (argc <= 2)
+    {
         fprintf(stderr, "Usage: %s <output file> <codec name>\n", argv[0]);
         exit(0);
     }
@@ -86,13 +90,15 @@ int main(int argc, char **argv)
 
     /* find the mpeg1video encoder */
     codec = avcodec_find_encoder_by_name(codec_name);
-    if (!codec) {
+    if (!codec)
+    {
         fprintf(stderr, "Codec '%s' not found\n", codec_name);
         exit(1);
     }
 
     c = avcodec_alloc_context3(codec);
-    if (!c) {
+    if (!c)
+    {
         fprintf(stderr, "Could not allocate video codec context\n");
         exit(1);
     }
@@ -107,8 +113,14 @@ int main(int argc, char **argv)
     c->width = 352;
     c->height = 288;
     /* frames per second */
-    c->time_base = (AVRational){1, 25};
-    c->framerate = (AVRational){25, 1};
+    c->time_base = (AVRational)
+    {
+        1, 25
+    };
+    c->framerate = (AVRational)
+    {
+        25, 1
+    };
 
     /* emit one intra frame every ten frames
      * check frame pict_type before passing frame
@@ -125,34 +137,39 @@ int main(int argc, char **argv)
 
     /* open it */
     ret = avcodec_open2(c, codec, NULL);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         fprintf(stderr, "Could not open codec: %s\n", av_err2str(ret));
         exit(1);
     }
 
     f = fopen(filename, "wb");
-    if (!f) {
+    if (!f)
+    {
         fprintf(stderr, "Could not open %s\n", filename);
         exit(1);
     }
 
     frame = av_frame_alloc();
-    if (!frame) {
+    if (!frame)
+    {
         fprintf(stderr, "Could not allocate video frame\n");
         exit(1);
     }
     frame->format = c->pix_fmt;
-    frame->width  = c->width;
+    frame->width = c->width;
     frame->height = c->height;
 
     ret = av_frame_get_buffer(frame, 0);
-    if (ret < 0) {
+    if (ret < 0)
+    {
         fprintf(stderr, "Could not allocate the video frame data\n");
         exit(1);
     }
 
     /* encode 1 second of video */
-    for (i = 0; i < 25; i++) {
+    for (i = 0; i < 25; i++)
+    {
         fflush(stdout);
 
         /* make sure the frame data is writable */
@@ -162,15 +179,19 @@ int main(int argc, char **argv)
 
         /* prepare a dummy image */
         /* Y */
-        for (y = 0; y < c->height; y++) {
-            for (x = 0; x < c->width; x++) {
+        for (y = 0; y < c->height; y++)
+        {
+            for (x = 0; x < c->width; x++)
+            {
                 frame->data[0][y * frame->linesize[0] + x] = x + y + i * 3;
             }
         }
 
         /* Cb and Cr */
-        for (y = 0; y < c->height/2; y++) {
-            for (x = 0; x < c->width/2; x++) {
+        for (y = 0; y < c->height / 2; y++)
+        {
+            for (x = 0; x < c->width / 2; x++)
+            {
                 frame->data[1][y * frame->linesize[1] + x] = 128 + y + i * 2;
                 frame->data[2][y * frame->linesize[2] + x] = 64 + x + i * 5;
             }

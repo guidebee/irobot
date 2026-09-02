@@ -39,27 +39,29 @@
 #include <libavutil/hwcontext.h>
 
 static int width, height;
-static AVBufferRef *hw_device_ctx = NULL;
+static AVBufferRef* hw_device_ctx = NULL;
 
-static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx)
+static int set_hwframe_ctx(AVCodecContext* ctx, AVBufferRef* hw_device_ctx)
 {
-    AVBufferRef *hw_frames_ref;
-    AVHWFramesContext *frames_ctx = NULL;
+    AVBufferRef* hw_frames_ref;
+    AVHWFramesContext* frames_ctx = NULL;
     int err = 0;
 
-    if (!(hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx))) {
+    if (!(hw_frames_ref = av_hwframe_ctx_alloc(hw_device_ctx)))
+    {
         fprintf(stderr, "Failed to create VAAPI frame context.\n");
         return -1;
     }
-    frames_ctx = (AVHWFramesContext *)(hw_frames_ref->data);
-    frames_ctx->format    = AV_PIX_FMT_VAAPI;
+    frames_ctx = (AVHWFramesContext*)(hw_frames_ref->data);
+    frames_ctx->format = AV_PIX_FMT_VAAPI;
     frames_ctx->sw_format = AV_PIX_FMT_NV12;
-    frames_ctx->width     = width;
-    frames_ctx->height    = height;
+    frames_ctx->width = width;
+    frames_ctx->height = height;
     frames_ctx->initial_pool_size = 20;
-    if ((err = av_hwframe_ctx_init(hw_frames_ref)) < 0) {
+    if ((err = av_hwframe_ctx_init(hw_frames_ref)) < 0)
+    {
         fprintf(stderr, "Failed to initialize VAAPI frame context."
-                "Error code: %s\n",av_err2str(err));
+                "Error code: %s\n", av_err2str(err));
         av_buffer_unref(&hw_frames_ref);
         return err;
     }
@@ -71,19 +73,21 @@ static int set_hwframe_ctx(AVCodecContext *ctx, AVBufferRef *hw_device_ctx)
     return err;
 }
 
-static int encode_write(AVCodecContext *avctx, AVFrame *frame, FILE *fout)
+static int encode_write(AVCodecContext* avctx, AVFrame* frame, FILE* fout)
 {
     int ret = 0;
-    AVPacket *enc_pkt;
+    AVPacket* enc_pkt;
 
     if (!(enc_pkt = av_packet_alloc()))
         return AVERROR(ENOMEM);
 
-    if ((ret = avcodec_send_frame(avctx, frame)) < 0) {
+    if ((ret = avcodec_send_frame(avctx, frame)) < 0)
+    {
         fprintf(stderr, "Error code: %s\n", av_err2str(ret));
         goto end;
     }
-    while (1) {
+    while (1)
+    {
         ret = avcodec_receive_packet(avctx, enc_pkt);
         if (ret)
             break;
@@ -99,29 +103,32 @@ end:
     return ret;
 }
 
-int main(int argc, char *argv[])
+int main(int argc, char* argv[])
 {
     int size, err;
     FILE *fin = NULL, *fout = NULL;
     AVFrame *sw_frame = NULL, *hw_frame = NULL;
-    AVCodecContext *avctx = NULL;
-    AVCodec *codec = NULL;
-    const char *enc_name = "h264_vaapi";
+    AVCodecContext* avctx = NULL;
+    AVCodec* codec = NULL;
+    const char* enc_name = "h264_vaapi";
 
-    if (argc < 5) {
+    if (argc < 5)
+    {
         fprintf(stderr, "Usage: %s <width> <height> <input file> <output file>\n", argv[0]);
         return -1;
     }
 
-    width  = atoi(argv[1]);
+    width = atoi(argv[1]);
     height = atoi(argv[2]);
-    size   = width * height;
+    size = width * height;
 
-    if (!(fin = fopen(argv[3], "r"))) {
+    if (!(fin = fopen(argv[3], "r")))
+    {
         fprintf(stderr, "Fail to open input file : %s\n", strerror(errno));
         return -1;
     }
-    if (!(fout = fopen(argv[4], "w+b"))) {
+    if (!(fout = fopen(argv[4], "w+b")))
+    {
         fprintf(stderr, "Fail to open output file : %s\n", strerror(errno));
         err = -1;
         goto close;
@@ -129,75 +136,96 @@ int main(int argc, char *argv[])
 
     err = av_hwdevice_ctx_create(&hw_device_ctx, AV_HWDEVICE_TYPE_VAAPI,
                                  NULL, NULL, 0);
-    if (err < 0) {
+    if (err < 0)
+    {
         fprintf(stderr, "Failed to create a VAAPI device. Error code: %s\n", av_err2str(err));
         goto close;
     }
 
-    if (!(codec = avcodec_find_encoder_by_name(enc_name))) {
+    if (!(codec = avcodec_find_encoder_by_name(enc_name)))
+    {
         fprintf(stderr, "Could not find encoder.\n");
         err = -1;
         goto close;
     }
 
-    if (!(avctx = avcodec_alloc_context3(codec))) {
+    if (!(avctx = avcodec_alloc_context3(codec)))
+    {
         err = AVERROR(ENOMEM);
         goto close;
     }
 
-    avctx->width     = width;
-    avctx->height    = height;
-    avctx->time_base = (AVRational){1, 25};
-    avctx->framerate = (AVRational){25, 1};
-    avctx->sample_aspect_ratio = (AVRational){1, 1};
-    avctx->pix_fmt   = AV_PIX_FMT_VAAPI;
+    avctx->width = width;
+    avctx->height = height;
+    avctx->time_base = (AVRational)
+    {
+        1, 25
+    };
+    avctx->framerate = (AVRational)
+    {
+        25, 1
+    };
+    avctx->sample_aspect_ratio = (AVRational)
+    {
+        1, 1
+    };
+    avctx->pix_fmt = AV_PIX_FMT_VAAPI;
 
     /* set hw_frames_ctx for encoder's AVCodecContext */
-    if ((err = set_hwframe_ctx(avctx, hw_device_ctx)) < 0) {
+    if ((err = set_hwframe_ctx(avctx, hw_device_ctx)) < 0)
+    {
         fprintf(stderr, "Failed to set hwframe context.\n");
         goto close;
     }
 
-    if ((err = avcodec_open2(avctx, codec, NULL)) < 0) {
+    if ((err = avcodec_open2(avctx, codec, NULL)) < 0)
+    {
         fprintf(stderr, "Cannot open video encoder codec. Error code: %s\n", av_err2str(err));
         goto close;
     }
 
-    while (1) {
-        if (!(sw_frame = av_frame_alloc())) {
+    while (1)
+    {
+        if (!(sw_frame = av_frame_alloc()))
+        {
             err = AVERROR(ENOMEM);
             goto close;
         }
         /* read data into software frame, and transfer them into hw frame */
-        sw_frame->width  = width;
+        sw_frame->width = width;
         sw_frame->height = height;
         sw_frame->format = AV_PIX_FMT_NV12;
         if ((err = av_frame_get_buffer(sw_frame, 0)) < 0)
             goto close;
         if ((err = fread((uint8_t*)(sw_frame->data[0]), size, 1, fin)) <= 0)
             break;
-        if ((err = fread((uint8_t*)(sw_frame->data[1]), size/2, 1, fin)) <= 0)
+        if ((err = fread((uint8_t*)(sw_frame->data[1]), size / 2, 1, fin)) <= 0)
             break;
 
-        if (!(hw_frame = av_frame_alloc())) {
+        if (!(hw_frame = av_frame_alloc()))
+        {
             err = AVERROR(ENOMEM);
             goto close;
         }
-        if ((err = av_hwframe_get_buffer(avctx->hw_frames_ctx, hw_frame, 0)) < 0) {
+        if ((err = av_hwframe_get_buffer(avctx->hw_frames_ctx, hw_frame, 0)) < 0)
+        {
             fprintf(stderr, "Error code: %s.\n", av_err2str(err));
             goto close;
         }
-        if (!hw_frame->hw_frames_ctx) {
+        if (!hw_frame->hw_frames_ctx)
+        {
             err = AVERROR(ENOMEM);
             goto close;
         }
-        if ((err = av_hwframe_transfer_data(hw_frame, sw_frame, 0)) < 0) {
+        if ((err = av_hwframe_transfer_data(hw_frame, sw_frame, 0)) < 0)
+        {
             fprintf(stderr, "Error while transferring frame data to surface."
                     "Error code: %s.\n", av_err2str(err));
             goto close;
         }
 
-        if ((err = (encode_write(avctx, hw_frame, fout))) < 0) {
+        if ((err = (encode_write(avctx, hw_frame, fout))) < 0)
+        {
             fprintf(stderr, "Failed to encode.\n");
             goto close;
         }

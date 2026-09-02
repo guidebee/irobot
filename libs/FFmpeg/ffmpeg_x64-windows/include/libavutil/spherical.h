@@ -48,7 +48,8 @@
 /**
  * Projection of the video surface(s) on a sphere.
  */
-enum AVSphericalProjection {
+enum AVSphericalProjection
+{
     /**
      * Video represents a sphere mapped on a flat surface using
      * equirectangular projection.
@@ -79,7 +80,8 @@ enum AVSphericalProjection {
  * @note The struct must be allocated with av_spherical_alloc() and
  *       its size is not a part of the public ABI.
  */
-typedef struct AVSphericalMapping {
+typedef struct AVSphericalMapping
+{
     /**
      * Projection type.
      */
@@ -123,9 +125,9 @@ typedef struct AVSphericalMapping {
      * ^ - the default up vector
      * @endcode
      */
-    int32_t yaw;   ///< Rotation around the up vector [-180, 180].
+    int32_t yaw; ///< Rotation around the up vector [-180, 180].
     int32_t pitch; ///< Rotation around the right vector [-90, 90].
-    int32_t roll;  ///< Rotation around the forward vector [-180, 180].
+    int32_t roll; ///< Rotation around the forward vector [-180, 180].
     /**
      * @}
      */
@@ -164,9 +166,9 @@ typedef struct AVSphericalMapping {
      *       projection type (@ref AV_SPHERICAL_EQUIRECTANGULAR_TILE),
      *       and should be ignored in all other cases.
      */
-    uint32_t bound_left;   ///< Distance from the left edge
-    uint32_t bound_top;    ///< Distance from the top edge
-    uint32_t bound_right;  ///< Distance from the right edge
+    uint32_t bound_left; ///< Distance from the left edge
+    uint32_t bound_top; ///< Distance from the top edge
+    uint32_t bound_right; ///< Distance from the right edge
     uint32_t bound_bottom; ///< Distance from the bottom edge
     /**
      * @}
@@ -188,7 +190,7 @@ typedef struct AVSphericalMapping {
  *
  * @return the newly allocated struct or NULL on failure
  */
-AVSphericalMapping *av_spherical_alloc(size_t *size);
+AVSphericalMapping* av_spherical_alloc(size_t* size);
 
 /**
  * Convert the @ref bounding fields from an AVSphericalVideo
@@ -202,10 +204,10 @@ AVSphericalMapping *av_spherical_alloc(size_t *size);
  * @param right  Pixels from the right edge.
  * @param bottom Pixels from the bottom edge.
  */
-void av_spherical_tile_bounds(const AVSphericalMapping *map,
+void av_spherical_tile_bounds(const AVSphericalMapping* map,
                               size_t width, size_t height,
-                              size_t *left, size_t *top,
-                              size_t *right, size_t *bottom);
+                              size_t* left, size_t* top,
+                              size_t* right, size_t* bottom);
 
 /**
  * Provide a human-readable name of a given AVSphericalProjection.
@@ -214,7 +216,7 @@ void av_spherical_tile_bounds(const AVSphericalMapping *map,
  *
  * @return The name of the AVSphericalProjection, or "unknown".
  */
-const char *av_spherical_projection_name(enum AVSphericalProjection projection);
+const char* av_spherical_projection_name(enum AVSphericalProjection projection);
 
 /**
  * Get the AVSphericalProjection form a human-readable name.
@@ -223,7 +225,7 @@ const char *av_spherical_projection_name(enum AVSphericalProjection projection);
  *
  * @return The AVSphericalProjection value, or -1 if not found.
  */
-int av_spherical_from_name(const char *name);
+int av_spherical_from_name(const char* name);
 /**
  * @}
  * @}

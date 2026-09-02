@@ -27,7 +27,7 @@
 
 #define AV_CPU_FLAG_FORCE    0x80000000 /* force usage of selected flags (OR) */
 
-    /* lower 16 bits - CPU features */
+/* lower 16 bits - CPU features */
 #define AV_CPU_FLAG_MMX          0x0001 ///< standard MMX
 #define AV_CPU_FLAG_MMXEXT       0x0002 ///< SSE integer functions or AMD MMX ext
 #define AV_CPU_FLAG_MMX2         0x0002 ///< SSE integer functions or AMD MMX ext
@@ -35,11 +35,11 @@
 #define AV_CPU_FLAG_SSE          0x0008 ///< SSE functions
 #define AV_CPU_FLAG_SSE2         0x0010 ///< PIV SSE2 functions
 #define AV_CPU_FLAG_SSE2SLOW 0x40000000 ///< SSE2 supported, but usually not faster
-                                        ///< than regular MMX/SSE (e.g. Core1)
+///< than regular MMX/SSE (e.g. Core1)
 #define AV_CPU_FLAG_3DNOWEXT     0x0020 ///< AMD 3DNowExt
 #define AV_CPU_FLAG_SSE3         0x0040 ///< Prescott SSE3 functions
 #define AV_CPU_FLAG_SSE3SLOW 0x20000000 ///< SSE3 supported, but usually not faster
-                                        ///< than regular MMX/SSE (e.g. Core1)
+///< than regular MMX/SSE (e.g. Core1)
 #define AV_CPU_FLAG_SSSE3        0x0080 ///< Conroe SSSE3 functions
 #define AV_CPU_FLAG_SSSE3SLOW 0x4000000 ///< SSSE3 supported, but usually not faster
 #define AV_CPU_FLAG_ATOM     0x10000000 ///< Atom processor, some SSSE3 instructions are slower
@@ -57,6 +57,7 @@
 #define AV_CPU_FLAG_BMI2        0x40000 ///< Bit Manipulation Instruction Set 2
 #define AV_CPU_FLAG_AVX512     0x100000 ///< AVX-512 functions: requires OS support even if YMM/ZMM registers aren't used
 
+
 #define AV_CPU_FLAG_ALTIVEC      0x0001 ///< standard
 #define AV_CPU_FLAG_VSX          0x0002 ///< ISA 2.06
 #define AV_CPU_FLAG_POWER8       0x0004 ///< ISA 2.07
@@ -69,6 +70,7 @@
 #define AV_CPU_FLAG_NEON         (1 << 5)
 #define AV_CPU_FLAG_ARMV8        (1 << 6)
 #define AV_CPU_FLAG_VFP_VM       (1 << 7) ///< VFPv2 vector mode, deprecated in ARMv7-A and unavailable in various CPUs implementations
+
 #define AV_CPU_FLAG_SETEND       (1 <<16)
 
 #define AV_CPU_FLAG_MMI          (1 << 0)
@@ -105,14 +107,14 @@ attribute_deprecated void av_set_cpu_flags_mask(int mask);
  * @return a combination of AV_CPU_* flags, negative on error.
  */
 attribute_deprecated
-int av_parse_cpu_flags(const char *s);
+int av_parse_cpu_flags(const char* s);
 
 /**
  * Parse CPU caps from a string and update the given AV_CPU_* flags based on that.
  *
  * @return negative on error.
  */
-int av_parse_cpu_caps(unsigned *flags, const char *s);
+int av_parse_cpu_caps(unsigned* flags, const char* s);
 
 /**
  * @return the number of logical CPU cores present.

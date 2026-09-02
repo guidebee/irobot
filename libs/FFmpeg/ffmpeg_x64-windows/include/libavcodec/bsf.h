@@ -46,41 +46,42 @@ typedef struct AVBSFInternal AVBSFInternal;
  * filter) as described in their documentation, and are to be considered
  * immutable otherwise.
  */
-typedef struct AVBSFContext {
+typedef struct AVBSFContext
+{
     /**
      * A class for logging and AVOptions
      */
-    const AVClass *av_class;
+    const AVClass* av_class;
 
     /**
      * The bitstream filter this context is an instance of.
      */
-    const struct AVBitStreamFilter *filter;
+    const struct AVBitStreamFilter* filter;
 
     /**
      * Opaque libavcodec internal data. Must not be touched by the caller in any
      * way.
      */
-    AVBSFInternal *internal;
+    AVBSFInternal* internal;
 
     /**
      * Opaque filter-specific private data. If filter->priv_class is non-NULL,
      * this is an AVOptions-enabled struct.
      */
-    void *priv_data;
+    void* priv_data;
 
     /**
      * Parameters of the input stream. This field is allocated in
      * av_bsf_alloc(), it needs to be filled by the caller before
      * av_bsf_init().
      */
-    AVCodecParameters *par_in;
+    AVCodecParameters* par_in;
 
     /**
      * Parameters of the output stream. This field is allocated in
      * av_bsf_alloc(), it is set by the filter in av_bsf_init().
      */
-    AVCodecParameters *par_out;
+    AVCodecParameters* par_out;
 
     /**
      * The timebase used for the timestamps of the input packets. Set by the
@@ -95,15 +96,16 @@ typedef struct AVBSFContext {
     AVRational time_base_out;
 } AVBSFContext;
 
-typedef struct AVBitStreamFilter {
-    const char *name;
+typedef struct AVBitStreamFilter
+{
+    const char* name;
 
     /**
      * A list of codec ids supported by the filter, terminated by
      * AV_CODEC_ID_NONE.
      * May be NULL, in that case the bitstream filter works with any codec id.
      */
-    const enum AVCodecID *codec_ids;
+    const enum AVCodecID* codec_ids;
 
     /**
      * A class for the private data, used to declare bitstream filter private
@@ -114,7 +116,7 @@ typedef struct AVBitStreamFilter {
      * must be a pointer to AVClass, which will be set by libavcodec generic
      * code to this class.
      */
-    const AVClass *priv_class;
+    const AVClass* priv_class;
 
     /*****************************************************************
      * No fields below this line are part of the public API. They
@@ -125,17 +127,17 @@ typedef struct AVBitStreamFilter {
      */
 
     int priv_data_size;
-    int (*init)(AVBSFContext *ctx);
-    int (*filter)(AVBSFContext *ctx, AVPacket *pkt);
-    void (*close)(AVBSFContext *ctx);
-    void (*flush)(AVBSFContext *ctx);
+    int (*init)(AVBSFContext* ctx);
+    int (*filter)(AVBSFContext* ctx, AVPacket* pkt);
+    void (*close)(AVBSFContext* ctx);
+    void (*flush)(AVBSFContext* ctx);
 } AVBitStreamFilter;
 
 /**
  * @return a bitstream filter with the specified name or NULL if no such
  *         bitstream filter exists.
  */
-const AVBitStreamFilter *av_bsf_get_by_name(const char *name);
+const AVBitStreamFilter* av_bsf_get_by_name(const char* name);
 
 /**
  * Iterate over all registered bitstream filters.
@@ -146,7 +148,7 @@ const AVBitStreamFilter *av_bsf_get_by_name(const char *name);
  * @return the next registered bitstream filter or NULL when the iteration is
  *         finished
  */
-const AVBitStreamFilter *av_bsf_iterate(void **opaque);
+const AVBitStreamFilter* av_bsf_iterate(void** opaque);
 
 /**
  * Allocate a context for a given bitstream filter. The caller must fill in the
@@ -160,13 +162,13 @@ const AVBitStreamFilter *av_bsf_iterate(void **opaque);
  *
  * @return 0 on success, a negative AVERROR code on failure
  */
-int av_bsf_alloc(const AVBitStreamFilter *filter, AVBSFContext **ctx);
+int av_bsf_alloc(const AVBitStreamFilter* filter, AVBSFContext** ctx);
 
 /**
  * Prepare the filter for use, after all the parameters and options have been
  * set.
  */
-int av_bsf_init(AVBSFContext *ctx);
+int av_bsf_init(AVBSFContext* ctx);
 
 /**
  * Submit a packet for filtering.
@@ -186,7 +188,7 @@ int av_bsf_init(AVBSFContext *ctx);
  * filter (using av_bsf_receive_packet()) before new input can be consumed. Another
  * negative AVERROR value if an error occurs.
  */
-int av_bsf_send_packet(AVBSFContext *ctx, AVPacket *pkt);
+int av_bsf_send_packet(AVBSFContext * ctx, AVPacket * pkt);
 
 /**
  * Retrieve a filtered packet.
@@ -212,18 +214,18 @@ int av_bsf_send_packet(AVBSFContext *ctx, AVPacket *pkt);
  * output fewer packets than were sent to it, so this function may return
  * AVERROR(EAGAIN) immediately after a successful av_bsf_send_packet() call.
  */
-int av_bsf_receive_packet(AVBSFContext *ctx, AVPacket *pkt);
+int av_bsf_receive_packet(AVBSFContext * ctx, AVPacket * pkt);
 
 /**
  * Reset the internal bitstream filter state. Should be called e.g. when seeking.
  */
-void av_bsf_flush(AVBSFContext *ctx);
+void av_bsf_flush(AVBSFContext* ctx);
 
 /**
  * Free a bitstream filter context and everything associated with it; write NULL
  * into the supplied pointer.
  */
-void av_bsf_free(AVBSFContext **ctx);
+void av_bsf_free(AVBSFContext** ctx);
 
 /**
  * Get the AVClass for AVBSFContext. It can be used in combination with
@@ -231,7 +233,7 @@ void av_bsf_free(AVBSFContext **ctx);
  *
  * @see av_opt_find().
  */
-const AVClass *av_bsf_get_class(void);
+const AVClass* av_bsf_get_class(void);
 
 /**
  * Structure for chain/list of bitstream filters.
@@ -246,14 +248,14 @@ typedef struct AVBSFList AVBSFList;
  *
  * @return Pointer to @ref AVBSFList on success, NULL in case of failure
  */
-AVBSFList *av_bsf_list_alloc(void);
+AVBSFList* av_bsf_list_alloc(void);
 
 /**
  * Free list of bitstream filters.
  *
  * @param lst Pointer to pointer returned by av_bsf_list_alloc()
  */
-void av_bsf_list_free(AVBSFList **lst);
+void av_bsf_list_free(AVBSFList** lst);
 
 /**
  * Append bitstream filter to the list of bitstream filters.
@@ -263,7 +265,7 @@ void av_bsf_list_free(AVBSFList **lst);
  *
  * @return >=0 on success, negative AVERROR in case of failure
  */
-int av_bsf_list_append(AVBSFList *lst, AVBSFContext *bsf);
+int av_bsf_list_append(AVBSFList* lst, AVBSFContext* bsf);
 
 /**
  * Construct new bitstream filter context given it's name and options
@@ -275,7 +277,7 @@ int av_bsf_list_append(AVBSFList *lst, AVBSFContext *bsf);
  *
  * @return >=0 on success, negative AVERROR in case of failure
  */
-int av_bsf_list_append2(AVBSFList *lst, const char * bsf_name, AVDictionary **options);
+int av_bsf_list_append2(AVBSFList* lst, const char* bsf_name, AVDictionary** options);
 /**
  * Finalize list of bitstream filters.
  *
@@ -292,7 +294,7 @@ int av_bsf_list_append2(AVBSFList *lst, const char * bsf_name, AVDictionary **op
  *
  * @return >=0 on success, negative AVERROR in case of failure
  */
-int av_bsf_list_finalize(AVBSFList **lst, AVBSFContext **bsf);
+int av_bsf_list_finalize(AVBSFList** lst, AVBSFContext** bsf);
 
 /**
  * Parse string describing list of bitstream filters and create single
@@ -307,7 +309,7 @@ int av_bsf_list_finalize(AVBSFList **lst, AVBSFContext **bsf);
  *
  * @return >=0 on success, negative AVERROR in case of failure
  */
-int av_bsf_list_parse_str(const char *str, AVBSFContext **bsf);
+int av_bsf_list_parse_str(const char* str, AVBSFContext** bsf);
 
 /**
  * Get null/pass-through bitstream filter.
@@ -316,7 +318,7 @@ int av_bsf_list_parse_str(const char *str, AVBSFContext **bsf);
  *
  * @return
  */
-int av_bsf_get_null_filter(AVBSFContext **bsf);
+int av_bsf_get_null_filter(AVBSFContext** bsf);
 
 /**
  * @}

@@ -57,7 +57,7 @@
 #ifndef av_bswap16
 static av_always_inline av_const uint16_t av_bswap16(uint16_t x)
 {
-    x= (x>>8) | (x<<8);
+    x = (x >> 8) | (x << 8);
     return x;
 }
 #endif

@@ -22,30 +22,30 @@ extern "C" {
 
 #define IMAGE_ALIGN 1
 
-namespace irobot::video {
-
+namespace irobot::video
+{
     class VideoBuffer;
 
-    class Decoder {
-
+    class Decoder
+    {
     public:
-        VideoBuffer *video_buffer;
-        AVCodecContext *codec_ctx;
-        AVCodecContext *codec_cv_ctx;
-        SwsContext *sws_cv_ctx;
+        VideoBuffer* video_buffer;
+        AVCodecContext* codec_ctx;
+        AVCodecContext* codec_cv_ctx;
+        SwsContext* sws_cv_ctx;
         int frame_count;
 
-        void Init(VideoBuffer *vb);
+        void Init(VideoBuffer* vb);
 
-        bool Open(const AVCodec *codec);
+        bool Open(const AVCodec* codec);
 
         void Close();
 
-        bool Push(const AVPacket *packet);
+        bool Push(const AVPacket* packet);
 
         void Interrupt();
 
-        static void SaveFrame(AVFrame *pFrameRGB, int iFrame);
+        static void SaveFrame(AVFrame* pFrameRGB, int iFrame);
 
     private:
         void PushFrame();

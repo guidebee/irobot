@@ -19,7 +19,12 @@ extern "C" {
 
 using namespace irobot::util;
 
-TEST_CASE("utility xstrncpy simple", "[util][str_util]") {
+TEST_CASE (
+"utility xstrncpy simple"
+,
+"[util][str_util]"
+)
+ {
     char s[] = "xxxxxxxxxx";
     size_t w = xstrncpy(s, "abcdef", sizeof(s));
 
@@ -36,7 +41,12 @@ TEST_CASE("utility xstrncpy simple", "[util][str_util]") {
     REQUIRE(!strcmp("abcdef", s));
 }
 
-TEST_CASE("utility xstrncpy just fit", "[util][str_util]") {
+TEST_CASE (
+"utility xstrncpy just fit"
+,
+"[util][str_util]"
+)
+ {
     char s[] = "xxxxxx";
     size_t w = xstrncpy(s, "abcdef", sizeof(s));
 
@@ -50,7 +60,12 @@ TEST_CASE("utility xstrncpy just fit", "[util][str_util]") {
     REQUIRE(!strcmp("abcdef", s));
 }
 
-TEST_CASE("utility xstrncpy truncated", "[util][str_util]") {
+TEST_CASE (
+"utility xstrncpy truncated"
+,
+"[util][str_util]"
+)
+ {
     char s[] = "xxx";
     size_t w = xstrncpy(s, "abcdef", sizeof(s));
 
@@ -64,7 +79,12 @@ TEST_CASE("utility xstrncpy truncated", "[util][str_util]") {
     REQUIRE(!strncmp("abcdef", s, 3));
 }
 
-TEST_CASE("utility xstrjoin simple", "[util][str_util]") {
+TEST_CASE (
+"utility xstrjoin simple"
+,
+"[util][str_util]"
+)
+ {
     const char *const tokens[] = {"abc", "de", "fghi", NULL};
     char s[] = "xxxxxxxxxxxxxx";
     size_t w = xstrjoin(s, tokens, ' ', sizeof(s));
@@ -82,7 +102,12 @@ TEST_CASE("utility xstrjoin simple", "[util][str_util]") {
     REQUIRE(!strcmp("abc de fghi", s));
 }
 
-TEST_CASE("utility xstrjoin just fit", "[util][str_util]") {
+TEST_CASE (
+"utility xstrjoin just fit"
+,
+"[util][str_util]"
+)
+ {
     const char *const tokens[] = {"abc", "de", "fghi", NULL};
     char s[] = "xxxxxxxxxxx";
     size_t w = xstrjoin(s, tokens, ' ', sizeof(s));
@@ -97,7 +122,12 @@ TEST_CASE("utility xstrjoin just fit", "[util][str_util]") {
     REQUIRE(!strcmp("abc de fghi", s));
 }
 
-TEST_CASE("utility xstrjoin truncated in token", "[util][str_util]") {
+TEST_CASE (
+"utility xstrjoin truncated in token"
+,
+"[util][str_util]"
+)
+ {
     const char *const tokens[] = {"abc", "de", "fghi", NULL};
     char s[] = "xxxxx";
     size_t w = xstrjoin(s, tokens, ' ', sizeof(s));
@@ -112,7 +142,12 @@ TEST_CASE("utility xstrjoin truncated in token", "[util][str_util]") {
     REQUIRE(!strcmp("abc d", s));
 }
 
-TEST_CASE("utility xstrjoin truncated before sep", "[util][str_util]") {
+TEST_CASE (
+"utility xstrjoin truncated before sep"
+,
+"[util][str_util]"
+)
+ {
     const char *const tokens[] = {"abc", "de", "fghi", NULL};
     char s[] = "xxxxxx";
     size_t w = xstrjoin(s, tokens, ' ', sizeof(s));
@@ -127,7 +162,12 @@ TEST_CASE("utility xstrjoin truncated before sep", "[util][str_util]") {
     REQUIRE(!strcmp("abc de", s));
 }
 
-TEST_CASE("utility xstrjoin truncated after sep", "[util][str_util]") {
+TEST_CASE (
+"utility xstrjoin truncated after sep"
+,
+"[util][str_util]"
+)
+ {
     const char *const tokens[] = {"abc", "de", "fghi", NULL};
     char s[] = "xxxxxxx";
     size_t w = xstrjoin(s, tokens, ' ', sizeof(s));
@@ -142,7 +182,12 @@ TEST_CASE("utility xstrjoin truncated after sep", "[util][str_util]") {
     REQUIRE(!strcmp("abc de ", s));
 }
 
-TEST_CASE("utility strquote", "[util][str_util]") {
+TEST_CASE (
+"utility strquote"
+,
+"[util][str_util]"
+)
+ {
     const char *s = "abcde";
     char *out = strquote(s);
 
@@ -151,7 +196,12 @@ TEST_CASE("utility strquote", "[util][str_util]") {
     SDL_free(out);
 }
 
-TEST_CASE("utility utf8 truncate", "[util][str_util]") {
+TEST_CASE (
+"utility utf8 truncate"
+,
+"[util][str_util]"
+)
+ {
     const char *s = "aÉbÔc";
     assert(strlen(s) == 7); // É and Ô are 2 bytes-wide
 
@@ -182,7 +232,12 @@ TEST_CASE("utility utf8 truncate", "[util][str_util]") {
     REQUIRE(count == 7); // no more chars
 }
 
-TEST_CASE("utility parse integer", "[util][str_util]") {
+TEST_CASE (
+"utility parse integer"
+,
+"[util][str_util]"
+)
+ {
     long value;
     bool ok = parse_integer("1234", &value);
     REQUIRE(ok);
@@ -199,7 +254,12 @@ TEST_CASE("utility parse integer", "[util][str_util]") {
     REQUIRE(!ok); // out-of-range
 }
 
-TEST_CASE("utility parse integer with suffix", "[util][str_util]") {
+TEST_CASE (
+"utility parse integer with suffix"
+,
+"[util][str_util]"
+)
+ {
     long value;
     bool ok = parse_integer_with_suffix("1234", &value);
     REQUIRE(ok);

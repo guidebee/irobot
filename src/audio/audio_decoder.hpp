@@ -17,36 +17,36 @@ extern "C" {
 }
 #endif
 
-namespace irobot::audio {
-
+namespace irobot::audio
+{
     class AudioBuffer;
 
-    class AudioDecoder {
-
+    class AudioDecoder
+    {
     public:
-        AudioBuffer *audio_buffer = nullptr;
-        AVCodecContext *codec_ctx = nullptr;
-        SwrContext *swr_ctx = nullptr;
-        AVFrame *frame = nullptr;
-        uint8_t *swr_buf = nullptr;
+        AudioBuffer* audio_buffer = nullptr;
+        AVCodecContext* codec_ctx = nullptr;
+        SwrContext* swr_ctx = nullptr;
+        AVFrame* frame = nullptr;
+        uint8_t* swr_buf = nullptr;
         int swr_buf_capacity = 0;
         int out_sample_rate = 0;
         int out_channels = 0;
 
-        void Init(AudioBuffer *buf);
+        void Init(AudioBuffer* buf);
 
         // opens the codec with a fixed output format (the device always
         // captures/encodes at this sample rate and channel count)
-        bool Open(const AVCodec *codec, int sample_rate, int channels);
+        bool Open(const AVCodec* codec, int sample_rate, int channels);
 
         void Close();
 
-        bool Push(const AVPacket *packet);
+        bool Push(const AVPacket* packet);
 
     private:
         bool EnsureResampler();
 
-        bool ResampleAndWrite(const AVFrame *decoded);
+        bool ResampleAndWrite(const AVFrame* decoded);
     };
 }
 

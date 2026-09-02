@@ -24,14 +24,14 @@ extern "C" {
 #include "core/common.hpp"
 #include "video/stream.hpp"
 
-namespace irobot::ui {
-
-
-    class Screen {
+namespace irobot::ui
+{
+    class Screen
+    {
     public:
-        SDL_Window *window;
-        SDL_Renderer *renderer;
-        SDL_Texture *texture;
+        SDL_Window* window;
+        SDL_Renderer* renderer;
+        SDL_Texture* texture;
         struct Size frame_size;
         // The window size the last time it was not maximized or fullscreen.
         struct Size windowed_window_size;
@@ -43,19 +43,19 @@ namespace irobot::ui {
         bool maximized;
 
         struct Size device_screen_size;
-        android::FileHandler *file_handler;
+        android::FileHandler* file_handler;
 
         // initialize default values
         void Init();
 
         // initialize screen, create window, renderer and texture (window is hidden)
-        bool InitRendering(const char *window_title,
+        bool InitRendering(const char* window_title,
                            struct Size frame_size, bool always_on_top,
                            int16_t window_x, int16_t window_y, uint16_t window_width,
                            uint16_t window_height, uint16_t screen_width,
                            uint16_t screen_height, bool window_borderless);
 
-        void InitFileHandler(android::FileHandler *file_handler);
+        void InitFileHandler(android::FileHandler* file_handler);
 
         // show the window
         void ShowWindow();
@@ -64,7 +64,7 @@ namespace irobot::ui {
         void Destroy();
 
         // resize if necessary and write the rendered frame into the texture
-        bool UpdateFrame(video::VideoBuffer *vb);
+        bool UpdateFrame(video::VideoBuffer* vb);
 
         // render the texture to the renderer
         void Render();
@@ -79,11 +79,11 @@ namespace irobot::ui {
         void ResizeToPixelPerfect();
 
         // react to window events
-        void HandleWindowEvent(const SDL_WindowEvent *event);
+        void HandleWindowEvent(const SDL_WindowEvent* event);
 
-        static struct Size GetWindowSize(SDL_Window *window);
+        static struct Size GetWindowSize(SDL_Window* window);
 
-        static bool GetPreferredDisplayBounds(struct Size *bounds);
+        static bool GetPreferredDisplayBounds(struct Size* bounds);
 
         static struct Size GetOptimalSize(struct Size current_size,
                                           struct Size frame_size);
@@ -92,15 +92,15 @@ namespace irobot::ui {
                                                  uint16_t req_width,
                                                  uint16_t req_height);
 
-        static inline SDL_Texture *CreateTexture(SDL_Renderer *renderer,
-                                                 struct Size frame_size) {
+        static inline SDL_Texture* CreateTexture(SDL_Renderer* renderer,
+                                                 struct Size frame_size)
+        {
             return SDL_CreateTexture(renderer, SDL_PIXELFORMAT_YV12,
                                      SDL_TEXTUREACCESS_STREAMING,
                                      frame_size.width, frame_size.height);
         }
 
         static bool InitSDLAndConfigure(bool display, bool audio);
-
 
     private:
         struct Size GetWindowedWindowSize();
@@ -113,11 +113,8 @@ namespace irobot::ui {
 
         bool PrepareForFrame(struct Size new_frame_size);
 
-        void UpdateTexture(const AVFrame *frame);
-
-
+        void UpdateTexture(const AVFrame* frame);
     };
-
 }
 
 #endif //ANDROID_IROBOT_SCREEN_HPP

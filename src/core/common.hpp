@@ -16,19 +16,22 @@
 #define MAX(X, Y) (X) > (Y) ? (X) : (Y)
 #endif
 
-namespace irobot {
-
-    struct Size {
+namespace irobot
+{
+    struct Size
+    {
         uint16_t width;
         uint16_t height;
     };
 
-    struct Point {
+    struct Point
+    {
         int32_t x;
         int32_t y;
     };
 
-    struct Position {
+    struct Position
+    {
         // The video screen size may be different from the real device screen size,
         // so store to which size the absolute position apply, to scale it
         // accordingly.

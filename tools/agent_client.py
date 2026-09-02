@@ -46,7 +46,6 @@ import socket
 import struct
 import time
 
-
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 27183  # irobot's --port; control = port+1, video = port+2
 
@@ -93,9 +92,9 @@ def android_keycode(name):
         return _NAMED_KEYCODES[name]
     if len(name) == 1:
         if "0" <= name <= "9":
-            return 7 + (ord(name) - ord("0"))       # AKEYCODE_0 == 7
+            return 7 + (ord(name) - ord("0"))  # AKEYCODE_0 == 7
         if "a" <= name <= "z":
-            return 29 + (ord(name) - ord("a"))       # AKEYCODE_A == 29
+            return 29 + (ord(name) - ord("a"))  # AKEYCODE_A == 29
     return None
 
 
@@ -109,7 +108,7 @@ def keycode_message(action, keycode, meta_state=0):
 
 
 def touch_message(action, x, y, screen_width, screen_height,
-                   pointer_id=POINTER_ID_MOUSE, pressure=1.0, buttons=0):
+                  pointer_id=POINTER_ID_MOUSE, pressure=1.0, buttons=0):
     # matches CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT's JSON shape. `x`/`y` are
     # pixel coordinates within a frame of size `screen_width` x
     # `screen_height` -- IMPORTANT: irobot_server's PositionMapper.map()
@@ -522,7 +521,7 @@ def main():
     parser = argparse.ArgumentParser(description="irobot AI-agent test client")
     parser.add_argument("--host", default=DEFAULT_HOST)
     parser.add_argument("--port", type=int, default=DEFAULT_PORT,
-                         help="irobot's --port value (control=port+1, video=port+2)")
+                        help="irobot's --port value (control=port+1, video=port+2)")
     sub = parser.add_subparsers(dest="cmd", required=True)
 
     p_record = sub.add_parser("record", help="record keyboard + touch input and forward it live")

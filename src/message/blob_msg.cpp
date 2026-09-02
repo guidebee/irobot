@@ -6,8 +6,10 @@
 #include "blob_msg.hpp"
 #include "util/buffer_util.hpp"
 
-namespace irobot::message {
-    size_t BlobMessage::Serialize(unsigned char *buf) {
+namespace irobot::message
+{
+    size_t BlobMessage::Serialize(unsigned char* buf)
+    {
         int index = 0;
         util::buffer_write64be(&buf[index], this->type);
         index += 8;
@@ -19,7 +21,8 @@ namespace irobot::message {
         index += 8;
         util::buffer_write64be(&buf[index], this->total_length);
         index += 8;
-        for (int i = 0; i < this->count; i++) {
+        for (int i = 0; i < this->count; i++)
+        {
             int length = this->buffers[i].length;
             util::buffer_write64be(&buf[index], length);
             index += 8;
@@ -29,9 +32,12 @@ namespace irobot::message {
         return index;
     }
 
-    void BlobMessage::Destroy() {
-        for (int i = 0; i < this->count; i++) {
-            if (this->buffers[i].data != nullptr) {
+    void BlobMessage::Destroy()
+    {
+        for (int i = 0; i < this->count; i++)
+        {
+            if (this->buffers[i].data != nullptr)
+            {
                 SDL_free(this->buffers[i].data);
                 this->buffers[i].data = nullptr;
             }

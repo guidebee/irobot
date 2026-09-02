@@ -12,11 +12,13 @@
 
 #define FPS_COUNTER_INTERVAL_MS 1000
 
-namespace irobot::video {
-
-    bool FpsCounter::Init() {
+namespace irobot::video
+{
+    bool FpsCounter::Init()
+    {
         bool initialzed = Actor::Init();
-        if (!initialzed) {
+        if (!initialzed)
+        {
             return false;
         }
 
@@ -26,20 +28,26 @@ namespace irobot::video {
     }
 
     // must be called with mutex locked
-    void FpsCounter::display_fps() {
+    void FpsCounter::display_fps()
+    {
         unsigned rendered_per_second =
-                this->nr_rendered * 1000 / FPS_COUNTER_INTERVAL_MS;
-        if (this->nr_skipped) {
+            this->nr_rendered * 1000 / FPS_COUNTER_INTERVAL_MS;
+        if (this->nr_skipped)
+        {
             LOGI("%u fps (+%u frames skipped)", rendered_per_second,
                  this->nr_skipped);
-        } else {
+        }
+        else
+        {
             LOGI("%u fps", rendered_per_second);
         }
     }
 
     // must be called with mutex locked
-    void FpsCounter::CheckIntervalExpired(uint32_t now) {
-        if (now < this->next_timestamp) {
+    void FpsCounter::CheckIntervalExpired(uint32_t now)
+    {
+        if (now < this->next_timestamp)
+        {
             return;
         }
 
@@ -48,19 +56,23 @@ namespace irobot::video {
         this->nr_skipped = 0;
         // add a multiple of the interval
         uint32_t elapsed_slices =
-                (now - this->next_timestamp) / FPS_COUNTER_INTERVAL_MS + 1;
+            (now - this->next_timestamp) / FPS_COUNTER_INTERVAL_MS + 1;
         this->next_timestamp += FPS_COUNTER_INTERVAL_MS * elapsed_slices;
     }
 
-    int FpsCounter::RunFpsCounter(void *data) {
-        auto *counter = (struct FpsCounter *) data;
+    int FpsCounter::RunFpsCounter(void* data)
+    {
+        auto* counter = (struct FpsCounter*)data;
 
         util::mutex_lock(counter->mutex);
-        while (!counter->interrupted) {
-            while (!counter->interrupted && !SDL_AtomicGet(&counter->started)) {
+        while (!counter->interrupted)
+        {
+            while (!counter->interrupted && !SDL_AtomicGet(&counter->started))
+            {
                 util::cond_wait(counter->thread_cond, counter->mutex);
             }
-            while (!counter->interrupted && SDL_AtomicGet(&counter->started)) {
+            while (!counter->interrupted && SDL_AtomicGet(&counter->started))
+            {
                 uint32_t now = SDL_GetTicks();
                 counter->CheckIntervalExpired(now);
 
@@ -75,7 +87,8 @@ namespace irobot::video {
         return 0;
     }
 
-    bool FpsCounter::Start() {
+    bool FpsCounter::Start()
+    {
         util::mutex_lock(this->mutex);
         this->next_timestamp = SDL_GetTicks() + FPS_COUNTER_INTERVAL_MS;
         this->nr_rendered = 0;
@@ -85,10 +98,12 @@ namespace irobot::video {
         util::cond_signal(this->thread_cond);
 
         // this->thread is always accessed from the same thread, no need to lock
-        if (!this->thread) {
+        if (!this->thread)
+        {
             this->thread =
-                    SDL_CreateThread(RunFpsCounter, "fps counter", this);
-            if (!this->thread) {
+                SDL_CreateThread(RunFpsCounter, "fps counter", this);
+            if (!this->thread)
+            {
                 LOGE("Could not start FPS counter thread");
                 return false;
             }
@@ -97,17 +112,21 @@ namespace irobot::video {
         return true;
     }
 
-    void FpsCounter::Stop() {
+    void FpsCounter::Stop()
+    {
         SDL_AtomicSet(&this->started, 0);
         Actor::Stop();
     }
 
-    bool FpsCounter::IsStarted() {
+    bool FpsCounter::IsStarted()
+    {
         return SDL_AtomicGet(&this->started) == 1;
     }
 
-    void FpsCounter::Interrupt() {
-        if (!this->thread) {
+    void FpsCounter::Interrupt()
+    {
+        if (!this->thread)
+        {
             return;
         }
         util::mutex_lock(this->mutex);
@@ -117,8 +136,10 @@ namespace irobot::video {
         util::cond_signal(this->thread_cond);
     }
 
-    void FpsCounter::AddRenderedFrame() {
-        if (!SDL_AtomicGet(&this->started)) {
+    void FpsCounter::AddRenderedFrame()
+    {
+        if (!SDL_AtomicGet(&this->started))
+        {
             return;
         }
 
@@ -129,8 +150,10 @@ namespace irobot::video {
         util::mutex_unlock(this->mutex);
     }
 
-    void FpsCounter::AddSkippedFrame() {
-        if (!SDL_AtomicGet(&this->started)) {
+    void FpsCounter::AddSkippedFrame()
+    {
+        if (!SDL_AtomicGet(&this->started))
+        {
             return;
         }
         util::mutex_lock(this->mutex);

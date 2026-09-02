@@ -10,26 +10,25 @@
 
 #include "message/control_msg.hpp"
 
-namespace irobot::ui {
-
+namespace irobot::ui
+{
     using namespace irobot::android;
 
     bool ConvertKeycodeAction(SDL_EventType from,
-                              enum AndroidKeyEventAction *to);
+                              enum AndroidKeyEventAction* to);
 
     enum AndroidMetaState ConvertMetaState(SDL_Keymod mod);
 
-    bool ConvertKeycode(SDL_Keycode from, enum AndroidKeycode *to,
+    bool ConvertKeycode(SDL_Keycode from, enum AndroidKeycode* to,
                         uint16_t mod,
                         bool prefer_text);
 
     enum AndroidMotionEventButtons ConvertMouseButtons(uint32_t state);
 
     bool ConvertMouseAction(SDL_EventType from,
-                            enum AndroidMotionEventAction *to);
+                            enum AndroidMotionEventAction* to);
 
     bool ConvertTouchAction(SDL_EventType from,
-                            enum AndroidMotionEventAction *to);
-
+                            enum AndroidMotionEventAction* to);
 }
 #endif //ANDROID_IROBOT_EVENT_CONVERTER_HPP

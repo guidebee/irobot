@@ -36,11 +36,12 @@
  * Main Vulkan context, allocated as AVHWDeviceContext.hwctx.
  * All of these can be set before init to change what the context uses
  */
-typedef struct AVVulkanDeviceContext {
+typedef struct AVVulkanDeviceContext
+{
     /**
      * Custom memory allocator, else NULL
      */
-    const VkAllocationCallbacks *alloc;
+    const VkAllocationCallbacks* alloc;
     /**
      * Vulkan instance. Must be at least version 1.1.
      */
@@ -85,7 +86,7 @@ typedef struct AVVulkanDeviceContext {
      * Duplicates are possible and accepted.
      * If no extensions are enabled, set these fields to NULL, and 0 respectively.
      */
-    const char * const *enabled_inst_extensions;
+    const char* const * enabled_inst_extensions;
     int nb_enabled_inst_extensions;
     /**
      * Enabled device extensions. By default, VK_KHR_external_memory_fd,
@@ -95,7 +96,7 @@ typedef struct AVVulkanDeviceContext {
      * the above fields, with the same conditions that duplicates are possible
      * and accepted, and that NULL and 0 respectively means no extensions are enabled.
      */
-    const char * const *enabled_dev_extensions;
+    const char* const * enabled_dev_extensions;
     int nb_enabled_dev_extensions;
     /**
      * This structure should be set to the set of features that present and enabled
@@ -109,7 +110,8 @@ typedef struct AVVulkanDeviceContext {
 /**
  * Allocated as AVHWFramesContext.hwctx, used to set pool-specific options
  */
-typedef struct AVVulkanFramesContext {
+typedef struct AVVulkanFramesContext
+{
     /**
      * Controls the tiling of allocated frames.
      */
@@ -122,7 +124,7 @@ typedef struct AVVulkanFramesContext {
     /**
      * Extension data for image creation.
      */
-    void *create_pnext;
+    void* create_pnext;
     /**
      * Extension data for memory allocation. Must have as many entries as
      * the number of planes of the sw_format.
@@ -130,7 +132,7 @@ typedef struct AVVulkanFramesContext {
      * to make all pool images exportable to other APIs if the necessary
      * extensions are present in enabled_dev_extensions.
      */
-    void *alloc_pnext[AV_NUM_DATA_POINTERS];
+    void* alloc_pnext[AV_NUM_DATA_POINTERS];
 } AVVulkanFramesContext;
 
 /*
@@ -146,7 +148,8 @@ typedef struct AVVulkanFramesContext {
  * @note the size of this structure is not part of the ABI, to allocate
  * you must use @av_vk_frame_alloc().
  */
-typedef struct AVVkFrame {
+typedef struct AVVkFrame
+{
     /**
      * Vulkan images to which the memory is bound to.
      */
@@ -186,19 +189,19 @@ typedef struct AVVkFrame {
     /**
      * Internal data.
      */
-    struct AVVkFrameInternal *internal;
+    struct AVVkFrameInternal* internal;
 } AVVkFrame;
 
 /**
  * Allocates a single AVVkFrame and initializes everything as 0.
  * @note Must be freed via av_free()
  */
-AVVkFrame *av_vk_frame_alloc(void);
+AVVkFrame* av_vk_frame_alloc(void);
 
 /**
  * Returns the format of each image up to the number of planes for a given sw_format.
  * Returns NULL on unsupported formats.
  */
-const VkFormat *av_vkfmt_from_pixfmt(enum AVPixelFormat p);
+const VkFormat* av_vkfmt_from_pixfmt(enum AVPixelFormat p);
 
 #endif /* AVUTIL_HWCONTEXT_VULKAN_H */

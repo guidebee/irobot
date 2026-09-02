@@ -8,7 +8,12 @@
 
 using nlohmann::json;
 
-TEST_CASE("test json library", "[json]") {
+TEST_CASE (
+"test json library"
+,
+"[json]"
+)
+ {
     json::string_t s = R"(["foo",1,2,3,false,{"one":1}])";
     json j = json::parse(s);
     REQUIRE(json::accept(s));

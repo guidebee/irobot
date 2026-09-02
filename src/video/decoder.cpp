@@ -9,51 +9,60 @@
 #include "util/log.hpp"
 #include "video/video_buffer.hpp"
 
-namespace irobot::video {
-// set the decoded frame as ready for rendering, and notify
-    void Decoder::PushFrame() {
+namespace irobot::video
+{
+    // set the decoded frame as ready for rendering, and notify
+    void Decoder::PushFrame()
+    {
         bool previous_frame_skipped;
         this->video_buffer->OfferDecodedFrame(
-                &previous_frame_skipped);
-        if (previous_frame_skipped) {
+            &previous_frame_skipped);
+        if (previous_frame_skipped)
+        {
             // the previous EVENT_NEW_FRAME will consume this frame
             return;
         }
         static SDL_Event new_frame_event = {
-                .type = EVENT_NEW_FRAME,
+            .type = EVENT_NEW_FRAME,
         };
         SDL_PushEvent(&new_frame_event);
         static SDL_Event new_opencv_frame_event = {
-                .type = EVENT_NEW_OPENCV_FRAME,
+            .type = EVENT_NEW_OPENCV_FRAME,
         };
         SDL_PushEvent(&new_opencv_frame_event);
     }
 
-    void Decoder::Init(VideoBuffer *vb) {
+    void Decoder::Init(VideoBuffer* vb)
+    {
         this->video_buffer = vb;
         this->sws_cv_ctx = nullptr;
         this->frame_count = 0;
     }
 
-    bool Decoder::Open(const AVCodec *codec) {
+    bool Decoder::Open(const AVCodec* codec)
+    {
         this->codec_ctx = avcodec_alloc_context3(codec);
-        if (!this->codec_ctx) {
+        if (!this->codec_ctx)
+        {
             LOGC("Could not allocate decoder context");
             return false;
         }
         this->codec_cv_ctx = avcodec_alloc_context3(codec);
-        if (!this->codec_cv_ctx) {
+        if (!this->codec_cv_ctx)
+        {
             LOGC("Could not allocate decoder context");
             return false;
         }
 
-        if (avcodec_open2(this->codec_ctx, codec, nullptr) < 0) {
+        if (avcodec_open2(this->codec_ctx, codec, nullptr) < 0)
+        {
             LOGE("Could not open codec");
             avcodec_free_context(&this->codec_ctx);
             return false;
         }
 
-        if (avcodec_open2(this->codec_cv_ctx, codec, nullptr) < 0) {
+        if (avcodec_open2(this->codec_cv_ctx, codec, nullptr) < 0)
+        {
             LOGE("Could not open codec");
             avcodec_free_context(&this->codec_ctx);
             avcodec_free_context(&this->codec_cv_ctx);
@@ -63,7 +72,8 @@ namespace irobot::video {
         return true;
     }
 
-    void Decoder::Close() {
+    void Decoder::Close()
+    {
         avcodec_free_context(&this->codec_ctx);
         avcodec_free_context(&this->codec_cv_ctx);
         sws_freeContext(this->sws_cv_ctx);
@@ -71,22 +81,26 @@ namespace irobot::video {
         this->sws_cv_ctx = nullptr;
     }
 
-    bool Decoder::Push(const AVPacket *packet) {
-        if (packet->pts == AV_NOPTS_VALUE) {
+    bool Decoder::Push(const AVPacket* packet)
+    {
+        if (packet->pts == AV_NOPTS_VALUE)
+        {
             // CONFIG packet (SPS/PPS): feed to codec but don't expect a decoded frame
             avcodec_send_packet(this->codec_ctx, packet);
             return true;
         }
         int ret;
-        if ((ret = avcodec_send_packet(this->codec_ctx, packet)) < 0) {
+        if ((ret = avcodec_send_packet(this->codec_ctx, packet)) < 0)
+        {
             LOGE("Could not send video packet: %d", ret);
             return false;
         }
         ret = avcodec_receive_frame(this->codec_ctx,
                                     this->video_buffer->decoding_frame);
-        if (!ret) {
-
-            if (this->sws_cv_ctx == nullptr) {
+        if (!ret)
+        {
+            if (this->sws_cv_ctx == nullptr)
+            {
                 this->codec_cv_ctx->height = this->video_buffer->decoding_frame->height;
                 this->codec_cv_ctx->width = video_buffer->decoding_frame->width;
                 this->codec_cv_ctx->pix_fmt = AV_PIX_FMT_YUV420P;
@@ -106,7 +120,8 @@ namespace irobot::video {
                                                   nullptr
                 );
 
-                if (this->sws_cv_ctx == nullptr) {
+                if (this->sws_cv_ctx == nullptr)
+                {
                     LOGE("Could not open sws_cv_ctx");
                     avcodec_free_context(&this->codec_ctx);
                     avcodec_free_context(&this->codec_cv_ctx);
@@ -120,7 +135,7 @@ namespace irobot::video {
                 this->video_buffer->rgb_frame->height = this->codec_cv_ctx->height;
                 this->video_buffer->rgb_frame->format = AV_PIX_FMT_RGB24;
 
-                this->video_buffer->buffer = (uint8_t *) av_malloc(numBytes * sizeof(uint8_t));
+                this->video_buffer->buffer = (uint8_t*)av_malloc(numBytes * sizeof(uint8_t));
 
                 av_image_fill_arrays(this->video_buffer->rgb_frame->data, this->video_buffer->rgb_frame->linesize,
                                      this->video_buffer->buffer, AV_PIX_FMT_RGB24,
@@ -129,7 +144,7 @@ namespace irobot::video {
 
             // Convert the image from its native format to RGB
             sws_scale(this->sws_cv_ctx,
-                      (uint8_t const *const *) this->video_buffer->decoding_frame->data,
+                      (uint8_t const*const *)this->video_buffer->decoding_frame->data,
                       this->video_buffer->decoding_frame->linesize,
                       0,
                       this->codec_cv_ctx->height,
@@ -138,8 +153,9 @@ namespace irobot::video {
             );
             this->video_buffer->frame_number = ++this->frame_count;
             this->PushFrame();
-
-        } else if (ret != AVERROR(EAGAIN)) {
+        }
+        else if (ret != AVERROR(EAGAIN))
+        {
             LOGE("Could not receive video frame: %d", ret);
             return false;
         }
@@ -147,16 +163,18 @@ namespace irobot::video {
         return true;
     }
 
-    void Decoder::Interrupt() {
+    void Decoder::Interrupt()
+    {
         this->video_buffer->Interrupt();
     }
 
 
 #pragma ide diagnostic ignored "OCUnusedGlobalDeclarationInspection"
 
-    void Decoder::SaveFrame(AVFrame *pFrameRGB,
-                            int iFrame) {
-        FILE *pFile;
+    void Decoder::SaveFrame(AVFrame* pFrameRGB,
+                            int iFrame)
+    {
+        FILE* pFile;
         char szFilename[32];
         int width = pFrameRGB->width;
         int height = pFrameRGB->height;
@@ -175,6 +193,4 @@ namespace irobot::video {
         // Close file
         fclose(pFile);
     }
-
-
 }

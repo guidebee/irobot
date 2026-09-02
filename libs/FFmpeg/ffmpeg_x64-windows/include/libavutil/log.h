@@ -26,7 +26,8 @@
 #include "attributes.h"
 #include "version.h"
 
-typedef enum {
+typedef enum
+{
     AV_CLASS_CATEGORY_NA = 0,
     AV_CLASS_CATEGORY_INPUT,
     AV_CLASS_CATEGORY_OUTPUT,
@@ -44,8 +45,8 @@ typedef enum {
     AV_CLASS_CATEGORY_DEVICE_AUDIO_INPUT,
     AV_CLASS_CATEGORY_DEVICE_OUTPUT,
     AV_CLASS_CATEGORY_DEVICE_INPUT,
-    AV_CLASS_CATEGORY_NB  ///< not part of ABI/API
-}AVClassCategory;
+    AV_CLASS_CATEGORY_NB ///< not part of ABI/API
+} AVClassCategory;
 
 #define AV_IS_INPUT_DEVICE(category) \
     (((category) == AV_CLASS_CATEGORY_DEVICE_VIDEO_INPUT) || \
@@ -64,7 +65,8 @@ struct AVOptionRanges;
  * arbitrary struct of which the first field is a pointer to an
  * AVClass struct (e.g. AVCodecContext, AVFormatContext etc.).
  */
-typedef struct AVClass {
+typedef struct AVClass
+{
     /**
      * The name of the class; usually it is the same name as the
      * context structure type to which the AVClass is associated.
@@ -82,7 +84,7 @@ typedef struct AVClass {
      *
      * @see av_set_default_options()
      */
-    const struct AVOption *option;
+    const struct AVOption* option;
 
     /**
      * LIBAVUTIL_VERSION with which this structure was created.
@@ -110,7 +112,7 @@ typedef struct AVClass {
     /**
      * Return next AVOptions-enabled child or NULL
      */
-    void* (*child_next)(void *obj, void *prev);
+    void* (*child_next)(void* obj, void* prev);
 
 #if FF_API_CHILD_CLASS_NEXT
     /**
@@ -122,7 +124,7 @@ typedef struct AVClass {
      * child_class_next iterates over _all possible_ children.
      */
     attribute_deprecated
-    const struct AVClass* (*child_class_next)(const struct AVClass *prev);
+    const struct AVClass* (*child_class_next)(const struct AVClass* prev);
 #endif
 
     /**
@@ -142,7 +144,7 @@ typedef struct AVClass {
      * Callback to return the supported/allowed ranges.
      * available since version (52.12)
      */
-    int (*query_ranges)(struct AVOptionRanges **, void *obj, const char *key, int flags);
+    int (*query_ranges)(struct AVOptionRanges**, void* obj, const char* key, int flags);
 
     /**
      * Iterate over the AVClasses corresponding to potential AVOptions-enabled
@@ -157,7 +159,7 @@ typedef struct AVClass {
      *       iterates over _already existing_ objects, while child_class_iterate
      *       iterates over _all possible_ children.
      */
-    const struct AVClass* (*child_class_iterate)(void **iter);
+    const struct AVClass* (*child_class_iterate)(void** iter);
 } AVClass;
 
 /**
@@ -249,7 +251,12 @@ typedef struct AVClass {
  * @param fmt The format string (printf-compatible) that specifies how
  *        subsequent arguments are converted to output.
  */
-void av_log(void *avcl, int level, const char *fmt, ...) av_printf_format(3, 4);
+void av_log(void* avcl, int level, const char* fmt, ...) av_printf_format
+(
+3
+,
+4
+);
 
 /**
  * Send the specified message to the log once with the initial_level and then with
@@ -270,7 +277,12 @@ void av_log(void *avcl, int level, const char *fmt, ...) av_printf_format(3, 4);
  *        this must be initialized to 0 before the first use. The same state
  *        must not be accessed by 2 Threads simultaneously.
  */
-void av_log_once(void* avcl, int initial_level, int subsequent_level, int *state, const char *fmt, ...) av_printf_format(5, 6);
+void av_log_once(void* avcl, int initial_level, int subsequent_level, int* state, const char* fmt, ...) av_printf_format
+(
+5
+,
+6
+);
 
 
 /**
@@ -288,7 +300,7 @@ void av_log_once(void* avcl, int initial_level, int subsequent_level, int *state
  *        subsequent arguments are converted to output.
  * @param vl The arguments referenced by the format string.
  */
-void av_vlog(void *avcl, int level, const char *fmt, va_list vl);
+void av_vlog(void* avcl, int level, const char* fmt, va_list vl);
 
 /**
  * Get the current log level
@@ -318,7 +330,7 @@ void av_log_set_level(int level);
  *
  * @param callback A logging function with a compatible signature.
  */
-void av_log_set_callback(void (*callback)(void*, int, const char*, va_list));
+void av_log_set_callback(void(*callback)(void*, int, const char*, va_list));
 
 /**
  * Default logging callback
@@ -333,7 +345,7 @@ void av_log_set_callback(void (*callback)(void*, int, const char*, va_list));
  *        subsequent arguments are converted to output.
  * @param vl The arguments referenced by the format string.
  */
-void av_log_default_callback(void *avcl, int level, const char *fmt,
+void av_log_default_callback(void* avcl, int level, const char* fmt,
                              va_list vl);
 
 /**
@@ -344,7 +356,7 @@ void av_log_default_callback(void *avcl, int level, const char *fmt,
  * @return The AVClass class_name
  */
 const char* av_default_item_name(void* ctx);
-AVClassCategory av_default_get_category(void *ptr);
+AVClassCategory av_default_get_category(void* ptr);
 
 /**
  * Format a line of log the same way as the default callback.
@@ -353,8 +365,8 @@ AVClassCategory av_default_get_category(void *ptr);
  * @param print_prefix  used to store whether the prefix must be printed;
  *                      must point to a persistent integer initially set to 1
  */
-void av_log_format_line(void *ptr, int level, const char *fmt, va_list vl,
-                        char *line, int line_size, int *print_prefix);
+void av_log_format_line(void* ptr, int level, const char* fmt, va_list vl,
+                        char* line, int line_size, int* print_prefix);
 
 /**
  * Format a line of log the same way as the default callback.
@@ -370,8 +382,8 @@ void av_log_format_line(void *ptr, int level, const char *fmt, va_list vl,
  *         character. If the return value is not less than line_size, it means
  *         that the log message was truncated to fit the buffer.
  */
-int av_log_format_line2(void *ptr, int level, const char *fmt, va_list vl,
-                        char *line, int line_size, int *print_prefix);
+int av_log_format_line2(void* ptr, int level, const char* fmt, va_list vl,
+                        char* line, int line_size, int* print_prefix);
 
 /**
  * Skip repeated messages, this requires the user app to use av_log() instead of

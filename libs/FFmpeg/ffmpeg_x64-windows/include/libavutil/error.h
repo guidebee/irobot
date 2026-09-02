@@ -37,6 +37,7 @@
 /* error handling */
 #if EDOM > 0
 #define AVERROR(e) (-(e))   ///< Returns a negative error code from a POSIX error code, to return from library functions.
+
 #define AVUNERROR(e) (-(e)) ///< Returns a POSIX error code from a library function error return value.
 #else
 /* Some platforms have E* and errno already negated. */
@@ -54,6 +55,7 @@
 #define AVERROR_ENCODER_NOT_FOUND  FFERRTAG(0xF8,'E','N','C') ///< Encoder not found
 #define AVERROR_EOF                FFERRTAG( 'E','O','F',' ') ///< End of file
 #define AVERROR_EXIT               FFERRTAG( 'E','X','I','T') ///< Immediate exit was requested; the called function should not be restarted
+
 #define AVERROR_EXTERNAL           FFERRTAG( 'E','X','T',' ') ///< Generic error in an external library
 #define AVERROR_FILTER_NOT_FOUND   FFERRTAG(0xF8,'F','I','L') ///< Filter not found
 #define AVERROR_INVALIDDATA        FFERRTAG( 'I','N','D','A') ///< Invalid data found when processing input
@@ -70,8 +72,11 @@
 #define AVERROR_BUG2               FFERRTAG( 'B','U','G',' ')
 #define AVERROR_UNKNOWN            FFERRTAG( 'U','N','K','N') ///< Unknown error, typically from an external library
 #define AVERROR_EXPERIMENTAL       (-0x2bb2afa8) ///< Requested feature is flagged experimental. Set strict_std_compliance if you really want to use it.
+
 #define AVERROR_INPUT_CHANGED      (-0x636e6701) ///< Input changed between calls. Reconfiguration is required. (can be OR-ed with AVERROR_OUTPUT_CHANGED)
+
 #define AVERROR_OUTPUT_CHANGED     (-0x636e6702) ///< Output changed between calls. Reconfiguration is required. (can be OR-ed with AVERROR_INPUT_CHANGED)
+
 /* HTTP & RTSP errors */
 #define AVERROR_HTTP_BAD_REQUEST   FFERRTAG(0xF8,'4','0','0')
 #define AVERROR_HTTP_UNAUTHORIZED  FFERRTAG(0xF8,'4','0','1')
@@ -94,7 +99,7 @@
  * @return 0 on success, a negative value if a description for errnum
  * cannot be found
  */
-int av_strerror(int errnum, char *errbuf, size_t errbuf_size);
+int av_strerror(int errnum, char* errbuf, size_t errbuf_size);
 
 /**
  * Fill the provided buffer with a string containing an error string
@@ -106,7 +111,7 @@ int av_strerror(int errnum, char *errbuf, size_t errbuf_size);
  * @return the buffer in input, filled with the error description
  * @see av_strerror()
  */
-static inline char *av_make_error_string(char *errbuf, size_t errbuf_size, int errnum)
+static inline char* av_make_error_string(char* errbuf, size_t errbuf_size, int errnum)
 {
     av_strerror(errnum, errbuf, errbuf_size);
     return errbuf;

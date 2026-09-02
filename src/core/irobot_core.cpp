@@ -45,8 +45,8 @@
 #define OPT_HEADLESS              1015
 #define OPT_NO_AUDIO              1016
 
-namespace irobot {
-
+namespace irobot
+{
     using namespace video;
     using namespace util;
     using namespace android;
@@ -70,19 +70,20 @@ namespace irobot {
     agent::AgentController agent_controller;
     agent::AgentStream agent_stream;
     agent::AgentManager agent_manager = {
-            .video_buffer = &video_buffer,
-            .controller = &controller,
-            .agent_controller=&agent_controller,
-            .agent_stream = &agent_stream,
+        .video_buffer = &video_buffer,
+        .controller = &controller,
+        .agent_controller = &agent_controller,
+        .agent_stream = &agent_stream,
     };
     InputManager input_manager = {
-            .agent_manager=&agent_manager,
-            .screen = &screen,
-            .prefer_text = false, // initialized later
+        .agent_manager = &agent_manager,
+        .screen = &screen,
+        .prefer_text = false, // initialized later
     };
 
 
-    IRobotCore::IRobotCore() {
+    IRobotCore::IRobotCore()
+    {
         this->serial = nullptr;
         this->crop = nullptr;
         this->record_filename = nullptr;
@@ -112,29 +113,31 @@ namespace irobot {
         this->help = false;
         this->version = false;
         this->headless = false;
-
     }
 
-    bool IRobotCore::Start() {
-        const IRobotCore *options = this;
+    bool IRobotCore::Start()
+    {
+        const IRobotCore* options = this;
         bool record = options->record_filename != nullptr;
         DeviceServerParameters params = {
-                .crop = options->crop,
-                .local_port = options->port,
-                .max_size = options->max_size,
-                .bit_rate = options->bit_rate,
-                .max_fps = options->max_fps,
-                .control = options->control,
-                .audio = options->audio,
+            .crop = options->crop,
+            .local_port = options->port,
+            .max_size = options->max_size,
+            .bit_rate = options->bit_rate,
+            .max_fps = options->max_fps,
+            .control = options->control,
+            .audio = options->audio,
         };
 
-        if (!server.Start(options->serial, &params)) {
+        if (!server.Start(options->serial, &params))
+        {
             return false;
         }
 
         ProcessType proc_show_touches = PROCESS_NONE;
         bool show_touches_waited = false;
-        if (options->show_touches) {
+        if (options->show_touches)
+        {
             LOGI("Enable show_touches");
             proc_show_touches = SetShowTouchesEnabled(options->serial, true);
             show_touches_waited = false;
@@ -150,26 +153,33 @@ namespace irobot {
         bool audio_player_opened = false;
         bool audio_stream_started = false;
 
-        if (!agent_manager.Init(options->port)) {
+        if (!agent_manager.Init(options->port))
+        {
             return false;
         }
 
         bool cannot_cont = false;
 
         bool audio_enabled = options->audio && options->display;
-        if (!options->headless) {
-            if (!Screen::InitSDLAndConfigure(options->display, audio_enabled)) {
+        if (!options->headless)
+        {
+            if (!Screen::InitSDLAndConfigure(options->display, audio_enabled))
+            {
                 cannot_cont = true;
             }
             screen.InitFileHandler(&file_handler);
-        } else {
-            if (!Screen::InitSDLAndConfigure(false, false)) {
+        }
+        else
+        {
+            if (!Screen::InitSDLAndConfigure(false, false))
+            {
                 cannot_cont = true;
             }
             audio_enabled = false;
         }
 
-        if (!cannot_cont & !server.ConnectTo()) {
+        if (!cannot_cont & !server.ConnectTo())
+        {
             cannot_cont = true;
         }
 
@@ -180,26 +190,32 @@ namespace irobot {
         // change therefore, we transmit the screen size before the video stream,
         // to be able to init the window immediately
         if (!cannot_cont & !Receiver::ReadDeviceInfomation(server.video_socket,
-                                                           device_name, &frame_size)) {
+                                                           device_name, &frame_size))
+        {
             cannot_cont = true;
         }
 
-        Decoder *dec = nullptr;
-        if (!cannot_cont & options->display) {
-            if (!fps_counter.Init()) {
+        Decoder* dec = nullptr;
+        if (!cannot_cont & options->display)
+        {
+            if (!fps_counter.Init())
+            {
                 cannot_cont = true;
             }
             fps_counter_initialized = true;
 
             if (!cannot_cont & !video_buffer.Init(&fps_counter,
-                                                  options->render_expired_frames)) {
+                                                  options->render_expired_frames))
+            {
                 cannot_cont = true;
             }
             video_buffer_initialized = true;
 
-            if (!cannot_cont & options->control) {
+            if (!cannot_cont & options->control)
+            {
                 if (!file_handler.Init(server.serial,
-                                       options->push_target)) {
+                                       options->push_target))
+                {
                     cannot_cont = true;
                 }
                 file_handler_initialized = true;
@@ -209,29 +225,36 @@ namespace irobot {
             dec = &decoder;
         }
 
-        if (!cannot_cont & audio_enabled) {
+        if (!cannot_cont & audio_enabled)
+        {
             // ~0.5s of 48kHz stereo S16 audio
-            if (!audio_buffer.Init(48000 * 2 * 2 / 2)) {
+            if (!audio_buffer.Init(48000 * 2 * 2 / 2))
+            {
                 cannot_cont = true;
             }
             audio_buffer_initialized = true;
             audio_decoder.Init(&audio_buffer);
             audio_player.Init(&audio_buffer);
 
-            if (!cannot_cont & !audio_player.Open(48000, 2)) {
+            if (!cannot_cont & !audio_player.Open(48000, 2))
+            {
                 LOGW("Could not open audio playback device, disabling audio");
                 audio_enabled = false;
-            } else {
+            }
+            else
+            {
                 audio_player_opened = true;
             }
         }
 
-        struct Recorder *rec = nullptr;
-        if (!cannot_cont & record) {
+        struct Recorder* rec = nullptr;
+        if (!cannot_cont & record)
+        {
             if (!recorder.Init(
-                    options->record_filename,
-                    options->record_format,
-                    frame_size)) {
+                options->record_filename,
+                options->record_format,
+                frame_size))
+            {
                 cannot_cont = true;
             }
             rec = &recorder;
@@ -244,32 +267,42 @@ namespace irobot {
 
         // now we consumed the header values, the socket receives the video stream
         // start the stream
-        if (!cannot_cont & !stream.Start()) {
+        if (!cannot_cont & !stream.Start())
+        {
             cannot_cont = true;
         }
 
-        if (!cannot_cont & audio_enabled) {
+        if (!cannot_cont & audio_enabled)
+        {
             audio_stream.Init(server.audio_socket, &audio_decoder);
-            if (!audio_stream.Start()) {
+            if (!audio_stream.Start())
+            {
                 LOGW("Could not start audio stream thread, disabling audio");
                 audio_enabled = false;
-            } else {
+            }
+            else
+            {
                 audio_stream_started = true;
             }
         }
 
-        if (!cannot_cont & !agent_manager.Start()) {
+        if (!cannot_cont & !agent_manager.Start())
+        {
             cannot_cont = true;
         }
 
-        if (!cannot_cont & options->display) {
-            if (options->control) {
-                if (!controller.Init(server.control_socket)) {
+        if (!cannot_cont & options->display)
+        {
+            if (options->control)
+            {
+                if (!controller.Init(server.control_socket))
+                {
                     cannot_cont = true;
                 }
                 controller_initialized = true;
 
-                if (!controller.Start()) {
+                if (!controller.Start())
+                {
                     cannot_cont = true;
                 }
                 controller_started = true;
@@ -277,66 +310,77 @@ namespace irobot {
 
             char default_window_title[DEVICE_NAME_FIELD_LENGTH + 32];
             sprintf(default_window_title, "iRobot-%s", device_name);
-            if (!options->headless) {
+            if (!options->headless)
+            {
                 input_manager.prefer_text = options->prefer_text;
-                const char *_window_title =
-                        options->window_title ? options->window_title : default_window_title;
+                const char* _window_title =
+                    options->window_title ? options->window_title : default_window_title;
 
                 if (!cannot_cont & !screen.InitRendering(_window_title, frame_size,
                                                          options->always_on_top, options->window_x,
                                                          options->window_y, options->window_width,
                                                          options->window_height, options->screen_width,
                                                          options->screen_height,
-                                                         options->window_borderless)) {
+                                                         options->window_borderless))
+                {
                     cannot_cont = true;
                 }
             }
-            if (!cannot_cont & options->turn_screen_off) {
+            if (!cannot_cont & options->turn_screen_off)
+            {
                 struct message::ControlMessage msg{};
                 msg.type = message::CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE;
                 msg.set_screen_power_mode.mode = message::SCREEN_POWER_MODE_OFF;
 
-                if (!agent_manager.PushDeviceControlMessage(&msg)) {
+                if (!agent_manager.PushDeviceControlMessage(&msg))
+                {
                     LOGW("Could not request 'set screen power mode'");
                 }
             }
-            if (!options->headless) {
-                if (options->fullscreen) {
+            if (!options->headless)
+            {
+                if (options->fullscreen)
+                {
                     screen.SwitchFullscreen();
                 }
             }
         }
 
-        if (options->show_touches) {
+        if (options->show_touches)
+        {
             WaitShowTouches(proc_show_touches);
             show_touches_waited = true;
         }
         bool ret = false;
-        if (!options->headless) {
+        if (!options->headless)
+        {
             ret = input_manager.EventLoop(options->display,
                                           options->control);
             LOGD("quit...");
             screen.Destroy();
-        } else {
+        }
+        else
+        {
             SDL_Event event;
             bool quit = false;
             InputManager::SwitchFpsCounterState(&fps_counter);
-            while (!quit) {
-                while (SDL_PollEvent(&event)) {
+            while (!quit)
+            {
+                while (SDL_PollEvent(&event))
+                {
                     enum EventResult result = agent_manager.HandleEvent(&event, false);
-                    switch (result) {
-                        case EVENT_RESULT_STOPPED_BY_USER:
-                            quit = true;
-                            break;
-                        case EVENT_RESULT_STOPPED_BY_EOS:
-                            LOGW("Device disconnected");
-                            quit = true;
-                            break;
-                        case EVENT_RESULT_CONTINUE:
-                            break;
+                    switch (result)
+                    {
+                    case EVENT_RESULT_STOPPED_BY_USER:
+                        quit = true;
+                        break;
+                    case EVENT_RESULT_STOPPED_BY_EOS:
+                        LOGW("Device disconnected");
+                        quit = true;
+                        break;
+                    case EVENT_RESULT_CONTINUE:
+                        break;
                     }
-
-
                 }
             }
             printf("Exting ...\n");
@@ -346,14 +390,17 @@ namespace irobot {
         // is shutdown
         stream.Stop();
 
-        if (controller_started) {
+        if (controller_started)
+        {
             controller.Stop();
             agent_manager.Stop();
         }
-        if (file_handler_initialized) {
+        if (file_handler_initialized)
+        {
             file_handler.Stop();
         }
-        if (fps_counter_initialized) {
+        if (fps_counter_initialized)
+        {
             fps_counter.Interrupt();
         }
 
@@ -364,47 +411,58 @@ namespace irobot {
         // interrupted, we can join them
         stream.Join();
 
-        if (audio_stream_started) {
+        if (audio_stream_started)
+        {
             audio_stream.Join();
         }
 
 
-        if (controller_started) {
+        if (controller_started)
+        {
             controller.Join();
             agent_manager.Join();
         }
-        if (controller_initialized) {
+        if (controller_initialized)
+        {
             controller.Destroy();
             agent_manager.Destroy();
         }
 
-        if (recorder_initialized) {
+        if (recorder_initialized)
+        {
             recorder.Destroy();
         }
 
-        if (file_handler_initialized) {
+        if (file_handler_initialized)
+        {
             file_handler.Join();
             file_handler.Destroy();
         }
 
-        if (video_buffer_initialized) {
+        if (video_buffer_initialized)
+        {
             video_buffer.Destroy();
         }
 
-        if (audio_player_opened) {
+        if (audio_player_opened)
+        {
             audio_player.Close();
         }
-        if (audio_buffer_initialized) {
+        if (audio_buffer_initialized)
+        {
             audio_buffer.Destroy();
         }
 
-        if (fps_counter_initialized) {
+        if (fps_counter_initialized)
+        {
             fps_counter.Join();
             fps_counter.Destroy();
         }
 
-        if (options->show_touches) {
-            if (!show_touches_waited) {
+        if (options->show_touches)
+        {
+            if (!show_touches_waited)
+            {
                 // wait the process which enabled "show touches"
                 WaitShowTouches(proc_show_touches);
             }
@@ -419,43 +477,50 @@ namespace irobot {
     }
 
 
-    ProcessType IRobotCore::SetShowTouchesEnabled(const char *serial, bool enabled) {
-        const char *value = enabled ? "1" : "0";
-        const char *const adb_cmd[] = {
-                "shell", "settings", "put", "system", "show_touches", value
+    ProcessType IRobotCore::SetShowTouchesEnabled(const char* serial, bool enabled)
+    {
+        const char* value = enabled ? "1" : "0";
+        const char* const adb_cmd[] = {
+            "shell", "settings", "put", "system", "show_touches", value
         };
         return platform::adb_execute(serial, adb_cmd, ARRAY_LEN(adb_cmd));
     }
 
-    void IRobotCore::WaitShowTouches(ProcessType process) {
+    void IRobotCore::WaitShowTouches(ProcessType process)
+    {
         // reap the process, ignore the result
         platform::process_check_success(process, "show_touches");
     }
 
-    SDL_LogPriority IRobotCore::SDLPriorityFromAVLevel(int level) {
-        switch (level) {
-            case AV_LOG_PANIC:
-            case AV_LOG_FATAL:
-                return SDL_LOG_PRIORITY_CRITICAL;
-            case AV_LOG_ERROR:
-                return SDL_LOG_PRIORITY_ERROR;
-            case AV_LOG_WARNING:
-                return SDL_LOG_PRIORITY_WARN;
-            case AV_LOG_INFO:
-                return SDL_LOG_PRIORITY_INFO;
-            default:
-                return static_cast<SDL_LogPriority>(0);
+    SDL_LogPriority IRobotCore::SDLPriorityFromAVLevel(int level)
+    {
+        switch (level)
+        {
+        case AV_LOG_PANIC:
+        case AV_LOG_FATAL:
+            return SDL_LOG_PRIORITY_CRITICAL;
+        case AV_LOG_ERROR:
+            return SDL_LOG_PRIORITY_ERROR;
+        case AV_LOG_WARNING:
+            return SDL_LOG_PRIORITY_WARN;
+        case AV_LOG_INFO:
+            return SDL_LOG_PRIORITY_INFO;
+        default:
+            return static_cast<SDL_LogPriority>(0);
         }
     }
 
-    void IRobotCore::AVLogCallback(void *avcl, int level, const char *fmt, va_list vl) {
-        (void) avcl;
+    void IRobotCore::AVLogCallback(void* avcl, int level, const char* fmt, va_list vl)
+    {
+        (void)avcl;
         SDL_LogPriority priority = SDLPriorityFromAVLevel(level);
-        if (priority == 0) {
+        if (priority == 0)
+        {
             return;
         }
-        char *local_fmt = static_cast<char *>(SDL_malloc(strlen(fmt) + 10));
-        if (!local_fmt) {
+        char* local_fmt = static_cast<char*>(SDL_malloc(strlen(fmt) + 10));
+        if (!local_fmt)
+        {
             LOGC("Could not allocate string");
             return;
         }
@@ -467,7 +532,8 @@ namespace irobot {
     }
 
 
-    void IRobotCore::PrintUsage(const char *arg0) {
+    void IRobotCore::PrintUsage(const char* arg0)
+    {
 #ifdef __APPLE__
 # define CTRL_OR_CMD "Cmd"
 #else
@@ -667,22 +733,28 @@ namespace irobot {
                 DEFAULT_LOCAL_PORT);
     }
 
-    bool IRobotCore::ParseIntegerArg(const char *s, long *out,
+    bool IRobotCore::ParseIntegerArg(const char* s, long* out,
                                      bool accept_suffix, long min,
-                                     long max, const char *name) {
+                                     long max, const char* name)
+    {
         long value;
         bool ok;
-        if (accept_suffix) {
+        if (accept_suffix)
+        {
             ok = parse_integer_with_suffix(s, &value);
-        } else {
+        }
+        else
+        {
             ok = parse_integer(s, &value);
         }
-        if (!ok) {
+        if (!ok)
+        {
             LOGE("Could not parse %s: %s", name, s);
             return false;
         }
 
-        if (value < min || value > max) {
+        if (value < min || value > max)
+        {
             LOGE("Could not parse %s: value (%ld) out-of-range (%ld; %ld)",
                  name, value, min, max);
             return false;
@@ -692,82 +764,97 @@ namespace irobot {
         return true;
     }
 
-    bool IRobotCore::ParseBitRate(const char *s, uint32_t *bit_rate) {
+    bool IRobotCore::ParseBitRate(const char* s, uint32_t* bit_rate)
+    {
         long value;
         // long may be 32 bits (it is the case on mingw), so do not use more than
         // 31 bits (long is signed)
         bool ok = ParseIntegerArg(s, &value, true, 0, 0x7FFFFFFF, "bit-rate");
-        if (!ok) {
+        if (!ok)
+        {
             return false;
         }
 
-        *bit_rate = (uint32_t) value;
+        *bit_rate = (uint32_t)value;
         return true;
     }
 
-    bool IRobotCore::ParseMaxSize(const char *s, uint16_t *max_size) {
+    bool IRobotCore::ParseMaxSize(const char* s, uint16_t* max_size)
+    {
         long value;
         bool ok = ParseIntegerArg(s, &value, false, 0, 0xFFFF, "max size");
-        if (!ok) {
+        if (!ok)
+        {
             return false;
         }
 
-        *max_size = (uint16_t) value;
+        *max_size = (uint16_t)value;
         return true;
     }
 
-    bool IRobotCore::ParseMaxFps(const char *s, uint16_t *max_fps) {
+    bool IRobotCore::ParseMaxFps(const char* s, uint16_t* max_fps)
+    {
         long value;
         bool ok = ParseIntegerArg(s, &value, false, 0, 1000, "max fps");
-        if (!ok) {
+        if (!ok)
+        {
             return false;
         }
 
-        *max_fps = (uint16_t) value;
+        *max_fps = (uint16_t)value;
         return true;
     }
 
-    bool IRobotCore::ParseWindowPosition(const char *s, int16_t *position) {
+    bool IRobotCore::ParseWindowPosition(const char* s, int16_t* position)
+    {
         long value;
         bool ok = ParseIntegerArg(s, &value, false, -1, 0x7FFF,
                                   "window position");
-        if (!ok) {
+        if (!ok)
+        {
             return false;
         }
 
-        *position = (int16_t) value;
+        *position = (int16_t)value;
         return true;
     }
 
-    bool IRobotCore::ParseWindowDimension(const char *s, uint16_t *dimension) {
+    bool IRobotCore::ParseWindowDimension(const char* s, uint16_t* dimension)
+    {
         long value;
         bool ok = ParseIntegerArg(s, &value, false, 0, 0xFFFF,
                                   "window dimension");
-        if (!ok) {
+        if (!ok)
+        {
             return false;
         }
 
-        *dimension = (uint16_t) value;
+        *dimension = (uint16_t)value;
         return true;
     }
 
-    bool IRobotCore::ParsePort(const char *s, uint16_t *port) {
+    bool IRobotCore::ParsePort(const char* s, uint16_t* port)
+    {
         long value;
         bool ok = ParseIntegerArg(s, &value, false, 0, 0xFFFF, "port");
-        if (!ok) {
+        if (!ok)
+        {
             return false;
         }
 
-        *port = (uint16_t) value;
+        *port = (uint16_t)value;
         return true;
     }
 
-    bool IRobotCore::ParseRecordFormat(const char *opt_arg, enum RecordFormat *format) {
-        if (!strcmp(opt_arg, "mp4")) {
+    bool IRobotCore::ParseRecordFormat(const char* opt_arg, enum RecordFormat* format)
+    {
+        if (!strcmp(opt_arg, "mp4"))
+        {
             *format = RECORDER_FORMAT_MP4;
             return true;
         }
-        if (!strcmp(opt_arg, "mkv")) {
+        if (!strcmp(opt_arg, "mkv"))
+        {
             *format = RECORDER_FORMAT_MKV;
             return true;
         }
@@ -775,223 +862,254 @@ namespace irobot {
         return false;
     }
 
-    enum RecordFormat IRobotCore::GuessRecordFormat(const char *filename) {
+    enum RecordFormat IRobotCore::GuessRecordFormat(const char* filename)
+    {
         size_t len = strlen(filename);
-        if (len < 4) {
+        if (len < 4)
+        {
             return static_cast<RecordFormat>(0);
         }
-        const char *ext = &filename[len - 4];
-        if (!strcmp(ext, ".mp4")) {
+        const char* ext = &filename[len - 4];
+        if (!strcmp(ext, ".mp4"))
+        {
             return RECORDER_FORMAT_MP4;
         }
-        if (!strcmp(ext, ".mkv")) {
+        if (!strcmp(ext, ".mkv"))
+        {
             return RECORDER_FORMAT_MKV;
         }
         return static_cast<RecordFormat>(0);
     }
 
 
-    bool IRobotCore::ParseArgs(int argc, char **argv) {
-        struct IRobotCore *args = this;
+    bool IRobotCore::ParseArgs(int argc, char** argv)
+    {
+        struct IRobotCore* args = this;
         static const struct option long_options[] = {
-                {"always-on-top",         no_argument,       nullptr, OPT_ALWAYS_ON_TOP},
-                {"bit-rate",              required_argument, nullptr, 'b'},
-                {"crop",                  required_argument, nullptr, OPT_CROP},
-                {"fullscreen",            no_argument,       nullptr, 'f'},
-                {"help",                  no_argument,       nullptr, 'h'},
-                {"max-fps",               required_argument, nullptr, OPT_MAX_FPS},
-                {"max-size",              required_argument, nullptr, 'm'},
-                {"no-audio",              no_argument,       nullptr, OPT_NO_AUDIO},
-                {"no-control",            no_argument,       nullptr, 'n'},
-                {"no-display",            no_argument,       nullptr, 'N'},
-                {"port",                  required_argument, nullptr, 'p'},
-                {"push-target",           required_argument, nullptr, OPT_PUSH_TARGET},
-                {"record",                required_argument, nullptr, 'r'},
-                {"record-format",         required_argument, nullptr, OPT_RECORD_FORMAT},
-                {"render-expired-frames", no_argument,       nullptr,
-                                                                      OPT_RENDER_EXPIRED_FRAMES},
-                {"serial",                required_argument, nullptr, 's'},
-                {"show-touches",          no_argument,       nullptr, 't'},
-                {"turn-screen-off",       no_argument,       nullptr, 'S'},
-                {"prefer-text",           no_argument,       nullptr, OPT_PREFER_TEXT},
-                {"version",               no_argument,       nullptr, 'v'},
-                {"window-title",          required_argument, nullptr, OPT_WINDOW_TITLE},
-                {"window-x",              required_argument, nullptr, OPT_WINDOW_X},
-                {"window-y",              required_argument, nullptr, OPT_WINDOW_Y},
-                {"window-width",          required_argument, nullptr, OPT_WINDOW_WIDTH},
-                {"window-height",         required_argument, nullptr, OPT_WINDOW_HEIGHT},
-                {"screen-width",          required_argument, nullptr, OPT_SCREEN_WIDTH},
-                {"screen-height",         required_argument, nullptr, OPT_SCREEN_HEIGHT},
-                {"window-borderless",     no_argument,       nullptr,
-                                                                      OPT_WINDOW_BORDERLESS},
-                {"headless",              no_argument,       nullptr,
-                                                                      OPT_HEADLESS},
-                {nullptr, 0,                                 nullptr, 0},
+            {"always-on-top", no_argument, nullptr, OPT_ALWAYS_ON_TOP},
+            {"bit-rate", required_argument, nullptr, 'b'},
+            {"crop", required_argument, nullptr, OPT_CROP},
+            {"fullscreen", no_argument, nullptr, 'f'},
+            {"help", no_argument, nullptr, 'h'},
+            {"max-fps", required_argument, nullptr, OPT_MAX_FPS},
+            {"max-size", required_argument, nullptr, 'm'},
+            {"no-audio", no_argument, nullptr, OPT_NO_AUDIO},
+            {"no-control", no_argument, nullptr, 'n'},
+            {"no-display", no_argument, nullptr, 'N'},
+            {"port", required_argument, nullptr, 'p'},
+            {"push-target", required_argument, nullptr, OPT_PUSH_TARGET},
+            {"record", required_argument, nullptr, 'r'},
+            {"record-format", required_argument, nullptr, OPT_RECORD_FORMAT},
+            {
+                "render-expired-frames", no_argument, nullptr,
+                OPT_RENDER_EXPIRED_FRAMES
+            },
+            {"serial", required_argument, nullptr, 's'},
+            {"show-touches", no_argument, nullptr, 't'},
+            {"turn-screen-off", no_argument, nullptr, 'S'},
+            {"prefer-text", no_argument, nullptr, OPT_PREFER_TEXT},
+            {"version", no_argument, nullptr, 'v'},
+            {"window-title", required_argument, nullptr, OPT_WINDOW_TITLE},
+            {"window-x", required_argument, nullptr, OPT_WINDOW_X},
+            {"window-y", required_argument, nullptr, OPT_WINDOW_Y},
+            {"window-width", required_argument, nullptr, OPT_WINDOW_WIDTH},
+            {"window-height", required_argument, nullptr, OPT_WINDOW_HEIGHT},
+            {"screen-width", required_argument, nullptr, OPT_SCREEN_WIDTH},
+            {"screen-height", required_argument, nullptr, OPT_SCREEN_HEIGHT},
+            {
+                "window-borderless", no_argument, nullptr,
+                OPT_WINDOW_BORDERLESS
+            },
+            {
+                "headless", no_argument, nullptr,
+                OPT_HEADLESS
+            },
+            {nullptr, 0, nullptr, 0},
         };
 
-        struct IRobotCore *opts = args;
+        struct IRobotCore* opts = args;
 
         optind = 0; // reset to start from the first argument in tests
 
         int c;
         while ((c = getopt_long(argc, argv, "b:c:fF:hm:nNp:r:s:StTv", long_options,
-                                nullptr)) != -1) {
-            switch (c) {
-                case 'b':
-                    if (!ParseBitRate(optarg, &opts->bit_rate)) {
-                        return false;
-                    }
-                    break;
-                case 'c':
-                    LOGW("Deprecated option -c. Use --crop instead.");
-                    // fall through
-                case OPT_CROP:
-                    opts->crop = optarg;
-                    break;
-                case 'f':
-                    opts->fullscreen = true;
-                    break;
-                case 'F':
-                    LOGW("Deprecated option -F. Use --record-format instead.");
-                    // fall through
-                case OPT_RECORD_FORMAT:
-                    if (!ParseRecordFormat(optarg, &opts->record_format)) {
-                        return false;
-                    }
-                    break;
-                case 'h':
-                    args->help = true;
-                    break;
-                case OPT_MAX_FPS:
-                    if (!ParseMaxFps(optarg, &opts->max_fps)) {
-                        return false;
-                    }
-                    break;
-                case 'm':
-                    if (!ParseMaxSize(optarg, &opts->max_size)) {
-                        return false;
-                    }
-                    break;
-                case 'n':
-                    opts->control = false;
-                    break;
-                case OPT_NO_AUDIO:
-                    opts->audio = false;
-                    break;
-                case 'N':
-                    opts->display = false;
-                    break;
-                case 'p':
-                    if (!ParsePort(optarg, &opts->port)) {
-                        return false;
-                    }
-                    break;
-                case 'r':
-                    opts->record_filename = optarg;
-                    break;
-                case 's':
-                    opts->serial = optarg;
-                    break;
-                case 'S':
-                    opts->turn_screen_off = true;
-                    break;
-                case 't':
-                    opts->show_touches = true;
-                    break;
-                case 'T':
-                    LOGW("Deprecated option -T. Use --always-on-top instead.");
-                    // fall through
-                case OPT_ALWAYS_ON_TOP:
-                    opts->always_on_top = true;
-                    break;
-                case 'v':
-                    args->version = true;
-                    break;
-                case OPT_RENDER_EXPIRED_FRAMES:
-                    opts->render_expired_frames = true;
-                    break;
-                case OPT_WINDOW_TITLE:
-                    opts->window_title = optarg;
-                    break;
-                case OPT_WINDOW_X:
-                    if (!ParseWindowPosition(optarg, &opts->window_x)) {
-                        return false;
-                    }
-                    break;
-                case OPT_WINDOW_Y:
-                    if (!ParseWindowPosition(optarg, &opts->window_y)) {
-                        return false;
-                    }
-                    break;
-                case OPT_WINDOW_WIDTH:
-                    if (!ParseWindowDimension(optarg, &opts->window_width)) {
-                        return false;
-                    }
-                    break;
-                case OPT_WINDOW_HEIGHT:
-                    if (!ParseWindowDimension(optarg, &opts->window_height)) {
-                        return false;
-                    }
-                    break;
-                case OPT_SCREEN_WIDTH:
-                    if (!ParseWindowDimension(optarg, &opts->screen_width)) {
-                        return false;
-                    }
-                    break;
-                case OPT_SCREEN_HEIGHT:
-                    if (!ParseWindowDimension(optarg, &opts->screen_height)) {
-                        return false;
-                    }
-                    break;
-                case OPT_WINDOW_BORDERLESS:
-                    opts->window_borderless = true;
-                    break;
-                case OPT_HEADLESS:
-                    opts->headless = true;
-                    break;
-                case OPT_PUSH_TARGET:
-                    opts->push_target = optarg;
-                    break;
-                case OPT_PREFER_TEXT:
-                    opts->prefer_text = true;
-                    break;
-                default:
-                    // getopt prints the error message on stderr
+                                nullptr)) != -1)
+        {
+            switch (c)
+            {
+            case 'b':
+                if (!ParseBitRate(optarg, &opts->bit_rate))
+                {
                     return false;
+                }
+                break;
+            case 'c':
+                LOGW("Deprecated option -c. Use --crop instead.");
+            // fall through
+            case OPT_CROP:
+                opts->crop = optarg;
+                break;
+            case 'f':
+                opts->fullscreen = true;
+                break;
+            case 'F':
+                LOGW("Deprecated option -F. Use --record-format instead.");
+            // fall through
+            case OPT_RECORD_FORMAT:
+                if (!ParseRecordFormat(optarg, &opts->record_format))
+                {
+                    return false;
+                }
+                break;
+            case 'h':
+                args->help = true;
+                break;
+            case OPT_MAX_FPS:
+                if (!ParseMaxFps(optarg, &opts->max_fps))
+                {
+                    return false;
+                }
+                break;
+            case 'm':
+                if (!ParseMaxSize(optarg, &opts->max_size))
+                {
+                    return false;
+                }
+                break;
+            case 'n':
+                opts->control = false;
+                break;
+            case OPT_NO_AUDIO:
+                opts->audio = false;
+                break;
+            case 'N':
+                opts->display = false;
+                break;
+            case 'p':
+                if (!ParsePort(optarg, &opts->port))
+                {
+                    return false;
+                }
+                break;
+            case 'r':
+                opts->record_filename = optarg;
+                break;
+            case 's':
+                opts->serial = optarg;
+                break;
+            case 'S':
+                opts->turn_screen_off = true;
+                break;
+            case 't':
+                opts->show_touches = true;
+                break;
+            case 'T':
+                LOGW("Deprecated option -T. Use --always-on-top instead.");
+            // fall through
+            case OPT_ALWAYS_ON_TOP:
+                opts->always_on_top = true;
+                break;
+            case 'v':
+                args->version = true;
+                break;
+            case OPT_RENDER_EXPIRED_FRAMES:
+                opts->render_expired_frames = true;
+                break;
+            case OPT_WINDOW_TITLE:
+                opts->window_title = optarg;
+                break;
+            case OPT_WINDOW_X:
+                if (!ParseWindowPosition(optarg, &opts->window_x))
+                {
+                    return false;
+                }
+                break;
+            case OPT_WINDOW_Y:
+                if (!ParseWindowPosition(optarg, &opts->window_y))
+                {
+                    return false;
+                }
+                break;
+            case OPT_WINDOW_WIDTH:
+                if (!ParseWindowDimension(optarg, &opts->window_width))
+                {
+                    return false;
+                }
+                break;
+            case OPT_WINDOW_HEIGHT:
+                if (!ParseWindowDimension(optarg, &opts->window_height))
+                {
+                    return false;
+                }
+                break;
+            case OPT_SCREEN_WIDTH:
+                if (!ParseWindowDimension(optarg, &opts->screen_width))
+                {
+                    return false;
+                }
+                break;
+            case OPT_SCREEN_HEIGHT:
+                if (!ParseWindowDimension(optarg, &opts->screen_height))
+                {
+                    return false;
+                }
+                break;
+            case OPT_WINDOW_BORDERLESS:
+                opts->window_borderless = true;
+                break;
+            case OPT_HEADLESS:
+                opts->headless = true;
+                break;
+            case OPT_PUSH_TARGET:
+                opts->push_target = optarg;
+                break;
+            case OPT_PREFER_TEXT:
+                opts->prefer_text = true;
+                break;
+            default:
+                // getopt prints the error message on stderr
+                return false;
             }
         }
 
-        if (!opts->display && !opts->record_filename) {
+        if (!opts->display && !opts->record_filename)
+        {
             LOGE("-N/--no-display requires screen recording (-r/--record)");
             return false;
         }
 
-        if (!opts->display && opts->fullscreen) {
+        if (!opts->display && opts->fullscreen)
+        {
             LOGE("-f/--fullscreen-window is incompatible with -N/--no-display");
             return false;
         }
 
         int index = optind;
-        if (index < argc) {
+        if (index < argc)
+        {
             LOGE("Unexpected additional argument: %s", argv[index]);
             return false;
         }
 
-        if (opts->record_format && !opts->record_filename) {
+        if (opts->record_format && !opts->record_filename)
+        {
             LOGE("Record format specified without recording");
             return false;
         }
 
-        if (opts->record_filename && !opts->record_format) {
+        if (opts->record_filename && !opts->record_format)
+        {
             opts->record_format = GuessRecordFormat(opts->record_filename);
-            if (!opts->record_format) {
+            if (!opts->record_format)
+            {
                 LOGE("No format specified for \"%s\" (try with -F mkv)",
                      opts->record_filename);
                 return false;
             }
         }
 
-        if (!opts->control && opts->turn_screen_off) {
+        if (!opts->control && opts->turn_screen_off)
+        {
             LOGE("Could not request to turn screen off if control is disabled");
             return false;
         }
@@ -999,7 +1117,8 @@ namespace irobot {
         return true;
     }
 
-    void IRobotCore::PrintVersion() {
+    void IRobotCore::PrintVersion()
+    {
         fprintf(stderr, "irobot %s\n\n", IROBOT_SERVER_VERSION);
 
         fprintf(stderr, "dependencies:\n");
@@ -1016,8 +1135,8 @@ namespace irobot {
                 LIBAVUTIL_VERSION_MICRO);
     }
 
-    int IRobotCore::iRobotMain(int argc, char **argv) {
-
+    int IRobotCore::iRobotMain(int argc, char** argv)
+    {
 #ifdef __WINDOWS__
         // disable buffering, we want logs immediately
         // even line buffering (setvbuf() with mode _IOLBF) is not sufficient
@@ -1032,26 +1151,30 @@ namespace irobot {
         IRobotCore irobot_core = {};
         platform::net_init();
 
-        if (!irobot_core.ParseArgs(argc, argv)) {
+        if (!irobot_core.ParseArgs(argc, argv))
+        {
             return 1;
         }
 
-        if (irobot_core.help) {
+        if (irobot_core.help)
+        {
             PrintUsage(argv[0]);
             return 0;
         }
 
-        if (irobot_core.version) {
+        if (irobot_core.version)
+        {
             PrintVersion();
             return 0;
         }
 
         LOGI("irobot "
-                     IROBOT_SERVER_VERSION
-                     " <https://github.com/guidebee/irobot>");
+             IROBOT_SERVER_VERSION
+             " <https://github.com/guidebee/irobot>");
 
 
-        if (avformat_network_init()) {
+        if (avformat_network_init())
+        {
             return 1;
         }
 
@@ -1062,13 +1185,12 @@ namespace irobot {
         platform::net_cleanup();
 
 #if defined (__WINDOWS__)
-        if (res != 0) {
+        if (res != 0)
+        {
             fprintf(stderr, "Press any key to continue...\n");
             getchar();
         }
 #endif
         return res;
     }
-
-
 }

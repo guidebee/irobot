@@ -28,7 +28,8 @@
 #include "pixfmt.h"
 #include "version.h"
 
-typedef struct AVComponentDescriptor {
+typedef struct AVComponentDescriptor
+{
     /**
      * Which of the 4 planes contains the component.
      */
@@ -78,9 +79,10 @@ typedef struct AVComponentDescriptor {
  *       and all the YUV variants) AVPixFmtDescriptor just stores how values
  *       are stored not what these values represent.
  */
-typedef struct AVPixFmtDescriptor {
-    const char *name;
-    uint8_t nb_components;  ///< The number of components each pixel has, (1-4)
+typedef struct AVPixFmtDescriptor
+{
+    const char* name;
+    uint8_t nb_components; ///< The number of components each pixel has, (1-4)
 
     /**
      * Amount to shift the luma width right to find the chroma width.
@@ -119,7 +121,7 @@ typedef struct AVPixFmtDescriptor {
     /**
      * Alternative comma-separated names.
      */
-    const char *alias;
+    const char* alias;
 } AVPixFmtDescriptor;
 
 /**
@@ -198,19 +200,19 @@ typedef struct AVPixFmtDescriptor {
  * used for storing the pixel information, that is padding bits are
  * not counted.
  */
-int av_get_bits_per_pixel(const AVPixFmtDescriptor *pixdesc);
+int av_get_bits_per_pixel(const AVPixFmtDescriptor* pixdesc);
 
 /**
  * Return the number of bits per pixel for the pixel format
  * described by pixdesc, including any padding or unused bits.
  */
-int av_get_padded_bits_per_pixel(const AVPixFmtDescriptor *pixdesc);
+int av_get_padded_bits_per_pixel(const AVPixFmtDescriptor* pixdesc);
 
 /**
  * @return a pixel format descriptor for provided pixel format or NULL if
  * this pixel format is unknown.
  */
-const AVPixFmtDescriptor *av_pix_fmt_desc_get(enum AVPixelFormat pix_fmt);
+const AVPixFmtDescriptor* av_pix_fmt_desc_get(enum AVPixelFormat pix_fmt);
 
 /**
  * Iterate over all pixel format descriptors known to libavutil.
@@ -219,13 +221,13 @@ const AVPixFmtDescriptor *av_pix_fmt_desc_get(enum AVPixelFormat pix_fmt);
  *
  * @return next descriptor or NULL after the last descriptor
  */
-const AVPixFmtDescriptor *av_pix_fmt_desc_next(const AVPixFmtDescriptor *prev);
+const AVPixFmtDescriptor* av_pix_fmt_desc_next(const AVPixFmtDescriptor* prev);
 
 /**
  * @return an AVPixelFormat id described by desc, or AV_PIX_FMT_NONE if desc
  * is not a valid pointer to a pixel format descriptor.
  */
-enum AVPixelFormat av_pix_fmt_desc_get_id(const AVPixFmtDescriptor *desc);
+enum AVPixelFormat av_pix_fmt_desc_get_id(const AVPixFmtDescriptor* desc);
 
 /**
  * Utility function to access log2_chroma_w log2_chroma_h from
@@ -238,7 +240,7 @@ enum AVPixelFormat av_pix_fmt_desc_get_id(const AVPixFmtDescriptor *desc);
  * @return 0 on success, AVERROR(ENOSYS) on invalid or unknown pixel format
  */
 int av_pix_fmt_get_chroma_sub_sample(enum AVPixelFormat pix_fmt,
-                                     int *h_shift, int *v_shift);
+                                     int* h_shift, int* v_shift);
 
 /**
  * @return number of planes in pix_fmt, a negative AVERROR if pix_fmt is not a
@@ -249,52 +251,52 @@ int av_pix_fmt_count_planes(enum AVPixelFormat pix_fmt);
 /**
  * @return the name for provided color range or NULL if unknown.
  */
-const char *av_color_range_name(enum AVColorRange range);
+const char* av_color_range_name(enum AVColorRange range);
 
 /**
  * @return the AVColorRange value for name or an AVError if not found.
  */
-int av_color_range_from_name(const char *name);
+int av_color_range_from_name(const char* name);
 
 /**
  * @return the name for provided color primaries or NULL if unknown.
  */
-const char *av_color_primaries_name(enum AVColorPrimaries primaries);
+const char* av_color_primaries_name(enum AVColorPrimaries primaries);
 
 /**
  * @return the AVColorPrimaries value for name or an AVError if not found.
  */
-int av_color_primaries_from_name(const char *name);
+int av_color_primaries_from_name(const char* name);
 
 /**
  * @return the name for provided color transfer or NULL if unknown.
  */
-const char *av_color_transfer_name(enum AVColorTransferCharacteristic transfer);
+const char* av_color_transfer_name(enum AVColorTransferCharacteristic transfer);
 
 /**
  * @return the AVColorTransferCharacteristic value for name or an AVError if not found.
  */
-int av_color_transfer_from_name(const char *name);
+int av_color_transfer_from_name(const char* name);
 
 /**
  * @return the name for provided color space or NULL if unknown.
  */
-const char *av_color_space_name(enum AVColorSpace space);
+const char* av_color_space_name(enum AVColorSpace space);
 
 /**
  * @return the AVColorSpace value for name or an AVError if not found.
  */
-int av_color_space_from_name(const char *name);
+int av_color_space_from_name(const char* name);
 
 /**
  * @return the name for provided chroma location or NULL if unknown.
  */
-const char *av_chroma_location_name(enum AVChromaLocation location);
+const char* av_chroma_location_name(enum AVChromaLocation location);
 
 /**
  * @return the AVChromaLocation value for name or an AVError if not found.
  */
-int av_chroma_location_from_name(const char *name);
+int av_chroma_location_from_name(const char* name);
 
 /**
  * Return the pixel format corresponding to name.
@@ -307,7 +309,7 @@ int av_chroma_location_from_name(const char *name);
  *
  * Finally if no pixel format has been found, returns AV_PIX_FMT_NONE.
  */
-enum AVPixelFormat av_get_pix_fmt(const char *name);
+enum AVPixelFormat av_get_pix_fmt(const char* name);
 
 /**
  * Return the short name for a pixel format, NULL in case pix_fmt is
@@ -315,7 +317,7 @@ enum AVPixelFormat av_get_pix_fmt(const char *name);
  *
  * @see av_get_pix_fmt(), av_get_pix_fmt_string()
  */
-const char *av_get_pix_fmt_name(enum AVPixelFormat pix_fmt);
+const char* av_get_pix_fmt_name(enum AVPixelFormat pix_fmt);
 
 /**
  * Print in buf the string corresponding to the pixel format with
@@ -327,7 +329,7 @@ const char *av_get_pix_fmt_name(enum AVPixelFormat pix_fmt);
  * corresponding info string, or a negative value to print the
  * corresponding header.
  */
-char *av_get_pix_fmt_string(char *buf, int buf_size,
+char* av_get_pix_fmt_string(char* buf, int buf_size,
                             enum AVPixelFormat pix_fmt);
 
 /**
@@ -347,13 +349,13 @@ char *av_get_pix_fmt_string(char *buf, int buf_size,
  * data[0]. The behavior is undefined if the format is not paletted.
  * @param dst_element_size size of elements in dst array (2 or 4 byte)
  */
-void av_read_image_line2(void *dst, const uint8_t *data[4],
-                        const int linesize[4], const AVPixFmtDescriptor *desc,
-                        int x, int y, int c, int w, int read_pal_component,
-                        int dst_element_size);
+void av_read_image_line2(void* dst, const uint8_t* data[4],
+                         const int linesize[4], const AVPixFmtDescriptor* desc,
+                         int x, int y, int c, int w, int read_pal_component,
+                         int dst_element_size);
 
-void av_read_image_line(uint16_t *dst, const uint8_t *data[4],
-                        const int linesize[4], const AVPixFmtDescriptor *desc,
+void av_read_image_line(uint16_t* dst, const uint8_t* data[4],
+                        const int linesize[4], const AVPixFmtDescriptor* desc,
                         int x, int y, int c, int w, int read_pal_component);
 
 /**
@@ -371,12 +373,12 @@ void av_read_image_line(uint16_t *dst, const uint8_t *data[4],
  * values to write to the image line
  * @param src_element_size size of elements in src array (2 or 4 byte)
  */
-void av_write_image_line2(const void *src, uint8_t *data[4],
-                         const int linesize[4], const AVPixFmtDescriptor *desc,
-                         int x, int y, int c, int w, int src_element_size);
+void av_write_image_line2(const void* src, uint8_t* data[4],
+                          const int linesize[4], const AVPixFmtDescriptor* desc,
+                          int x, int y, int c, int w, int src_element_size);
 
-void av_write_image_line(const uint16_t *src, uint8_t *data[4],
-                         const int linesize[4], const AVPixFmtDescriptor *desc,
+void av_write_image_line(const uint16_t* src, uint8_t* data[4],
+                         const int linesize[4], const AVPixFmtDescriptor* desc,
                          int x, int y, int c, int w);
 
 /**
@@ -437,6 +439,6 @@ int av_get_pix_fmt_loss(enum AVPixelFormat dst_pix_fmt,
  * (maximum loss for an invalid dst_pix_fmt).
  */
 enum AVPixelFormat av_find_best_pix_fmt_of_2(enum AVPixelFormat dst_pix_fmt1, enum AVPixelFormat dst_pix_fmt2,
-                                             enum AVPixelFormat src_pix_fmt, int has_alpha, int *loss_ptr);
+                                             enum AVPixelFormat src_pix_fmt, int has_alpha, int* loss_ptr);
 
 #endif /* AVUTIL_PIXDESC_H */

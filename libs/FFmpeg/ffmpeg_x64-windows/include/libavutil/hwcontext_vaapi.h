@@ -33,7 +33,8 @@
  * with the data pointer set to a VASurfaceID.
  */
 
-enum {
+enum
+{
     /**
      * The quirks field has been set by the user and should not be detected
      * automatically by av_hwdevice_ctx_init().
@@ -65,7 +66,8 @@ enum {
  *
  * Allocated as AVHWDeviceContext.hwctx
  */
-typedef struct AVVAAPIDeviceContext {
+typedef struct AVVAAPIDeviceContext
+{
     /**
      * The VADisplay handle, to be filled by the user.
      */
@@ -85,21 +87,22 @@ typedef struct AVVAAPIDeviceContext {
  *
  * Allocated as AVHWFramesContext.hwctx.
  */
-typedef struct AVVAAPIFramesContext {
+typedef struct AVVAAPIFramesContext
+{
     /**
      * Set by the user to apply surface attributes to all surfaces in
      * the frame pool.  If null, default settings are used.
      */
-    VASurfaceAttrib *attributes;
-    int           nb_attributes;
+    VASurfaceAttrib* attributes;
+    int nb_attributes;
     /**
      * The surfaces IDs of all surfaces in the pool after creation.
      * Only valid if AVHWFramesContext.initial_pool_size was positive.
      * These are intended to be used as the render_targets arguments to
      * vaCreateContext().
      */
-    VASurfaceID     *surface_ids;
-    int           nb_surfaces;
+    VASurfaceID* surface_ids;
+    int nb_surfaces;
 } AVVAAPIFramesContext;
 
 /**
@@ -107,7 +110,8 @@ typedef struct AVVAAPIFramesContext {
  *
  * Allocated with av_hwdevice_hwconfig_alloc().
  */
-typedef struct AVVAAPIHWConfig {
+typedef struct AVVAAPIHWConfig
+{
     /**
      * ID of a VAAPI pipeline configuration.
      */

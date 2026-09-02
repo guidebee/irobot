@@ -11,11 +11,13 @@
 #ifndef ANDROID_IROBOT_INPUT_HPP
 #define ANDROID_IROBOT_INPUT_HPP
 
-namespace irobot::android {
-/**
+namespace irobot::android
+{
+    /**
  * Meta key / modifer state.
  */
-    enum AndroidMetaState {
+    enum AndroidMetaState
+    {
         /** No meta keys are pressed. */
         AMETA_NONE = 0,
 
@@ -71,20 +73,22 @@ namespace irobot::android {
         AMETA_SCROLL_LOCK_ON = 0x400000,
     };
 
-/**
+    /**
  * Input event types.
  */
-    enum AndroidInputEventType {
+    enum AndroidInputEventType
+    {
         /** Indicates that the input event is a key event. */
         AINPUT_EVENT_TYPE_KEY = 1,
         /** Indicates that the input event is a motion event. */
         AINPUT_EVENT_TYPE_MOTION = 2
     };
 
-/**
+    /**
  * Key event actions.
  */
-    enum AndroidKeyEventAction {
+    enum AndroidKeyEventAction
+    {
         /** The key has been pressed down. */
         AKEY_EVENT_ACTION_DOWN = 0,
 
@@ -100,10 +104,11 @@ namespace irobot::android {
         AKEY_EVENT_ACTION_MULTIPLE = 2
     };
 
-/**
+    /**
  * Key event flags.
  */
-    enum AndroidKeyEventFlags {
+    enum AndroidKeyEventFlags
+    {
         /** This mask is set if the device woke because of this key event. */
         AKEY_EVENT_FLAG_WOKE_HERE = 0x1,
 
@@ -180,14 +185,15 @@ namespace irobot::android {
         AKEY_EVENT_FLAG_FALLBACK = 0x400,
     };
 
-/**
+    /**
  * Bit shift for the action bits holding the pointer index as
  * defined by AMOTION_EVENT_ACTION_POINTER_INDEX_MASK.
  */
 #define AMOTION_EVENT_ACTION_POINTER_INDEX_SHIFT 8
 
-/** Motion event actions */
-    enum AndroidMotionEventAction {
+    /** Motion event actions */
+    enum AndroidMotionEventAction
+    {
         /** Bit mask of the parts of the action code that are the action itself. */
         AMOTION_EVENT_ACTION_MASK = 0xff,
 
@@ -270,10 +276,11 @@ namespace irobot::android {
         AMOTION_EVENT_ACTION_BUTTON_RELEASE = 12,
     };
 
-/**
+    /**
  * Motion event flags.
  */
-    enum AndroidMotionEventFlags {
+    enum AndroidMotionEventFlags
+    {
         /**
          * This flag indicates that the window that received this motion event is partly
          * or wholly obscured by another visible window above it.  This flag is set to true
@@ -287,10 +294,11 @@ namespace irobot::android {
         AMOTION_EVENT_FLAG_WINDOW_IS_OBSCURED = 0x1,
     };
 
-/**
+    /**
  * Motion event edge touch flags.
  */
-    enum AndroidMotionEventEdgeTouchFlags {
+    enum AndroidMotionEventEdgeTouchFlags
+    {
         /** No edges intersected. */
         AMOTION_EVENT_EDGE_FLAG_NONE = 0,
 
@@ -307,11 +315,12 @@ namespace irobot::android {
         AMOTION_EVENT_EDGE_FLAG_RIGHT = 0x08
     };
 
-/**
+    /**
  * Constants that identify each individual axis of a motion event.
  * @anchor AMOTION_EVENT_AXIS
  */
-    enum AndroidMotionEventAxis {
+    enum AndroidMotionEventAxis
+    {
         /**
          * Axis constant: X axis of a motion event.
          *
@@ -676,11 +685,12 @@ namespace irobot::android {
         //       Refer to frameworks/base/core/java/android/view/MotionEvent.java for the full list.
     };
 
-/**
+    /**
  * Constants that identify buttons that are associated with motion events.
  * Refer to the documentation on the MotionEvent class for descriptions of each button.
  */
-    enum AndroidMotionEventButtons {
+    enum AndroidMotionEventButtons
+    {
         /** primary */
         AMOTION_EVENT_BUTTON_PRIMARY = 1 << 0,
         /** secondary */
@@ -695,11 +705,12 @@ namespace irobot::android {
         AMOTION_EVENT_BUTTON_STYLUS_SECONDARY = 1 << 6,
     };
 
-/**
+    /**
  * Constants that identify tool types.
  * Refer to the documentation on the MotionEvent class for descriptions of each tool type.
  */
-    enum AndroidMotionEventToolType {
+    enum AndroidMotionEventToolType
+    {
         /** unknown */
         AMOTION_EVENT_TOOL_TYPE_UNKNOWN = 0,
         /** finger */
@@ -712,13 +723,14 @@ namespace irobot::android {
         AMOTION_EVENT_TOOL_TYPE_ERASER = 4,
     };
 
-/**
+    /**
  * Input source masks.
  *
  * Refer to the documentation on android.view.InputDevice for more details about input sources
  * and their correct interpretation.
  */
-    enum AndroidInputSourceClass {
+    enum AndroidInputSourceClass
+    {
         /** mask */
         AINPUT_SOURCE_CLASS_MASK = 0x000000ff,
 
@@ -736,10 +748,11 @@ namespace irobot::android {
         AINPUT_SOURCE_CLASS_JOYSTICK = 0x00000010,
     };
 
-/**
+    /**
  * Input sources.
  */
-    enum AndroidInputSource {
+    enum AndroidInputSource
+    {
         /** unknown */
         AINPUT_SOURCE_UNKNOWN = 0x00000000,
 
@@ -771,12 +784,13 @@ namespace irobot::android {
         AINPUT_SOURCE_ROTARY_ENCODER = 0x00400000 | AINPUT_SOURCE_CLASS_NONE,
     };
 
-/**
+    /**
  * Keyboard types.
  *
  * Refer to the documentation on android.view.InputDevice for more details.
  */
-    enum AndroidKeyboardType {
+    enum AndroidKeyboardType
+    {
         /** none */
         AINPUT_KEYBOARD_TYPE_NONE = 0,
         /** non alphabetic */
@@ -785,7 +799,7 @@ namespace irobot::android {
         AINPUT_KEYBOARD_TYPE_ALPHABETIC = 2,
     };
 
-/**
+    /**
  * Constants used to retrieve information about the range of motion for a particular
  * coordinate of a motion event.
  *
@@ -794,7 +808,8 @@ namespace irobot::android {
  *
  * @deprecated These constants are deprecated. Use {@link AMOTION_EVENT_AXIS AMOTION_EVENT_AXIS_*} constants instead.
  */
-    enum AndroidMotionRange {
+    enum AndroidMotionRange
+    {
         /** x */
         AINPUT_MOTION_RANGE_X = AMOTION_EVENT_AXIS_X,
         /** y */
@@ -814,7 +829,6 @@ namespace irobot::android {
         /** orientation */
         AINPUT_MOTION_RANGE_ORIENTATION = AMOTION_EVENT_AXIS_ORIENTATION,
     };
-
 }
 #endif //ANDROID_IROBOT_INPUT_HPP
 

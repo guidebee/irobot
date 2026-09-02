@@ -13,10 +13,11 @@
 #include "platform/command.hpp"
 #include "platform/net.hpp"
 
-namespace irobot {
-
-    struct DeviceServerParameters {
-        const char *crop;
+namespace irobot
+{
+    struct DeviceServerParameters
+    {
+        const char* crop;
         uint16_t local_port;
         uint16_t max_size;
         uint32_t bit_rate;
@@ -26,10 +27,10 @@ namespace irobot {
     };
 
 
-    class DeviceServer {
-
+    class DeviceServer
+    {
     public:
-        char *serial;
+        char* serial;
         ProcessType process;
         socket_t server_socket; // only used if !tunnel_forward
         socket_t video_socket;
@@ -44,8 +45,8 @@ namespace irobot {
         void Init();
 
         // push, enable tunnel et start the server
-        bool Start(const char *pSerial,
-                   const struct DeviceServerParameters *params);
+        bool Start(const char* pSerial,
+                   const struct DeviceServerParameters* params);
 
         // block until the communication with the server is established
         bool ConnectTo();
@@ -56,17 +57,17 @@ namespace irobot {
         // close and release sockets
         void Destroy();
 
-        static const char *GetServerPath();
+        static const char* GetServerPath();
 
-        static bool PushServer(const char *serial);
+        static bool PushServer(const char* serial);
 
-        static bool EnableTunnelReverse(const char *serial, uint16_t local_port);
+        static bool EnableTunnelReverse(const char* serial, uint16_t local_port);
 
-        static bool DisableTunnelReverse(const char *serial);
+        static bool DisableTunnelReverse(const char* serial);
 
-        static bool EnableTunnelForward(const char *serial, uint16_t local_port);
+        static bool EnableTunnelForward(const char* serial, uint16_t local_port);
 
-        static bool DisableTunnelForward(const char *serial, uint16_t local_port);
+        static bool DisableTunnelForward(const char* serial, uint16_t local_port);
 
         static socket_t ListenOnPort(uint16_t port);
 
@@ -75,15 +76,14 @@ namespace irobot {
         static socket_t ConnectToServer(uint16_t port,
                                         uint32_t attempts, uint32_t delay);
 
-        static void CloseSocket(socket_t *socket);
+        static void CloseSocket(socket_t* socket);
 
     private:
         bool EnableTunnel();
 
         bool DisableTunnel();
 
-        ProcessType ExecuteServer(const DeviceServerParameters *params);
-
+        ProcessType ExecuteServer(const DeviceServerParameters* params);
     };
 }
 

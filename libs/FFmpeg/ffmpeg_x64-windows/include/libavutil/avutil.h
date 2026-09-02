@@ -175,17 +175,17 @@ unsigned avutil_version(void);
  * version number or a git commit description. This string has no fixed format
  * and can change any time. It should never be parsed by code.
  */
-const char *av_version_info(void);
+const char* av_version_info(void);
 
 /**
  * Return the libavutil build-time configuration.
  */
-const char *avutil_configuration(void);
+const char* avutil_configuration(void);
 
 /**
  * Return the libavutil license.
  */
-const char *avutil_license(void);
+const char* avutil_license(void);
 
 /**
  * @}
@@ -196,13 +196,14 @@ const char *avutil_license(void);
  * @brief Media Type
  */
 
-enum AVMediaType {
-    AVMEDIA_TYPE_UNKNOWN = -1,  ///< Usually treated as AVMEDIA_TYPE_DATA
+enum AVMediaType
+{
+    AVMEDIA_TYPE_UNKNOWN = -1, ///< Usually treated as AVMEDIA_TYPE_DATA
     AVMEDIA_TYPE_VIDEO,
     AVMEDIA_TYPE_AUDIO,
-    AVMEDIA_TYPE_DATA,          ///< Opaque data information usually continuous
+    AVMEDIA_TYPE_DATA, ///< Opaque data information usually continuous
     AVMEDIA_TYPE_SUBTITLE,
-    AVMEDIA_TYPE_ATTACHMENT,    ///< Opaque data information usually sparse
+    AVMEDIA_TYPE_ATTACHMENT, ///< Opaque data information usually sparse
     AVMEDIA_TYPE_NB
 };
 
@@ -210,7 +211,7 @@ enum AVMediaType {
  * Return a string describing the media_type enum, NULL if media_type
  * is unknown.
  */
-const char *av_get_media_type_string(enum AVMediaType media_type);
+const char* av_get_media_type_string(enum AVMediaType media_type);
 
 /**
  * @defgroup lavu_const Constants
@@ -269,15 +270,16 @@ const char *av_get_media_type_string(enum AVMediaType media_type);
  * @{
  */
 
-enum AVPictureType {
+enum AVPictureType
+{
     AV_PICTURE_TYPE_NONE = 0, ///< Undefined
-    AV_PICTURE_TYPE_I,     ///< Intra
-    AV_PICTURE_TYPE_P,     ///< Predicted
-    AV_PICTURE_TYPE_B,     ///< Bi-dir predicted
-    AV_PICTURE_TYPE_S,     ///< S(GMC)-VOP MPEG-4
-    AV_PICTURE_TYPE_SI,    ///< Switching Intra
-    AV_PICTURE_TYPE_SP,    ///< Switching Predicted
-    AV_PICTURE_TYPE_BI,    ///< BI type
+    AV_PICTURE_TYPE_I, ///< Intra
+    AV_PICTURE_TYPE_P, ///< Predicted
+    AV_PICTURE_TYPE_B, ///< Bi-dir predicted
+    AV_PICTURE_TYPE_S, ///< S(GMC)-VOP MPEG-4
+    AV_PICTURE_TYPE_SI, ///< Switching Intra
+    AV_PICTURE_TYPE_SP, ///< Switching Predicted
+    AV_PICTURE_TYPE_BI, ///< BI type
 };
 
 /**
@@ -305,9 +307,9 @@ char av_get_picture_type_char(enum AVPictureType pict_type);
 /**
  * Return x default pointer in case p is NULL.
  */
-static inline void *av_x_if_null(const void *p, const void *x)
+static inline void* av_x_if_null(const void* p, const void* x)
 {
-    return (void *)(intptr_t)(p ? p : x);
+    return (void*)(intptr_t)(p ? p : x);
 }
 
 /**
@@ -319,7 +321,7 @@ static inline void *av_x_if_null(const void *p, const void *x)
  * @return  length of the list, in elements, not counting the terminator
  */
 unsigned av_int_list_length_for_size(unsigned elsize,
-                                     const void *list, uint64_t term) av_pure;
+                                     const void* list, uint64_t term) av_pure;
 
 /**
  * Compute the length of an integer list.
@@ -336,7 +338,7 @@ unsigned av_int_list_length_for_size(unsigned elsize,
  * The API of this function matches POSIX fopen(), errors are returned through
  * errno.
  */
-FILE *av_fopen_utf8(const char *path, const char *mode);
+FILE* av_fopen_utf8(const char* path, const char* mode);
 
 /**
  * Return the fractional representation of the internal time base.
@@ -355,7 +357,7 @@ AVRational av_get_time_base_q(void);
  * @param fourcc the fourcc to represent
  * @return the buffer in input
  */
-char *av_fourcc_make_string(char *buf, uint32_t fourcc);
+char* av_fourcc_make_string(char* buf, uint32_t fourcc);
 
 /**
  * @}

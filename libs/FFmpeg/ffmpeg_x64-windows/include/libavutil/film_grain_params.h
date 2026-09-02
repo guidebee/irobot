@@ -21,7 +21,8 @@
 
 #include "frame.h"
 
-enum AVFilmGrainParamsType {
+enum AVFilmGrainParamsType
+{
     AV_FILM_GRAIN_PARAMS_NONE = 0,
 
     /**
@@ -36,7 +37,8 @@ enum AVFilmGrainParamsType {
  * @note The struct must be allocated as part of AVFilmGrainParams using
  *       av_film_grain_params_alloc(). Its size is not a part of the public ABI.
  */
-typedef struct AVFilmGrainAOMParams {
+typedef struct AVFilmGrainAOMParams
+{
     /**
      * Number of points, and the scale and value for each point of the
      * piecewise linear scaling function for the uma plane.
@@ -125,7 +127,8 @@ typedef struct AVFilmGrainAOMParams {
  * @note The struct must be allocated with av_film_grain_params_alloc() and
  *       its size is not a part of the public ABI.
  */
-typedef struct AVFilmGrainParams {
+typedef struct AVFilmGrainParams
+{
     /**
      * Specifies the codec for which this structure is valid.
      */
@@ -141,7 +144,8 @@ typedef struct AVFilmGrainParams {
      * If a codec's film grain structure differs slightly over another
      * codec's, fields within may change meaning depending on the type.
      */
-    union {
+    union
+    {
         AVFilmGrainAOMParams aom;
     } codec;
 } AVFilmGrainParams;
@@ -154,7 +158,7 @@ typedef struct AVFilmGrainParams {
  * @return An AVFilmGrainParams filled with default values or NULL
  *         on failure.
  */
-AVFilmGrainParams *av_film_grain_params_alloc(size_t *size);
+AVFilmGrainParams* av_film_grain_params_alloc(size_t* size);
 
 /**
  * Allocate a complete AVFilmGrainParams and add it to the frame.
@@ -163,6 +167,6 @@ AVFilmGrainParams *av_film_grain_params_alloc(size_t *size);
  *
  * @return The AVFilmGrainParams structure to be filled by caller.
  */
-AVFilmGrainParams *av_film_grain_params_create_side_data(AVFrame *frame);
+AVFilmGrainParams* av_film_grain_params_create_side_data(AVFrame * frame);
 
 #endif /* AVUTIL_FILM_GRAIN_PARAMS_H */

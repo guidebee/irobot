@@ -66,7 +66,7 @@
  *
  * @return Uninitialized hash context or `NULL` in case of error
  */
-struct AVMurMur3 *av_murmur3_alloc(void);
+struct AVMurMur3* av_murmur3_alloc(void);
 
 /**
  * Initialize or reinitialize an AVMurMur3 hash context with a seed.
@@ -78,7 +78,7 @@ struct AVMurMur3 *av_murmur3_alloc(void);
  * @see @ref lavu_murmur3_seedinfo "Detailed description" on a discussion of
  * seeds for MurmurHash3.
  */
-void av_murmur3_init_seeded(struct AVMurMur3 *c, uint64_t seed);
+void av_murmur3_init_seeded(struct AVMurMur3* c, uint64_t seed);
 
 /**
  * Initialize or reinitialize an AVMurMur3 hash context.
@@ -91,7 +91,7 @@ void av_murmur3_init_seeded(struct AVMurMur3 *c, uint64_t seed);
  * @see @ref lavu_murmur3_seedinfo "Detailed description" on a discussion of
  * seeds for MurmurHash3.
  */
-void av_murmur3_init(struct AVMurMur3 *c);
+void av_murmur3_init(struct AVMurMur3* c);
 
 /**
  * Update hash context with new data.
@@ -101,9 +101,9 @@ void av_murmur3_init(struct AVMurMur3 *c);
  * @param[in]  len  Number of bytes to read from `src`
  */
 #if FF_API_CRYPTO_SIZE_T
-void av_murmur3_update(struct AVMurMur3 *c, const uint8_t *src, int len);
+void av_murmur3_update(struct AVMurMur3* c, const uint8_t* src, int len);
 #else
-void av_murmur3_update(struct AVMurMur3 *c, const uint8_t *src, size_t len);
+void av_murmur3_update(struct AVMurMur3* c, const uint8_t* src, size_t len);
 #endif
 
 /**
@@ -112,7 +112,7 @@ void av_murmur3_update(struct AVMurMur3 *c, const uint8_t *src, size_t len);
  * @param[in,out] c    Hash context
  * @param[out]    dst  Buffer where output digest value is stored
  */
-void av_murmur3_final(struct AVMurMur3 *c, uint8_t dst[16]);
+void av_murmur3_final(struct AVMurMur3* c, uint8_t dst[16]);
 
 /**
  * @}

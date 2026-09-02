@@ -117,7 +117,8 @@
 #define AV_CH_LAYOUT_STEREO_DOWNMIX    (AV_CH_STEREO_LEFT|AV_CH_STEREO_RIGHT)
 #define AV_CH_LAYOUT_22POINT2          (AV_CH_LAYOUT_5POINT1_BACK|AV_CH_FRONT_LEFT_OF_CENTER|AV_CH_FRONT_RIGHT_OF_CENTER|AV_CH_BACK_CENTER|AV_CH_LOW_FREQUENCY_2|AV_CH_SIDE_LEFT|AV_CH_SIDE_RIGHT|AV_CH_TOP_FRONT_LEFT|AV_CH_TOP_FRONT_RIGHT|AV_CH_TOP_FRONT_CENTER|AV_CH_TOP_CENTER|AV_CH_TOP_BACK_LEFT|AV_CH_TOP_BACK_RIGHT|AV_CH_TOP_SIDE_LEFT|AV_CH_TOP_SIDE_RIGHT|AV_CH_TOP_BACK_CENTER|AV_CH_BOTTOM_FRONT_CENTER|AV_CH_BOTTOM_FRONT_LEFT|AV_CH_BOTTOM_FRONT_RIGHT)
 
-enum AVMatrixEncoding {
+enum AVMatrixEncoding
+{
     AV_MATRIX_ENCODING_NONE,
     AV_MATRIX_ENCODING_DOLBY,
     AV_MATRIX_ENCODING_DPLII,
@@ -145,7 +146,7 @@ enum AVMatrixEncoding {
  *
  * Example: "stereo+FC" = "2c+FC" = "2c+1c" = "0x7"
  */
-uint64_t av_get_channel_layout(const char *name);
+uint64_t av_get_channel_layout(const char* name);
 
 /**
  * Return a channel layout and the number of channels based on the specified name.
@@ -159,7 +160,7 @@ uint64_t av_get_channel_layout(const char *name);
  *
  * @return 0 on success, AVERROR(EINVAL) if the parsing fails.
  */
-int av_get_extended_channel_layout(const char *name, uint64_t* channel_layout, int* nb_channels);
+int av_get_extended_channel_layout(const char* name, uint64_t* channel_layout, int* nb_channels);
 
 /**
  * Return a description of a channel layout.
@@ -168,13 +169,13 @@ int av_get_extended_channel_layout(const char *name, uint64_t* channel_layout, i
  * @param buf put here the string containing the channel layout
  * @param buf_size size in bytes of the buffer
  */
-void av_get_channel_layout_string(char *buf, int buf_size, int nb_channels, uint64_t channel_layout);
+void av_get_channel_layout_string(char* buf, int buf_size, int nb_channels, uint64_t channel_layout);
 
 struct AVBPrint;
 /**
  * Append a description of a channel layout to a bprint buffer.
  */
-void av_bprint_channel_layout(struct AVBPrint *bp, int nb_channels, uint64_t channel_layout);
+void av_bprint_channel_layout(struct AVBPrint* bp, int nb_channels, uint64_t channel_layout);
 
 /**
  * Return the number of channels in the channel layout.
@@ -208,7 +209,7 @@ uint64_t av_channel_layout_extract_channel(uint64_t channel_layout, int index);
  *
  * @return channel name on success, NULL on error.
  */
-const char *av_get_channel_name(uint64_t channel);
+const char* av_get_channel_name(uint64_t channel);
 
 /**
  * Get the description of a given channel.
@@ -216,7 +217,7 @@ const char *av_get_channel_name(uint64_t channel);
  * @param channel  a channel layout with a single channel
  * @return  channel description on success, NULL on error
  */
-const char *av_get_channel_description(uint64_t channel);
+const char* av_get_channel_description(uint64_t channel);
 
 /**
  * Get the value and name of a standard channel layout.
@@ -227,8 +228,8 @@ const char *av_get_channel_description(uint64_t channel);
  * @return  0  if the layout exists,
  *          <0 if index is beyond the limits
  */
-int av_get_standard_channel_layout(unsigned index, uint64_t *layout,
-                                   const char **name);
+int av_get_standard_channel_layout(unsigned index, uint64_t* layout,
+                                   const char** name);
 
 /**
  * @}

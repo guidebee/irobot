@@ -25,8 +25,10 @@ extern "C" {
 #include <climits>
 #include <cstdlib>
 
-namespace irobot::util {
-    size_t xstrncpy(char *dest, const char *src, size_t n) {
+namespace irobot::util
+{
+    size_t xstrncpy(char* dest, const char* src, size_t n)
+    {
         size_t i;
         for (i = 0; i < n - 1 && src[i] != '\0'; ++i)
             dest[i] = src[i];
@@ -35,12 +37,15 @@ namespace irobot::util {
         return src[i] == '\0' ? i : n;
     }
 
-    size_t xstrjoin(char *dst, const char *const tokens[], char sep, size_t n) {
-        const char *const *remaining = tokens;
-        const char *token = *remaining++;
+    size_t xstrjoin(char* dst, const char* const tokens[], char sep, size_t n)
+    {
+        const char* const * remaining = tokens;
+        const char* token = *remaining++;
         size_t i = 0;
-        while (token) {
-            if (i) {
+        while (token)
+        {
+            if (i)
+            {
                 dst[i++] = sep;
                 if (i == n)
                     goto truncated;
@@ -53,15 +58,17 @@ namespace irobot::util {
         }
         return i;
 
-        truncated:
+    truncated:
         dst[n - 1] = '\0';
         return n;
     }
 
-    char *strquote(const char *src) {
+    char* strquote(const char* src)
+    {
         size_t len = strlen(src);
-        char *quoted = (char *) SDL_malloc(len + 3);
-        if (!quoted) {
+        char* quoted = (char*)SDL_malloc(len + 3);
+        if (!quoted)
+        {
             return nullptr;
         }
         memcpy(&quoted[1], src, len);
@@ -71,17 +78,21 @@ namespace irobot::util {
         return quoted;
     }
 
-    bool parse_integer(const char *s, long *out) {
-        char *endptr;
-        if (*s == '\0') {
+    bool parse_integer(const char* s, long* out)
+    {
+        char* endptr;
+        if (*s == '\0')
+        {
             return false;
         }
         errno = 0;
         long value = strtol(s, &endptr, 0);
-        if (errno == ERANGE) {
+        if (errno == ERANGE)
+        {
             return false;
         }
-        if (*endptr != '\0') {
+        if (*endptr != '\0')
+        {
             return false;
         }
 
@@ -89,32 +100,43 @@ namespace irobot::util {
         return true;
     }
 
-    bool parse_integer_with_suffix(const char *s, long *out) {
-        char *endptr;
-        if (*s == '\0') {
+    bool parse_integer_with_suffix(const char* s, long* out)
+    {
+        char* endptr;
+        if (*s == '\0')
+        {
             return false;
         }
         errno = 0;
         long value = strtol(s, &endptr, 0);
-        if (errno == ERANGE) {
+        if (errno == ERANGE)
+        {
             return false;
         }
         int mul = 1;
-        if (*endptr != '\0') {
-            if (s == endptr) {
+        if (*endptr != '\0')
+        {
+            if (s == endptr)
+            {
                 return false;
             }
-            if ((*endptr == 'M' || *endptr == 'm') && endptr[1] == '\0') {
+            if ((*endptr == 'M' || *endptr == 'm') && endptr[1] == '\0')
+            {
                 mul = 1000000;
-            } else if ((*endptr == 'K' || *endptr == 'k') && endptr[1] == '\0') {
+            }
+            else if ((*endptr == 'K' || *endptr == 'k') && endptr[1] == '\0')
+            {
                 mul = 1000;
-            } else {
+            }
+            else
+            {
                 return false;
             }
         }
 
         if ((value < 0 && LONG_MIN / mul > value) ||
-            (value > 0 && LONG_MAX / mul < value)) {
+            (value > 0 && LONG_MAX / mul < value))
+        {
             return false;
         }
 
@@ -122,14 +144,17 @@ namespace irobot::util {
         return true;
     }
 
-    size_t utf8_truncation_index(const char *utf8, size_t max_len) {
+    size_t utf8_truncation_index(const char* utf8, size_t max_len)
+    {
         size_t len = strlen(utf8);
-        if (len <= max_len) {
+        if (len <= max_len)
+        {
             return len;
         }
         len = max_len;
         // see UTF-8 encoding <https://en.wikipedia.org/wiki/UTF-8#Description>
-        while ((utf8[len] & 0x80) != 0 && (utf8[len] & 0xc0) != 0xc0) {
+        while ((utf8[len] & 0x80) != 0 && (utf8[len] & 0xc0) != 0xc0)
+        {
             // the next byte is not the start of a new UTF-8 codepoint
             // so if we would cut there, the character would be truncated
             len--;
@@ -138,15 +163,16 @@ namespace irobot::util {
     }
 
 
-// You must free the result if result is non-NULL.
-    char *str_replace(char *orig, char *rep, char *with) {
-        char *result; // the return string
-        char *ins;    // the next insert point
-        char *tmp;    // varies
-        int len_rep;  // length of rep (the string to remove)
+    // You must free the result if result is non-NULL.
+    char* str_replace(char* orig, char* rep, char* with)
+    {
+        char* result; // the return string
+        char* ins; // the next insert point
+        char* tmp; // varies
+        int len_rep; // length of rep (the string to remove)
         int len_with; // length of with (the string to replace rep with)
         int len_front; // distance between rep and end of last rep
-        int count;    // number of replacements
+        int count; // number of replacements
 
         // sanity checks and initialization
         if (!orig || !rep)
@@ -155,16 +181,17 @@ namespace irobot::util {
         if (len_rep == 0)
             return nullptr; // empty rep causes infinite loop during count
         if (!with)
-            with = const_cast<char *>("");
+            with = const_cast<char*>("");
         len_with = strlen(with);
 
         // count the number of replacements needed
         ins = orig;
-        for (count = 0; (tmp = strstr(ins, rep)); ++count) {
+        for (count = 0; (tmp = strstr(ins, rep)); ++count)
+        {
             ins = tmp + len_rep;
         }
 
-        tmp = result = reinterpret_cast<char *>(malloc(strlen(orig) + (len_with - len_rep) * count + 1));
+        tmp = result = reinterpret_cast<char*>(malloc(strlen(orig) + (len_with - len_rep) * count + 1));
 
         if (!result)
             return nullptr;
@@ -174,7 +201,8 @@ namespace irobot::util {
         //    tmp points to the end of the result string
         //    ins points to the next occurrence of rep in orig
         //    orig points to the remainder of orig after "end of rep"
-        while (count--) {
+        while (count--)
+        {
             ins = strstr(orig, rep);
             len_front = static_cast<int>(ins - orig);
             tmp = strncpy(tmp, orig, len_front) + len_front;
@@ -187,14 +215,17 @@ namespace irobot::util {
 
 #ifdef _WIN32
 
-    wchar_t * utf8_to_wide_char(const char *utf8) {
+    wchar_t* utf8_to_wide_char(const char* utf8)
+    {
         int len = MultiByteToWideChar(CP_UTF8, 0, utf8, -1, NULL, 0);
-        if (!len) {
+        if (!len)
+        {
             return NULL;
         }
 
-        wchar_t *wide = (wchar_t *)SDL_malloc(len * sizeof(wchar_t));
-        if (!wide) {
+        wchar_t* wide = (wchar_t*)SDL_malloc(len * sizeof(wchar_t));
+        if (!wide)
+        {
             return NULL;
         }
 
@@ -202,14 +233,17 @@ namespace irobot::util {
         return wide;
     }
 
-    char * utf8_from_wide_char(const wchar_t *ws) {
+    char* utf8_from_wide_char(const wchar_t* ws)
+    {
         int len = WideCharToMultiByte(CP_UTF8, 0, ws, -1, NULL, 0, NULL, NULL);
-        if (!len) {
+        if (!len)
+        {
             return NULL;
         }
 
-        char *utf8 = (char *)SDL_malloc(len);
-        if (!utf8) {
+        char* utf8 = (char*)SDL_malloc(len);
+        if (!utf8)
+        {
             return NULL;
         }
 
@@ -218,5 +252,4 @@ namespace irobot::util {
     }
 
 #endif
-
 }

@@ -22,101 +22,121 @@
 
 #define POINTER_ID_MOUSE UINT64_C(-1)
 
-namespace irobot::message {
-
+namespace irobot::message
+{
     using namespace irobot::android;
 
-    enum ControlMessageType {
-        CONTROL_MSG_TYPE_INJECT_KEYCODE           = 0,
-        CONTROL_MSG_TYPE_INJECT_TEXT              = 1,
-        CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT       = 2,
-        CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT      = 3,
-        CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON        = 4,
+    enum ControlMessageType
+    {
+        CONTROL_MSG_TYPE_INJECT_KEYCODE = 0,
+        CONTROL_MSG_TYPE_INJECT_TEXT = 1,
+        CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT = 2,
+        CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT = 3,
+        CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON = 4,
         CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL = 5,
-        CONTROL_MSG_TYPE_EXPAND_SETTINGS_PANEL    = 6,
+        CONTROL_MSG_TYPE_EXPAND_SETTINGS_PANEL = 6,
         CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL = 7, // server: TYPE_COLLAPSE_PANELS
-        CONTROL_MSG_TYPE_GET_CLIPBOARD            = 8,
-        CONTROL_MSG_TYPE_SET_CLIPBOARD            = 9,
-        CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE    = 10, // server: TYPE_SET_DISPLAY_POWER
-        CONTROL_MSG_TYPE_ROTATE_DEVICE            = 11,
+        CONTROL_MSG_TYPE_GET_CLIPBOARD = 8,
+        CONTROL_MSG_TYPE_SET_CLIPBOARD = 9,
+        CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE = 10, // server: TYPE_SET_DISPLAY_POWER
+        CONTROL_MSG_TYPE_ROTATE_DEVICE = 11,
         // internal-only types not sent to the server:
-        CONTROL_MSG_TYPE_START_RECORDING          = 200,
-        CONTROL_MSG_TYPE_END_RECORDING            = 201,
-        CONTROL_MSG_TYPE_UNKNOWN                  = 255,
+        CONTROL_MSG_TYPE_START_RECORDING = 200,
+        CONTROL_MSG_TYPE_END_RECORDING = 201,
+        CONTROL_MSG_TYPE_UNKNOWN = 255,
     };
 
     // copy_key values for GET_CLIPBOARD
-    enum CopyKey {
+    enum CopyKey
+    {
         COPY_KEY_NONE = 0,
         COPY_KEY_COPY = 1,
-        COPY_KEY_CUT  = 2,
+        COPY_KEY_CUT = 2,
     };
 
-    enum ScreenPowerMode {
+    enum ScreenPowerMode
+    {
         // see <https://android.googlesource.com/platform/frameworks/base.git/+/pie-release-2/core/java/android/view/SurfaceControl.java#305>
 
         SCREEN_POWER_MODE_OFF = 0,
         SCREEN_POWER_MODE_NORMAL = 2,
     };
 
-    struct ControlMessage {
+    struct ControlMessage
+    {
         enum ControlMessageType type;
-        union {
-            struct {
+
+        union
+        {
+            struct
+            {
                 enum AndroidKeyEventAction action;
                 enum AndroidKeycode keycode;
                 enum AndroidMetaState metastate;
             } inject_keycode;
-            struct {
-                char *text; // owned, to be freed by SDL_free()
+
+            struct
+            {
+                char* text; // owned, to be freed by SDL_free()
             } inject_text;
-            struct {
+
+            struct
+            {
                 enum AndroidMotionEventAction action;
                 enum AndroidMotionEventButtons buttons;
                 uint64_t pointer_id;
                 struct Position position;
                 float pressure;
             } inject_touch_event;
-            struct {
+
+            struct
+            {
                 struct Position position;
                 int32_t hscroll;
                 int32_t vscroll;
             } inject_scroll_event;
-            struct {
+
+            struct
+            {
                 enum AndroidKeyEventAction action;
             } back_or_screen_on;
-            struct {
+
+            struct
+            {
                 enum CopyKey copy_key;
             } get_clipboard;
-            struct {
-                char *text; // owned, to be freed by SDL_free()
+
+            struct
+            {
+                char* text; // owned, to be freed by SDL_free()
             } set_clipboard;
-            struct {
+
+            struct
+            {
                 enum ScreenPowerMode mode;
             } set_screen_power_mode;
         };
 
         // buf size must be at least CONTROL_MSG_SERIALIZED_MAX_SIZE
         // return the number of bytes written
-        size_t Serialize(unsigned char *buf);
+        size_t Serialize(unsigned char* buf);
 
         void Destroy();
 
         std::string JsonSerialize();
 
-        size_t JsonDeserialize(const unsigned char *buf, size_t len);
+        size_t JsonDeserialize(const unsigned char* buf, size_t len);
 
-        static void WritePosition(uint8_t *buf, const struct Position *position);
+        static void WritePosition(uint8_t* buf, const struct Position* position);
 
         // write length (2 bytes) + string (non nul-terminated)
-        static size_t WriteString(const char *utf8, size_t max_len, unsigned char *buf);
+        static size_t WriteString(const char* utf8, size_t max_len, unsigned char* buf);
 
         static uint16_t ToFixedPoint16(float f);
     };
 
     struct ControlMessageQueue CBUF(ControlMessage, 64);
 
-    typedef void (*MessageHandler)(void *entity, ControlMessage *msg);
-
+    typedef void (*MessageHandler)(void* entity, ControlMessage* msg);
 }
 #endif //ANDROID_IROBOT_CONTROL_MSG_HPP

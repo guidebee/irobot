@@ -24,14 +24,16 @@
 #include <stdint.h>
 #include "attributes.h"
 
-union av_intfloat32 {
+union av_intfloat32
+{
     uint32_t i;
-    float    f;
+    float f;
 };
 
-union av_intfloat64 {
+union av_intfloat64
+{
     uint64_t i;
-    double   f;
+    double f;
 };
 
 /**
