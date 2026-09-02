@@ -99,7 +99,7 @@ namespace irobot::ui {
                                      frame_size.width, frame_size.height);
         }
 
-        static bool InitSDLAndConfigure(bool display);
+        static bool InitSDLAndConfigure(bool display, bool audio);
 
 
     private:

@@ -22,6 +22,7 @@ namespace irobot {
         uint32_t bit_rate;
         uint16_t max_fps;
         bool control;
+        bool audio;
     };
 
 
@@ -32,10 +33,12 @@ namespace irobot {
         ProcessType process;
         socket_t server_socket; // only used if !tunnel_forward
         socket_t video_socket;
+        socket_t audio_socket;
         socket_t control_socket;
         uint16_t local_port;
         bool tunnel_enabled;
         bool tunnel_forward; // use "adb forward" instead of "adb reverse"
+        bool audio; // whether the audio socket must be accepted/connected
 
         // init default values
         void Init();

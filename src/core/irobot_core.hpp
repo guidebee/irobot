@@ -49,6 +49,7 @@ namespace irobot {
         bool fullscreen;
         bool always_on_top;
         bool control;
+        bool audio;
         bool display;
         bool turn_screen_off;
         bool render_expired_frames;

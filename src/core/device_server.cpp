@@ -138,8 +138,9 @@ namespace irobot {
         cmd[count++] = "com.guidebee.irobot.Server";
         cmd[count++] = IROBOT_SERVER_VERSION;
 
-        // audio is not supported by this client
-        cmd[count++] = "audio=false";
+        if (!params->audio) {
+            cmd[count++] = "audio=false";
+        }
 
         if (params->max_size) {
             snprintf(max_size_string, sizeof(max_size_string),
@@ -226,15 +227,18 @@ namespace irobot {
         this->process = PROCESS_NONE;
         this->server_socket = INVALID_SOCKET;
         this->video_socket = INVALID_SOCKET;
+        this->audio_socket = INVALID_SOCKET;
         this->control_socket = INVALID_SOCKET;
         this->local_port = 0;
         this->tunnel_enabled = false;
         this->tunnel_forward = false;
+        this->audio = false;
     }
 
     bool DeviceServer::Start(const char *pSerial,
                              const DeviceServerParameters *params) {
         this->local_port = params->local_port;
+        this->audio = params->audio;
 
         if (pSerial) {
             this->serial = SDL_strdup(pSerial);
@@ -300,9 +304,17 @@ namespace irobot {
                 return false;
             }
 
+            if (this->audio) {
+                this->audio_socket = net_accept(this->server_socket);
+                if (this->audio_socket == INVALID_SOCKET) {
+                    // the video_socket will be cleaned up on destroy
+                    return false;
+                }
+            }
+
             this->control_socket = net_accept(this->server_socket);
             if (this->control_socket == INVALID_SOCKET) {
-                // the video_socket will be cleaned up on destroy
+                // the video_socket/audio_socket will be cleaned up on destroy
                 return false;
             }
 
@@ -318,6 +330,14 @@ namespace irobot {
             }
 
             // we know that the device is listening, we don't need several attempts
+            if (this->audio) {
+                this->audio_socket =
+                        net_connect(IPV4_LOCALHOST, this->local_port);
+                if (this->audio_socket == INVALID_SOCKET) {
+                    return false;
+                }
+            }
+
             this->control_socket =
                     net_connect(IPV4_LOCALHOST, this->local_port);
             if (this->control_socket == INVALID_SOCKET) {
@@ -339,6 +359,9 @@ namespace irobot {
         }
         if (this->video_socket != INVALID_SOCKET) {
             CloseSocket(&this->video_socket);
+        }
+        if (this->audio_socket != INVALID_SOCKET) {
+            CloseSocket(&this->audio_socket);
         }
         if (this->control_socket != INVALID_SOCKET) {
             CloseSocket(&this->control_socket);

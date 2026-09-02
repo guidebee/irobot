@@ -413,8 +413,11 @@ namespace irobot::ui {
 
 
     // init SDL and set appropriate hints
-    bool Screen::InitSDLAndConfigure(bool display) {
+    bool Screen::InitSDLAndConfigure(bool display, bool audio) {
         uint32_t flags = display ? SDL_INIT_VIDEO : SDL_INIT_EVENTS;
+        if (audio) {
+            flags |= SDL_INIT_AUDIO;
+        }
         if (SDL_Init(flags)) {
             LOGC("Could not initialize SDL: %s", SDL_GetError());
             return false;

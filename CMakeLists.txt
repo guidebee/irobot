@@ -24,6 +24,10 @@ add_subdirectory(libs)
 include_directories(${CMAKE_HOME_DIRECTORY}/src ${PROJECT_BINARY_DIR}/src)
 
 SET(COMMON_SOURCE_HEADERS
+        ${CMAKE_HOME_DIRECTORY}/src/audio/audio_buffer.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/audio/audio_decoder.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/audio/audio_player.hpp
+        ${CMAKE_HOME_DIRECTORY}/src/audio/audio_stream.hpp
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_manager.hpp
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_controller.hpp
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_stream.hpp
@@ -60,6 +64,10 @@ SET(COMMON_SOURCE_HEADERS
 
 SET(COMMON_SOURCES
         ${COMMON_SOURCE_HEADERS}
+        ${CMAKE_HOME_DIRECTORY}/src/audio/audio_buffer.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/audio/audio_decoder.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/audio/audio_player.cpp
+        ${CMAKE_HOME_DIRECTORY}/src/audio/audio_stream.cpp
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_manager.cpp
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_controller.cpp
         ${CMAKE_HOME_DIRECTORY}/src/agent/agent_stream.cpp

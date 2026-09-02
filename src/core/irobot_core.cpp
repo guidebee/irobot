@@ -22,6 +22,10 @@
 #include "video/video_buffer.hpp"
 #include "util/log.hpp"
 #include "util/str_util.hpp"
+#include "audio/audio_buffer.hpp"
+#include "audio/audio_decoder.hpp"
+#include "audio/audio_player.hpp"
+#include "audio/audio_stream.hpp"
 
 #define OPT_RENDER_EXPIRED_FRAMES 1000
 #define OPT_WINDOW_TITLE          1001
@@ -39,6 +43,7 @@
 #define OPT_SCREEN_WIDTH          1013
 #define OPT_SCREEN_HEIGHT         1014
 #define OPT_HEADLESS              1015
+#define OPT_NO_AUDIO              1016
 
 namespace irobot {
 
@@ -56,6 +61,11 @@ namespace irobot {
     FileHandler file_handler;
     Decoder decoder;
     Screen screen;
+
+    irobot::audio::AudioBuffer audio_buffer;
+    irobot::audio::AudioDecoder audio_decoder;
+    irobot::audio::AudioPlayer audio_player;
+    irobot::audio::AudioStream audio_stream;
 
     agent::AgentController agent_controller;
     agent::AgentStream agent_stream;
@@ -93,6 +103,7 @@ namespace irobot {
         this->fullscreen = false;
         this->always_on_top = false;
         this->control = true;
+        this->audio = true;
         this->display = true;
         this->turn_screen_off = false;
         this->render_expired_frames = false;
@@ -114,6 +125,7 @@ namespace irobot {
                 .bit_rate = options->bit_rate,
                 .max_fps = options->max_fps,
                 .control = options->control,
+                .audio = options->audio,
         };
 
         if (!server.Start(options->serial, &params)) {
@@ -134,6 +146,9 @@ namespace irobot {
         bool recorder_initialized = false;
         bool controller_initialized = false;
         bool controller_started = false;
+        bool audio_buffer_initialized = false;
+        bool audio_player_opened = false;
+        bool audio_stream_started = false;
 
         if (!agent_manager.Init(options->port)) {
             return false;
@@ -141,15 +156,17 @@ namespace irobot {
 
         bool cannot_cont = false;
 
+        bool audio_enabled = options->audio && options->display;
         if (!options->headless) {
-            if (!Screen::InitSDLAndConfigure(options->display)) {
+            if (!Screen::InitSDLAndConfigure(options->display, audio_enabled)) {
                 cannot_cont = true;
             }
             screen.InitFileHandler(&file_handler);
         } else {
-            if (!Screen::InitSDLAndConfigure(false)) {
+            if (!Screen::InitSDLAndConfigure(false, false)) {
                 cannot_cont = true;
             }
+            audio_enabled = false;
         }
 
         if (!cannot_cont & !server.ConnectTo()) {
@@ -192,6 +209,23 @@ namespace irobot {
             dec = &decoder;
         }
 
+        if (!cannot_cont & audio_enabled) {
+            // ~0.5s of 48kHz stereo S16 audio
+            if (!audio_buffer.Init(48000 * 2 * 2 / 2)) {
+                cannot_cont = true;
+            }
+            audio_buffer_initialized = true;
+            audio_decoder.Init(&audio_buffer);
+            audio_player.Init(&audio_buffer);
+
+            if (!cannot_cont & !audio_player.Open(48000, 2)) {
+                LOGW("Could not open audio playback device, disabling audio");
+                audio_enabled = false;
+            } else {
+                audio_player_opened = true;
+            }
+        }
+
         struct Recorder *rec = nullptr;
         if (!cannot_cont & record) {
             if (!recorder.Init(
@@ -212,6 +246,16 @@ namespace irobot {
         // start the stream
         if (!cannot_cont & !stream.Start()) {
             cannot_cont = true;
+        }
+
+        if (!cannot_cont & audio_enabled) {
+            audio_stream.Init(server.audio_socket, &audio_decoder);
+            if (!audio_stream.Start()) {
+                LOGW("Could not start audio stream thread, disabling audio");
+                audio_enabled = false;
+            } else {
+                audio_stream_started = true;
+            }
         }
 
         if (!cannot_cont & !agent_manager.Start()) {
@@ -320,6 +364,10 @@ namespace irobot {
         // interrupted, we can join them
         stream.Join();
 
+        if (audio_stream_started) {
+            audio_stream.Join();
+        }
+
 
         if (controller_started) {
             controller.Join();
@@ -341,6 +389,13 @@ namespace irobot {
 
         if (video_buffer_initialized) {
             video_buffer.Destroy();
+        }
+
+        if (audio_player_opened) {
+            audio_player.Close();
+        }
+        if (audio_buffer_initialized) {
+            audio_buffer.Destroy();
         }
 
         if (fps_counter_initialized) {
@@ -452,6 +507,9 @@ namespace irobot {
                 "        other dimension is computed so that the device aspect-ratio\n"
                 "        is preserved.\n"
                 "        Default is %d%s.\n"
+                "\n"
+                "    --no-audio\n"
+                "        Disable audio forwarding.\n"
                 "\n"
                 "    -n, --no-control\n"
                 "        Disable device control (mirror the device in read-only).\n"
@@ -743,6 +801,7 @@ namespace irobot {
                 {"help",                  no_argument,       nullptr, 'h'},
                 {"max-fps",               required_argument, nullptr, OPT_MAX_FPS},
                 {"max-size",              required_argument, nullptr, 'm'},
+                {"no-audio",              no_argument,       nullptr, OPT_NO_AUDIO},
                 {"no-control",            no_argument,       nullptr, 'n'},
                 {"no-display",            no_argument,       nullptr, 'N'},
                 {"port",                  required_argument, nullptr, 'p'},
@@ -815,6 +874,9 @@ namespace irobot {
                     break;
                 case 'n':
                     opts->control = false;
+                    break;
+                case OPT_NO_AUDIO:
+                    opts->audio = false;
                     break;
                 case 'N':
                     opts->display = false;
