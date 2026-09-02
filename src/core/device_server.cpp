@@ -118,44 +118,60 @@ namespace irobot {
     }
 
     ProcessType DeviceServer::ExecuteServer(const struct DeviceServerParameters *params) {
-        char max_size_string[6];
-        char bit_rate_string[11];
-        char max_fps_string[6];
-        sprintf(max_size_string, "%" PRIu16, params->max_size);
-        sprintf(bit_rate_string, "%" PRIu32, params->bit_rate);
-        sprintf(max_fps_string, "%" PRIu16, params->max_fps);
-        const char *const cmd[] = {
-                "shell",
-                "CLASSPATH=" DEVICE_SERVER_PATH, // NOLINT(bugprone-suspicious-missing-comma)
-                "app_process",
+        char max_size_string[32];
+        char bit_rate_string[32];
+        char max_fps_string[32];
+        char crop_string[128];
+
+        const char *cmd[32];
+        int count = 0;
+
+        cmd[count++] = "shell";
+        cmd[count++] = "CLASSPATH=" DEVICE_SERVER_PATH;
+        cmd[count++] = "app_process";
 #ifdef SERVER_DEBUGGER
 # define SERVER_DEBUGGER_PORT "5005"
-        "-agentlib:jdwp=transport=dt_socket,suspend=y,server=y,address="
-            SERVER_DEBUGGER_PORT,
+        cmd[count++] = "-agentlib:jdwp=transport=dt_socket,suspend=y,server=y,address="
+                       SERVER_DEBUGGER_PORT;
 #endif
-                "/", // unused
-                "com.guidebee.irobot.Server",
-                IROBOT_SERVER_VERSION,
-                max_size_string,
-                bit_rate_string,
-                max_fps_string,
-                this->tunnel_forward ? "true" : "false",
-                params->crop ? params->crop : "-",
-                "true", // always send frame meta (packet boundaries + timestamp)
-                params->control ? "true" : "false",
-        };
+        cmd[count++] = "/"; // unused
+        cmd[count++] = "com.guidebee.irobot.Server";
+        cmd[count++] = IROBOT_SERVER_VERSION;
+
+        // audio is not supported by this client
+        cmd[count++] = "audio=false";
+
+        if (params->max_size) {
+            snprintf(max_size_string, sizeof(max_size_string),
+                     "max_size=%" PRIu16, params->max_size);
+            cmd[count++] = max_size_string;
+        }
+        if (params->bit_rate) {
+            snprintf(bit_rate_string, sizeof(bit_rate_string),
+                     "video_bit_rate=%" PRIu32, params->bit_rate);
+            cmd[count++] = bit_rate_string;
+        }
+        if (params->max_fps) {
+            snprintf(max_fps_string, sizeof(max_fps_string),
+                     "max_fps=%" PRIu16, params->max_fps);
+            cmd[count++] = max_fps_string;
+        }
+        if (this->tunnel_forward) {
+            cmd[count++] = "tunnel_forward=true";
+        }
+        if (params->crop) {
+            snprintf(crop_string, sizeof(crop_string), "crop=%s", params->crop);
+            cmd[count++] = crop_string;
+        }
+        if (!params->control) {
+            cmd[count++] = "control=false";
+        }
+
 #ifdef SERVER_DEBUGGER
         LOGI("Server debugger waiting for a client on device port "
              SERVER_DEBUGGER_PORT "...");
-        // From the computer, run
-        //     adb forward tcp:5005 tcp:5005
-        // Then, from Android Studio: Run > Debug > Edit configurations...
-        // On the left, click on '+', "Remote", with:
-        //     Host: localhost
-        //     Port: 5005
-        // Then click on "Debug"
 #endif
-        return adb_execute(this->serial, cmd, sizeof(cmd) / sizeof(cmd[0]));
+        return adb_execute(this->serial, cmd, count);
     }
 
 

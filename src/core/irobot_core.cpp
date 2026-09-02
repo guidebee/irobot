@@ -64,8 +64,6 @@ namespace irobot {
             .controller = &controller,
             .agent_controller=&agent_controller,
             .agent_stream = &agent_stream,
-            .phash_func=cv::img_hash::PHash::create()
-
     };
     InputManager input_manager = {
             .agent_manager=&agent_manager,

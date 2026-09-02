@@ -4,7 +4,9 @@ if (DEFINED ENV{VCPKG_ROOT} AND NOT DEFINED CMAKE_TOOLCHAIN_FILE)
     set(CMAKE_TOOLCHAIN_FILE "$ENV{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake"
             CACHE STRING "")
 endif ()
-set(VCPKG_TARGET_TRIPLET $ENV{VCPKG_DEFAULT_TRIPLET} CACHE INTERNAL "" FORCE)
+if (DEFINED ENV{VCPKG_DEFAULT_TRIPLET})
+    set(VCPKG_TARGET_TRIPLET $ENV{VCPKG_DEFAULT_TRIPLET} CACHE STRING "" FORCE)
+endif ()
 
 project(Android_iRobot VERSION 1.0.0 DESCRIPTION "Android iRobot Agent"
         LANGUAGES CXX)
@@ -107,12 +109,31 @@ function(APP name)
     add_executable(${APP_TARGET} ${COMMON_SOURCES}
             ${CMAKE_HOME_DIRECTORY}/src/${APP_TARGET}.cpp)
     target_link_libraries(${APP_TARGET} PRIVATE FFmpeg)
-    target_link_libraries(${APP_TARGET} PRIVATE SDL2::SDL2 SDL2::SDL2main)
+    target_link_libraries(${APP_TARGET} PRIVATE SDL2::SDL2)
     target_link_libraries(${APP_TARGET} PRIVATE ${OpenCV_LIBS})
     target_link_libraries(${APP_TARGET} PRIVATE nlohmann_json nlohmann_json::nlohmann_json)
 
     if (WIN32)
         target_link_libraries(${APP_TARGET} PRIVATE wsock32 ws2_32)
+
+        # Copy MinGW runtime and FFmpeg DLLs next to the executable
+        set(FFMPEG_BIN_DIR "${CMAKE_HOME_DIRECTORY}/libs/FFmpeg/ffmpeg_x64-windows/bin")
+        foreach(DLL avcodec-58 avformat-58 avutil-56 swscale-5 swresample-3 avdevice-58 avfilter-7)
+            add_custom_command(TARGET ${APP_TARGET} POST_BUILD
+                COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                    "${FFMPEG_BIN_DIR}/${DLL}.dll"
+                    "$<TARGET_FILE_DIR:${APP_TARGET}>")
+        endforeach()
+
+        get_filename_component(MINGW_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+        foreach(DLL libgcc_s_seh-1 libstdc++-6 libwinpthread-1)
+            if(EXISTS "${MINGW_BIN_DIR}/${DLL}.dll")
+                add_custom_command(TARGET ${APP_TARGET} POST_BUILD
+                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+                        "${MINGW_BIN_DIR}/${DLL}.dll"
+                        "$<TARGET_FILE_DIR:${APP_TARGET}>")
+            endif()
+        endforeach()
     endif ()
 
     install(DIRECTORY ${CMAKE_HOME_DIRECTORY}/server

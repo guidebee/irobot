@@ -8,6 +8,7 @@
 #include <SDL2/SDL_clipboard.h>
 
 #include <cassert>
+#include "util/buffer_util.hpp"
 #include "util/log.hpp"
 
 namespace irobot::android {
@@ -26,6 +27,10 @@ namespace irobot::android {
             case message::DEVICE_MSG_TYPE_CLIPBOARD:
                 LOGI("Device clipboard copied");
                 SDL_SetClipboardText(msg->clipboard.text);
+                break;
+            case message::DEVICE_MSG_TYPE_ACK_CLIPBOARD:
+            case message::DEVICE_MSG_TYPE_UHID_OUTPUT:
+                // not used by this client
                 break;
         }
     }
@@ -98,21 +103,41 @@ namespace irobot::android {
 
     bool Receiver::ReadDeviceInfomation(socket_t device_socket,
                                         char *device_name, struct Size *size) {
-        unsigned char buf[DEVICE_NAME_FIELD_LENGTH + 4];
-        int r = platform::net_recv_all(device_socket, buf, sizeof(buf));
-        if (r < DEVICE_NAME_FIELD_LENGTH + 4) {
-            LOGE("Could not retrieve device information");
+        // The server sends, in order on the video socket:
+        //   1) sendDeviceMeta(): 64-byte device name (null-padded)
+        //   2) writeVideoHeader(): 4-byte codec ID
+        //   3) writeSessionMeta(): 12-byte session header [flags(4)][width(4)][height(4)]
+        //      — flags MSB is always 1 (PACKET_FLAG_SESSION)
+
+        uint8_t name_buf[DEVICE_NAME_FIELD_LENGTH];
+        int r = platform::net_recv_all(device_socket, name_buf, DEVICE_NAME_FIELD_LENGTH);
+        if (r < DEVICE_NAME_FIELD_LENGTH) {
+            LOGE("Could not read device name");
             return false;
         }
-        // in case the client sends garbage
-        buf[DEVICE_NAME_FIELD_LENGTH - 1] = '\0';
-        // strcpy is safe here, since name contains at least
-        // DEVICE_NAME_FIELD_LENGTH bytes and strlen(buf) < DEVICE_NAME_FIELD_LENGTH
-        strcpy(device_name, (char *) buf);
-        size->width = (static_cast<unsigned char>(buf[DEVICE_NAME_FIELD_LENGTH] << 8))
-                      | buf[DEVICE_NAME_FIELD_LENGTH + 1];
-        size->height = (static_cast<unsigned char>(buf[DEVICE_NAME_FIELD_LENGTH + 2] << 8))
-                       | buf[DEVICE_NAME_FIELD_LENGTH + 3];
+        name_buf[DEVICE_NAME_FIELD_LENGTH - 1] = '\0';
+        strncpy(device_name, (char *) name_buf, DEVICE_NAME_FIELD_LENGTH);
+
+        uint8_t codec_buf[4];
+        r = platform::net_recv_all(device_socket, codec_buf, 4);
+        if (r < 4) {
+            LOGE("Could not read codec ID");
+            return false;
+        }
+        LOGD("Video codec ID: 0x%08x", util::buffer_read32be(codec_buf));
+
+        uint8_t session_buf[12];
+        r = platform::net_recv_all(device_socket, session_buf, 12);
+        if (r < 12) {
+            LOGE("Could not read session header");
+            return false;
+        }
+        if (!(session_buf[0] & 0x80)) {
+            LOGE("Expected session header (MSB=1), got media packet");
+            return false;
+        }
+        size->width  = util::buffer_read32be(&session_buf[4]);
+        size->height = util::buffer_read32be(&session_buf[8]);
         return true;
     }
 }

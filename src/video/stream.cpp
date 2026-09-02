@@ -13,45 +13,64 @@
 #define HEADER_SIZE 12
 #define NO_PTS UINT64_C(-1)
 
+#define PACKET_FLAG_CONFIG    (UINT64_C(1) << 62)
+#define PACKET_FLAG_KEY_FRAME (UINT64_C(1) << 61)
+#define PACKET_PTS_MASK       (PACKET_FLAG_KEY_FRAME - 1)
+
 namespace irobot::video {
 
     bool VideoStream::ReceivePacket(AVPacket *packet) {
-        // The video stream contains raw packets, without time information. When we
-        // record, we retrieve the timestamps separately, from a "meta" header
-        // added by the server before each raw packet.
+        // Each 12-byte header is either:
+        //   Session packet (MSB of byte 0 = 1): no payload follows, contains new w/h
+        //   Media packet  (MSB of byte 0 = 0): PTS+flags (8 bytes) + size (4 bytes),
+        //                                       followed by <size> bytes of H.264 data.
         //
-        // The "meta" header length is 12 bytes:
-        // [. . . . . . . .|. . . .]. . . . . . . . . . . . . . . ...
-        //  <-------------> <-----> <-----------------------------...
-        //        PTS        packet        raw packet
-        //                    size
-        //
-        // It is followed by <packet_size> bytes containing the packet/frame.
+        // Media PTS flags (high bits): bit62=CONFIG (SPS/PPS), bit61=KEY_FRAME
+        // CONFIG packets have pts = AV_NOPTS_VALUE (triggers PushPacket config path).
+        for (;;) {
+            uint8_t header[HEADER_SIZE];
+            ssize_t r = platform::net_recv_all(this->video_socket, header, HEADER_SIZE);
+            if (r < HEADER_SIZE) {
+                return false;
+            }
 
-        uint8_t header[HEADER_SIZE];
-        ssize_t r = platform::net_recv_all(this->video_socket, header, HEADER_SIZE);
-        if (r < HEADER_SIZE) {
-            return false;
+            if (header[0] & 0x80) {
+                // Session packet: screen was resized/rotated — no payload, just log
+                uint32_t w = util::buffer_read32be(&header[4]);
+                uint32_t h = util::buffer_read32be(&header[8]);
+                LOGI("Session change: %u x %u", w, h);
+                continue; // read the next header
+            }
+
+            uint64_t pts_flags = util::buffer_read64be(header);
+            uint32_t len = util::buffer_read32be(&header[8]);
+            if (!len) {
+                LOGE("Invalid zero-length packet");
+                return false;
+            }
+
+            if (av_new_packet(packet, len)) {
+                LOGE("Could not allocate packet");
+                return false;
+            }
+
+            r = platform::net_recv_all(this->video_socket, packet->data, len);
+            if (r < 0 || ((uint32_t) r) < len) {
+                av_packet_unref(packet);
+                return false;
+            }
+
+            if (pts_flags & PACKET_FLAG_CONFIG) {
+                packet->pts = AV_NOPTS_VALUE;
+            } else {
+                packet->pts = (int64_t)(pts_flags & PACKET_PTS_MASK);
+            }
+            if (pts_flags & PACKET_FLAG_KEY_FRAME) {
+                packet->flags |= AV_PKT_FLAG_KEY;
+            }
+            packet->dts = packet->pts;
+            return true;
         }
-
-        uint64_t pts = util::buffer_read64be(header);
-        uint32_t len = util::buffer_read32be(&header[8]);
-        assert(pts == NO_PTS || (pts & 0x8000000000000000) == 0);
-        assert(len);
-
-        if (av_new_packet(packet, len)) {
-            LOGE("Could not allocate packet");
-            return false;
-        }
-
-        r = platform::net_recv_all(this->video_socket, packet->data, len);
-        if (r < 0 || ((uint32_t) r) < len) {
-            av_packet_unref(packet);
-            return false;
-        }
-
-        packet->pts = pts != NO_PTS ? (int64_t) pts : AV_NOPTS_VALUE;
-        return true;
     }
 
     void VideoStream::NotifyStopped() {
