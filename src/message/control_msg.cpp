@@ -152,6 +152,47 @@ namespace irobot::message {
                 strcat(buffer, temp);
             }
                 break;
+            case CONTROL_MSG_TYPE_START_RECORDING: {
+                sprintf(temp, "    \"msg_type\" : \"%s\"\n", "CONTROL_MSG_TYPE_START_RECORDING");
+                strcat(buffer, temp);
+            }
+                break;
+            case CONTROL_MSG_TYPE_END_RECORDING: {
+                sprintf(temp, "    \"msg_type\" : \"%s\"\n", "CONTROL_MSG_TYPE_END_RECORDING");
+                strcat(buffer, temp);
+            }
+                break;
+            case CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON: {
+                sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON");
+                strcat(buffer, temp);
+                sprintf(temp, "    \"action\" : %d\n", this->back_or_screen_on.action);
+                strcat(buffer, temp);
+            }
+                break;
+            case CONTROL_MSG_TYPE_GET_CLIPBOARD: {
+                sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_GET_CLIPBOARD");
+                strcat(buffer, temp);
+                sprintf(temp, "    \"copy_key\" : %d\n", this->get_clipboard.copy_key);
+                strcat(buffer, temp);
+            }
+                break;
+            case CONTROL_MSG_TYPE_SET_CLIPBOARD: {
+                sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_SET_CLIPBOARD");
+                strcat(buffer, temp);
+                sprintf(temp, "    \"set_clipboard\" : {\n");
+                strcat(buffer, temp);
+                sprintf(temp, "        \"text\" : \"%s\"\n", this->set_clipboard.text);
+                strcat(buffer, temp);
+                strcat(buffer, "    }\n");
+            }
+                break;
+            case CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE: {
+                sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE");
+                strcat(buffer, temp);
+                sprintf(temp, "    \"mode\" : %d\n", this->set_screen_power_mode.mode);
+                strcat(buffer, temp);
+            }
+                break;
 
             case CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT: {
                 sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT");
@@ -223,6 +264,12 @@ namespace irobot::message {
             }
                 break;
             default:
+                // always emit a msg_type, even for types with no dedicated
+                // case above (including CONTROL_MSG_TYPE_UNKNOWN itself):
+                // JsonDeserialize() requires the key to be present, and a
+                // record missing it entirely would crash on replay
+                sprintf(temp, "    \"msg_type\" : \"%s\"\n", "CONTROL_MSG_TYPE_UNKNOWN");
+                strcat(buffer, temp);
                 break;
 
         }
@@ -236,9 +283,17 @@ namespace irobot::message {
         using nlohmann::json;
         using namespace android;
         std::string content(reinterpret_cast<const char *>(buf), len);
+        // A message that is well-formed JSON but the wrong *shape* (e.g. no
+        // "msg_type" key, or a type-specific field missing/mistyped) makes
+        // nlohmann throw on the j["..."] accesses below. This function runs
+        // on the agent-controller thread with no caller-side try/catch, so
+        // an uncaught exception here would std::terminate() the whole
+        // process. Treat any such shape mismatch the same as invalid JSON:
+        // report "could not parse" rather than crashing.
+        try {
         if (json::accept(content)) {
             auto j = json::parse(content);
-            std::string msg_type = j["msg_type"];
+            std::string msg_type = j.value("msg_type", std::string());
             if (msg_type == "CONTROL_MSG_TYPE_INJECT_KEYCODE") {
                 this->type = CONTROL_MSG_TYPE_INJECT_KEYCODE;
             } else if (msg_type == "CONTROL_MSG_TYPE_INJECT_TEXT") {
@@ -338,6 +393,8 @@ namespace irobot::message {
                     break;
                 case CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON:
                     LOGD("CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON: %d", (int) this->type);
+                    this->back_or_screen_on.action =
+                            (enum AndroidKeyEventAction) j.value("action", (int) AKEY_EVENT_ACTION_DOWN);
                     break;
                 case CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL:
                     LOGD("CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL: %d", (int) this->type);
@@ -347,13 +404,26 @@ namespace irobot::message {
                     break;
                 case CONTROL_MSG_TYPE_GET_CLIPBOARD:
                     LOGD("CONTROL_MSG_TYPE_GET_CLIPBOARD: %d", (int) this->type);
+                    this->get_clipboard.copy_key =
+                            (enum CopyKey) j.value("copy_key", (int) COPY_KEY_NONE);
                     break;
 
                 case CONTROL_MSG_TYPE_SET_CLIPBOARD:
                     LOGD("CONTROL_MSG_TYPE_SET_CLIPBOARD: %d", (int) this->type);
+                    {
+                        auto set_clipboard = j.value("set_clipboard", json::object());
+                        std::string message = set_clipboard.value("text", std::string());
+                        int text_len = message.length();
+                        char *text = (char *) SDL_malloc(text_len + 1);
+                        message.copy(text, text_len);
+                        text[text_len] = '\0';
+                        this->set_clipboard.text = text;
+                    }
                     break;
                 case CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE:
                     LOGD("CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE: %d", (int) this->type);
+                    this->set_screen_power_mode.mode =
+                            (enum ScreenPowerMode) j.value("mode", (int) SCREEN_POWER_MODE_NORMAL);
                     break;
                 case CONTROL_MSG_TYPE_ROTATE_DEVICE:
                     LOGD("CONTROL_MSG_TYPE_ROTATE_DEVICE: %d", (int) this->type);
@@ -368,6 +438,11 @@ namespace irobot::message {
                     LOGW("Unknown remote control message type: %d", (int) this->type);
                     ret = 0; // error, we cannot recover
             }
+        }
+        } catch (const json::exception &e) {
+            LOGW("Malformed control message JSON, dropping: %s", e.what());
+            this->type = CONTROL_MSG_TYPE_UNKNOWN;
+            return 0;
         }
 
         return ret;

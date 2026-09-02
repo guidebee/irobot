@@ -59,7 +59,12 @@ namespace irobot {
         unsigned char serialized_msg[CONTROL_MSG_SERIALIZED_MAX_SIZE];
         int length = msg->Serialize(serialized_msg);
         if (!length) {
-            return false;
+            // an unserializable message type (e.g. CONTROL_MSG_TYPE_UNKNOWN)
+            // is not a socket error: drop it and keep the controller alive,
+            // rather than treating it as a fatal write failure
+            LOGW("Could not serialize control message (type=%d), dropping it",
+                 (int) msg->type);
+            return true;
         }
         int w = platform::net_send_all(this->control_socket,
                                        serialized_msg, length);

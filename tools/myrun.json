@@ -1,0 +1,182 @@
+[
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 0,
+      "key_code": 29,
+      "meta_state": 0
+    },
+    "t": 13978
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 1,
+      "key_code": 29,
+      "meta_state": 0
+    },
+    "t": 14098
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 0,
+      "key_code": 34,
+      "meta_state": 0
+    },
+    "t": 15442
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 1,
+      "key_code": 34,
+      "meta_state": 0
+    },
+    "t": 15554
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 0,
+      "key_code": 30,
+      "meta_state": 0
+    },
+    "t": 15794
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 1,
+      "key_code": 30,
+      "meta_state": 0
+    },
+    "t": 15890
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 0,
+      "key_code": 31,
+      "meta_state": 0
+    },
+    "t": 16458
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 1,
+      "key_code": 31,
+      "meta_state": 0
+    },
+    "t": 16578
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 0,
+      "key_code": 33,
+      "meta_state": 0
+    },
+    "t": 16890
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 1,
+      "key_code": 33,
+      "meta_state": 0
+    },
+    "t": 16961
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 0,
+      "key_code": 34,
+      "meta_state": 0
+    },
+    "t": 17682
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 1,
+      "key_code": 34,
+      "meta_state": 0
+    },
+    "t": 17754
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 0,
+      "key_code": 29,
+      "meta_state": 0
+    },
+    "t": 18465
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 1,
+      "key_code": 29,
+      "meta_state": 0
+    },
+    "t": 18554
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 0,
+      "key_code": 34,
+      "meta_state": 0
+    },
+    "t": 18770
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 1,
+      "key_code": 34,
+      "meta_state": 0
+    },
+    "t": 18866
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 0,
+      "key_code": 33,
+      "meta_state": 0
+    },
+    "t": 19042
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 1,
+      "key_code": 33,
+      "meta_state": 0
+    },
+    "t": 19162
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 0,
+      "key_code": 8,
+      "meta_state": 0
+    },
+    "t": 20826
+  },
+  {
+    "msg_type": "CONTROL_MSG_TYPE_INJECT_KEYCODE",
+    "key_code": {
+      "action": 1,
+      "key_code": 8,
+      "meta_state": 0
+    },
+    "t": 20890
+  }
+]

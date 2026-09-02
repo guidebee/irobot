@@ -1,0 +1,3 @@
+pynput          # for: agent_client.py record
+opencv-python   # for: agent_client.py record / stream / interactive
+numpy           # for: agent_client.py record / stream / interactive
