@@ -2,16 +2,32 @@
   "version": 3,
   "configurePresets": [
     {
-      "name": "x64-mingw-clion",
-      "displayName": "x64 MinGW (CLion toolchain + vcpkg)",
+      "name": "x64-mingw-clion-base",
+      "hidden": true,
       "generator": "Ninja",
-      "binaryDir": "${sourceDir}/build",
       "cacheVariables": {
         "CMAKE_TOOLCHAIN_FILE": "$env{VCPKG_ROOT}/scripts/buildsystems/vcpkg.cmake",
         "VCPKG_TARGET_TRIPLET": "x64-mingw-dynamic",
         "CMAKE_C_COMPILER": "C:/Users/james/AppData/Local/Programs/CLion/bin/mingw/bin/gcc.exe",
-        "CMAKE_CXX_COMPILER": "C:/Users/james/AppData/Local/Programs/CLion/bin/mingw/bin/g++.exe",
+        "CMAKE_CXX_COMPILER": "C:/Users/james/AppData/Local/Programs/CLion/bin/mingw/bin/g++.exe"
+      }
+    },
+    {
+      "name": "x64-mingw-clion",
+      "displayName": "x64 MinGW Release (CLion toolchain + vcpkg)",
+      "inherits": "x64-mingw-clion-base",
+      "binaryDir": "${sourceDir}/build",
+      "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "x64-mingw-clion-debug",
+      "displayName": "x64 MinGW Debug (CLion toolchain + vcpkg)",
+      "inherits": "x64-mingw-clion-base",
+      "binaryDir": "${sourceDir}/build-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug"
       }
     }
   ]
