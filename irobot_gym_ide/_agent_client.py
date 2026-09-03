@@ -1,9 +1,9 @@
 """Load tools/agent_client.py as a module without requiring `tools/` to be a
-package or be on sys.path -- this IDE package can be run standalone
-(`python -m irobot_gym_ide.app` from inside tools/) or as part of a larger
-`tools` namespace, and either way it must reuse agent_client.py's wire
-helpers (touch_message, keycode_message, send_json, read_blob_message,
-android_keycode) rather than duplicating the wire format a second time.
+package or be on sys.path -- this IDE package lives at the repo root
+(`python -m irobot_gym_ide.app` run from there) and must reuse
+agent_client.py's wire helpers (touch_message, keycode_message, send_json,
+read_blob_message, android_keycode) rather than duplicating the wire format
+a second time.
 """
 from __future__ import annotations
 
@@ -12,7 +12,7 @@ import sys
 from pathlib import Path
 
 _MODULE_NAME = "irobot_gym_ide._agent_client_impl"
-_PATH = Path(__file__).resolve().parent.parent / "agent_client.py"
+_PATH = Path(__file__).resolve().parent.parent / "tools" / "agent_client.py"
 
 
 def _load():
