@@ -12,25 +12,40 @@ the right button.
 """
 from __future__ import annotations
 
+import threading
 from pathlib import Path
 
-from PySide6.QtCore import QTimer
+from PySide6.QtCore import QObject, QTimer, Signal
 from PySide6.QtWidgets import (
     QMainWindow, QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QListWidget, QListWidgetItem, QLineEdit, QSpinBox, QPushButton, QLabel,
     QComboBox, QPlainTextEdit, QSplitter, QFileDialog, QMessageBox, QInputDialog,
-    QCheckBox,
+    QCheckBox, QTabWidget,
 )
 from PySide6.QtCore import Qt
 
 from .. import io as project_io
-from ..model import Project, Action, EventKind, PrimitiveEvent, conflicting_pointer_actions, orphan_releases
+from ..model import (
+    Project, Action, EventKind, GameRun, PrimitiveEvent,
+    conflicting_pointer_actions, orphan_releases,
+)
 from ..connection import LiveConnection
 from ..device_recorder import DeviceEventRecorder, merge_gestures_into_events, segment_into_gestures
+from ..run_engine import GameRunExecutor
 from .canvas import CanvasView
 from .inspector import ActionInspector
+from .run_editor import RunEditorWidget
 
 POLL_MS = 66  # ~15 fps canvas refresh; the video channel itself may deliver faster or slower
+
+
+class _RunSignals(QObject):
+    """GameRunExecutor.run() executes on a worker thread (see MainWindow's
+    _run_game_run); Qt signals are the one thread-safe way to get its log
+    lines and completion back onto the GUI thread -- a queued connection is
+    automatic whenever emitter and receiver live on different threads."""
+    logLine = Signal(str)
+    finished = Signal()
 
 
 class MainWindow(QMainWindow):
@@ -47,6 +62,11 @@ class MainWindow(QMainWindow):
         self._device_recorder: DeviceEventRecorder | None = None
         self._device_recording_axis_ranges = None
         self._device_recording_rotation = 0
+        self._selected_run: GameRun | None = None
+        self._run_executor: GameRunExecutor | None = None
+        self._run_signals = _RunSignals()
+        self._run_signals.logLine.connect(lambda text: self._run_editor.log_line(text))
+        self._run_signals.finished.connect(self._on_run_finished)
         # guards _sync_project_fields() while _load_project_into_fields() is
         # populating widgets one at a time -- without it, an early
         # setValue() (e.g. port) fires valueChanged, which reads back
@@ -146,6 +166,20 @@ class MainWindow(QMainWindow):
         self._record_device_btn.clicked.connect(self._toggle_device_recording)
         left_layout.addWidget(self._record_device_btn)
 
+        left_layout.addWidget(QLabel("Game Runs"))
+        self._run_list = QListWidget()
+        self._run_list.currentItemChanged.connect(self._on_run_selected)
+        left_layout.addWidget(self._run_list)
+
+        run_btn_row = QHBoxLayout()
+        add_run_btn = QPushButton("Add Run")
+        remove_run_btn = QPushButton("Remove Run")
+        add_run_btn.clicked.connect(self._add_run)
+        remove_run_btn.clicked.connect(self._remove_run)
+        run_btn_row.addWidget(add_run_btn)
+        run_btn_row.addWidget(remove_run_btn)
+        left_layout.addLayout(run_btn_row)
+
         left_dock = QDockWidget("Project", self)
         left_dock.setWidget(left)
         self.addDockWidget(Qt.LeftDockWidgetArea, left_dock)
@@ -157,7 +191,7 @@ class MainWindow(QMainWindow):
         right_dock.setWidget(self._inspector)
         self.addDockWidget(Qt.RightDockWidgetArea, right_dock)
 
-        # center: canvas over log
+        # center: tabbed -- live mirror/canvas+log, and the game-run node graph editor
         self._canvas = CanvasView()
         self._canvas.pointClicked.connect(self._on_canvas_clicked)
         self._log = QPlainTextEdit()
@@ -169,7 +203,16 @@ class MainWindow(QMainWindow):
         splitter.addWidget(self._log)
         splitter.setStretchFactor(0, 4)
         splitter.setStretchFactor(1, 1)
-        self.setCentralWidget(splitter)
+
+        self._run_editor = RunEditorWidget(get_action_names=lambda: list(self.project.actions.keys()))
+        self._run_editor.graphChanged.connect(self._on_run_graph_changed)
+        self._run_editor.runRequested.connect(self._run_game_run)
+        self._run_editor.stopRequested.connect(self._stop_game_run)
+
+        tabs = QTabWidget()
+        tabs.addTab(splitter, "Mirror / Actions")
+        tabs.addTab(self._run_editor, "Game Run")
+        self.setCentralWidget(tabs)
 
     def _build_menu(self) -> None:
         menu = self.menuBar().addMenu("&File")
@@ -217,9 +260,12 @@ class MainWindow(QMainWindow):
         self.project = Project(name="untitled")
         self.project_path = None
         self._selected_action = None
+        self._selected_run = None
         self._load_project_into_fields()
         self._refresh_action_list()
+        self._refresh_run_list()
         self._inspector.set_action(None)
+        self._run_editor.set_run(None)
 
     def _open_project(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Open Project", "", "YAML (*.yaml *.yml)")
@@ -231,9 +277,12 @@ class MainWindow(QMainWindow):
             QMessageBox.critical(self, "Open failed", str(e))
             return
         self.project_path = Path(path)
+        self._selected_run = None
         self._load_project_into_fields()
         self._refresh_action_list()
+        self._refresh_run_list()
         self._inspector.set_action(None)
+        self._run_editor.set_run(None)
         self._log_line(f"Opened {path}")
         self._warn_pointer_conflicts()
 
@@ -269,6 +318,7 @@ class MainWindow(QMainWindow):
         self.project.add_action(Action(name=name))
         self._refresh_action_list()
         self._warn_pointer_conflicts()
+        self._on_run_graph_changed()
 
     def _remove_action(self) -> None:
         item = self._action_list.currentItem()
@@ -278,6 +328,7 @@ class MainWindow(QMainWindow):
         self._refresh_action_list()
         self._inspector.set_action(None)
         self._selected_action = None
+        self._on_run_graph_changed()
 
     def _on_action_selected(self, current: QListWidgetItem, _previous) -> None:
         if current is None:
@@ -289,6 +340,77 @@ class MainWindow(QMainWindow):
 
     def _on_action_edited(self) -> None:
         self._warn_pointer_conflicts()
+
+    # -- game runs --------------------------------------------------------
+
+    def _refresh_run_list(self) -> None:
+        self._run_list.clear()
+        for name in self.project.runs:
+            self._run_list.addItem(QListWidgetItem(name))
+
+    def _add_run(self) -> None:
+        name, ok = QInputDialog.getText(self, "Add Game Run", "Run name:")
+        if not ok or not name:
+            return
+        if name in self.project.runs:
+            QMessageBox.warning(self, "Add Game Run", f"Run {name!r} already exists.")
+            return
+        self.project.add_run(GameRun(name=name))
+        self._refresh_run_list()
+
+    def _remove_run(self) -> None:
+        item = self._run_list.currentItem()
+        if item is None:
+            return
+        self.project.remove_run(item.text())
+        self._refresh_run_list()
+        self._run_editor.set_run(None)
+        self._selected_run = None
+
+    def _on_run_selected(self, current: QListWidgetItem, _previous) -> None:
+        if current is None:
+            self._selected_run = None
+            self._run_editor.set_run(None)
+            return
+        self._selected_run = self.project.runs.get(current.text())
+        self._run_editor.set_run(self._selected_run)
+        self._on_run_graph_changed()
+
+    def _on_run_graph_changed(self) -> None:
+        self._run_editor.refresh_warnings(self.project.actions)
+
+    def _run_game_run(self, game_run: GameRun | None) -> None:
+        if game_run is None:
+            return
+        if self.connection is None or not self.connection.connected:
+            self._run_editor.log_line("Run ignored: not connected.")
+            return
+        ref = self._require_reference_resolution()
+        if ref is None:
+            return
+        ref_w, ref_h = ref
+        self._run_executor = GameRunExecutor(
+            self.connection, self.project.actions, ref_w, ref_h,
+            on_log=self._run_signals.logLine.emit)
+        self._run_editor.set_running(True)
+        self._run_editor.log_line(f"Running {game_run.name!r}...")
+
+        def worker() -> None:
+            try:
+                self._run_executor.run(game_run)
+            finally:
+                self._run_signals.finished.emit()
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _stop_game_run(self) -> None:
+        if self._run_executor is not None:
+            self._run_executor.stop()
+            self._run_editor.log_line("Stop requested.")
+
+    def _on_run_finished(self) -> None:
+        self._run_editor.set_running(False)
+        self._run_editor.log_line("Run finished.")
 
     def _warn_pointer_conflicts(self) -> None:
         conflicts = conflicting_pointer_actions(self.project.actions)
@@ -607,6 +729,8 @@ class MainWindow(QMainWindow):
     def closeEvent(self, event) -> None:
         if self._device_recorder is not None:
             self._device_recorder.stop()
+        if self._run_executor is not None:
+            self._run_executor.stop()
         if self.connection is not None:
             self.connection.disconnect()
         super().closeEvent(event)

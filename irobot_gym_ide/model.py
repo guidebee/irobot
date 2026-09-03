@@ -176,6 +176,148 @@ def conflicting_pointer_actions(actions: dict) -> list:
     return [(pid, names) for pid, names in groups.items() if len(names) > 1]
 
 
+class RunNodeKind(str, Enum):
+    ACTION = "action"   # runs one already-defined Action (by name) against the device
+    DELAY = "delay"      # waits `frames` frames, no wire message -- same unit as PrimitiveEvent.WAIT
+    REPEAT = "repeat"     # runs its "body"-edge target's subgraph to completion `times` times,
+                          # then continues once through its "after"-edge target, if any
+
+
+@dataclass
+class RunNode:
+    id: str
+    kind: RunNodeKind
+    x: float = 0.0    # canvas position -- authoring layout only, has no effect on execution
+    y: float = 0.0
+    action_name: str = ""   # ACTION only
+    frames: int = 0          # DELAY only
+    times: int = 1            # REPEAT only
+
+    def to_dict(self) -> dict:
+        d = {"id": self.id, "kind": self.kind.value, "x": self.x, "y": self.y}
+        if self.kind == RunNodeKind.ACTION:
+            d["action_name"] = self.action_name
+        elif self.kind == RunNodeKind.DELAY:
+            d["frames"] = self.frames
+        elif self.kind == RunNodeKind.REPEAT:
+            d["times"] = self.times
+        return d
+
+    @staticmethod
+    def from_dict(d: dict) -> "RunNode":
+        return RunNode(
+            id=d["id"], kind=RunNodeKind(d["kind"]), x=d.get("x", 0.0), y=d.get("y", 0.0),
+            action_name=d.get("action_name", ""), frames=d.get("frames", 0), times=d.get("times", 1),
+        )
+
+
+@dataclass
+class RunEdge:
+    id: str
+    source: str   # RunNode.id
+    target: str   # RunNode.id
+    # "out" for a plain fork edge (any non-REPEAT source, or a REPEAT source that hasn't been
+    # assigned a role yet). Meaningful only when `source` is a REPEAT node: "body" marks the one
+    # edge that starts the loop body, "after" marks the one edge that runs once after all
+    # iterations finish. See GameRun docstring for why REPEAT needs this and no other node does.
+    via: str = "out"
+
+    def to_dict(self) -> dict:
+        d = {"id": self.id, "source": self.source, "target": self.target}
+        if self.via != "out":
+            d["via"] = self.via
+        return d
+
+    @staticmethod
+    def from_dict(d: dict) -> "RunEdge":
+        return RunEdge(id=d["id"], source=d["source"], target=d["target"], via=d.get("via", "out"))
+
+
+@dataclass
+class GameRun:
+    """A drag-and-drop node graph over already-defined Actions, run_engine.py's
+    GameRunExecutor is the runtime for this: a node with more than one outgoing
+    edge forks (all targets start concurrently); a node with more than one
+    incoming edge joins (it waits until every incoming edge's source has
+    finished before it starts). REPEAT is the one node kind that isn't just
+    fork/join: rather than firing all its outgoing edges once, it repeats its
+    "body" edge's target subgraph to completion `times` times, then fires its
+    single "after" edge once (see RunEdge.via). There's no explicit
+    start/end node kind -- a node with no incoming edges is a root and starts
+    immediately (multiple roots start in parallel); a node with no outgoing
+    edges just ends its branch.
+    """
+    name: str
+    nodes: dict = field(default_factory=dict)   # dict[str, RunNode]
+    edges: list = field(default_factory=list)    # list[RunEdge]
+
+    def add_node(self, node: RunNode) -> None:
+        self.nodes[node.id] = node
+
+    def remove_node(self, node_id: str) -> None:
+        self.nodes.pop(node_id, None)
+        self.edges = [e for e in self.edges if e.source != node_id and e.target != node_id]
+
+    def add_edge(self, edge: RunEdge) -> None:
+        self.edges.append(edge)
+
+    def remove_edge(self, edge_id: str) -> None:
+        self.edges = [e for e in self.edges if e.id != edge_id]
+
+    def outgoing(self, node_id: str, via: Optional[str] = None) -> list:
+        return [e for e in self.edges if e.source == node_id and (via is None or e.via == via)]
+
+    def incoming(self, node_id: str) -> list:
+        return [e for e in self.edges if e.target == node_id]
+
+    def roots(self) -> list:
+        """Node ids with no incoming edge -- see class docstring."""
+        return [node_id for node_id in self.nodes if not self.incoming(node_id)]
+
+    def validate(self, project_actions: dict) -> list:
+        """Static authoring-time checks. Returns human-readable warnings, empty
+        if the graph looks internally consistent. Does not catch every
+        possible malformed graph (e.g. a node shared between a repeat body and
+        the outer graph) -- see run_engine.py's module docstring."""
+        warnings = []
+        for edge in self.edges:
+            if edge.source not in self.nodes:
+                warnings.append(f"edge {edge.id}: unknown source node {edge.source!r}")
+            if edge.target not in self.nodes:
+                warnings.append(f"edge {edge.id}: unknown target node {edge.target!r}")
+        for node in self.nodes.values():
+            if node.kind == RunNodeKind.ACTION and node.action_name not in project_actions:
+                warnings.append(f"node {node.id}: unknown action {node.action_name!r}")
+            if node.kind == RunNodeKind.REPEAT:
+                if node.times < 1:
+                    warnings.append(f"node {node.id}: repeat times must be >= 1")
+                if len(self.outgoing(node.id, via="body")) > 1:
+                    warnings.append(f"node {node.id}: repeat has more than one body connection")
+                if len(self.outgoing(node.id, via="after")) > 1:
+                    warnings.append(f"node {node.id}: repeat has more than one after-loop connection")
+            else:
+                for e in self.outgoing(node.id):
+                    if e.via != "out":
+                        warnings.append(f"edge {e.id}: via={e.via!r} is only valid from a repeat node")
+        return warnings
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name,
+            "nodes": [n.to_dict() for n in self.nodes.values()],
+            "edges": [e.to_dict() for e in self.edges],
+        }
+
+    @staticmethod
+    def from_dict(d: dict) -> "GameRun":
+        run = GameRun(name=d["name"])
+        for n in d.get("nodes", []):
+            run.add_node(RunNode.from_dict(n))
+        for e in d.get("edges", []):
+            run.add_edge(RunEdge.from_dict(e))
+        return run
+
+
 @dataclass
 class Project:
     name: str
@@ -187,12 +329,19 @@ class Project:
     reference_width: int = 0
     reference_height: int = 0
     actions: dict = field(default_factory=dict)   # dict[str, Action]
+    runs: dict = field(default_factory=dict)        # dict[str, GameRun]
 
     def add_action(self, action: Action) -> None:
         self.actions[action.name] = action
 
     def remove_action(self, name: str) -> None:
         self.actions.pop(name, None)
+
+    def add_run(self, run: GameRun) -> None:
+        self.runs[run.name] = run
+
+    def remove_run(self, name: str) -> None:
+        self.runs.pop(name, None)
 
     def to_dict(self) -> dict:
         return {
@@ -205,6 +354,7 @@ class Project:
             "port": self.port,
             "reference_resolution": {"width": self.reference_width, "height": self.reference_height},
             "actions": [a.to_dict() for a in self.actions.values()],
+            "runs": [r.to_dict() for r in self.runs.values()],
         }
 
     @staticmethod
@@ -222,6 +372,8 @@ class Project:
         )
         for a in d.get("actions", []):
             p.add_action(Action.from_dict(a))
+        for r in d.get("runs", []):
+            p.add_run(GameRun.from_dict(r))
         return p
 
     def copy(self) -> "Project":

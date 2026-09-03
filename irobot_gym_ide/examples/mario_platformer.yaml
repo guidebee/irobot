@@ -87,3 +87,38 @@ actions:
     frames: 10
   - kind: release
     key_name: back
+runs:
+- name: right_jump_combo_x3
+  nodes:
+  - id: n_right
+    kind: action
+    x: 40
+    y: 40
+    action_name: right
+  - id: n_rep
+    kind: repeat
+    x: 240
+    y: 40
+    times: 3
+  - id: n_jump
+    kind: action
+    x: 440
+    y: 0
+    action_name: jump
+  - id: n_attack
+    kind: action
+    x: 640
+    y: 200
+    action_name: attack
+  edges:
+  - id: e1
+    source: n_right
+    target: n_rep
+  - id: e2
+    source: n_rep
+    target: n_jump
+    via: body
+  - id: e3
+    source: n_rep
+    target: n_attack
+    via: after

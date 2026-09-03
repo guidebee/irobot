@@ -4,7 +4,8 @@
 import unittest
 
 from ..model import (
-    Action, EventKind, PrimitiveEvent, Project, conflicting_pointer_actions, orphan_releases,
+    Action, EventKind, GameRun, PrimitiveEvent, Project, RunEdge, RunNode, RunNodeKind,
+    conflicting_pointer_actions, orphan_releases,
 )
 
 
@@ -110,6 +111,74 @@ class ProjectRoundTripTest(unittest.TestCase):
         self.assertEqual(restored.reference_width, 1080)
         self.assertIn("jump", restored.actions)
         self.assertEqual(restored.actions["jump"].events[0].x, 900)
+
+    def test_runs_survive_to_dict_from_dict(self):
+        project = Project(name="game")
+        run = GameRun(name="main")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.ACTION, action_name="jump"))
+        run.add_node(RunNode(id="d", kind=RunNodeKind.DELAY, frames=5))
+        run.add_edge(RunEdge(id="e1", source="a", target="d"))
+        project.add_run(run)
+        restored = Project.from_dict(project.to_dict())
+        self.assertIn("main", restored.runs)
+        restored_run = restored.runs["main"]
+        self.assertEqual(restored_run.nodes["a"].action_name, "jump")
+        self.assertEqual(restored_run.nodes["d"].frames, 5)
+        self.assertEqual(len(restored_run.edges), 1)
+        self.assertEqual(restored_run.edges[0].via, "out")
+
+
+class GameRunGraphTest(unittest.TestCase):
+    def test_roots_are_nodes_with_no_incoming_edge(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.DELAY))
+        run.add_node(RunNode(id="b", kind=RunNodeKind.DELAY))
+        run.add_node(RunNode(id="c", kind=RunNodeKind.DELAY))
+        run.add_edge(RunEdge(id="e1", source="a", target="c"))
+        self.assertEqual(set(run.roots()), {"a", "b"})
+
+    def test_remove_node_also_removes_its_edges(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.DELAY))
+        run.add_node(RunNode(id="b", kind=RunNodeKind.DELAY))
+        run.add_edge(RunEdge(id="e1", source="a", target="b"))
+        run.remove_node("a")
+        self.assertEqual(run.edges, [])
+
+    def test_validate_flags_unknown_action_reference(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.ACTION, action_name="missing"))
+        warnings = run.validate(project_actions={})
+        self.assertTrue(any("unknown action" in w for w in warnings))
+
+    def test_validate_flags_via_on_non_repeat_source(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.DELAY))
+        run.add_node(RunNode(id="b", kind=RunNodeKind.DELAY))
+        run.add_edge(RunEdge(id="e1", source="a", target="b", via="body"))
+        warnings = run.validate(project_actions={})
+        self.assertTrue(any("only valid from a repeat node" in w for w in warnings))
+
+    def test_validate_flags_repeat_with_two_body_edges(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="r1", kind=RunNodeKind.REPEAT, times=3))
+        run.add_node(RunNode(id="a", kind=RunNodeKind.DELAY))
+        run.add_node(RunNode(id="b", kind=RunNodeKind.DELAY))
+        run.add_edge(RunEdge(id="e1", source="r1", target="a", via="body"))
+        run.add_edge(RunEdge(id="e2", source="r1", target="b", via="body"))
+        warnings = run.validate(project_actions={})
+        self.assertTrue(any("more than one body connection" in w for w in warnings))
+
+    def test_clean_graph_has_no_warnings(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.ACTION, action_name="jump"))
+        run.add_node(RunNode(id="rep", kind=RunNodeKind.REPEAT, times=2))
+        run.add_node(RunNode(id="body", kind=RunNodeKind.DELAY, frames=5))
+        run.add_node(RunNode(id="after", kind=RunNodeKind.ACTION, action_name="jump"))
+        run.add_edge(RunEdge(id="e1", source="a", target="rep"))
+        run.add_edge(RunEdge(id="e2", source="rep", target="body", via="body"))
+        run.add_edge(RunEdge(id="e3", source="rep", target="after", via="after"))
+        self.assertEqual(run.validate(project_actions={"jump": object()}), [])
 
 
 if __name__ == "__main__":
