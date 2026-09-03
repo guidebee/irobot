@@ -334,10 +334,134 @@ Reference width/height, exactly as `agent_client.py --screen-size` still require
 python -m unittest discover -s tools/irobot_gym_ide/tests -t .
 ```
 
-13 tests, all pure-Python (`model.py`/`io.py` round-trips and validation logic) — no Qt, no
-socket, no device required. GUI code is covered separately by manual offscreen smoke tests
-(`QT_QPA_PLATFORM=offscreen`, see §7) rather than an automated suite; formalizing those into
-`pytest-qt` tests is listed under Phase 2/backlog below rather than built speculatively now.
+25 tests, all pure-Python (`model.py`/`io.py`/`device_recorder.py` round-trips, validation, and
+parser logic) — no Qt, no socket, no device required. GUI code is covered separately by manual
+offscreen smoke tests (`QT_QPA_PLATFORM=offscreen`, see §7) rather than an automated suite;
+formalizing those into `pytest-qt` tests is listed under Phase 2/backlog below rather than built
+speculatively now.
+
+## 11. Record from Device — real touches, not injected ones
+
+`agent_client.py record` / irobot's own `Ctrl+E` already record touches, but only ones the
+*desktop* injects through the mirror — clicking the SDL window or this IDE's own canvas. Neither
+sees a touch made by a finger directly on the physical screen; that never passes through irobot's
+socket protocol at all. `device_recorder.py` adds a second, independent capture path for exactly
+that case, verified live against a real device before writing a line of the GUI: `adb shell
+getevent -lt` reads the raw Linux input event stream straight off the touchscreen's kernel driver
+(`synaptics_tcm_touch` on the test device), producing clean, complete, sub-millisecond-timestamped
+down/move/up cycles regardless of what app is running or how the phone is held. No `irobot_server`
+change, and no monorepo restructuring, is needed for this — it was a live open question when this
+feature was scoped, resolved by the same capture.
+
+**Parsing** (`TouchStateMachine`, fed one line at a time via `feed_line()`): reconstructs Android's
+Type-B multitouch protocol (`ABS_MT_SLOT` selects which finger's subsequent `ABS_MT_TRACKING_ID`/
+`ABS_MT_POSITION_X/Y` apply to; a `SYN_REPORT` closes out one frame of changes), with a protocol-A/
+single-touch fallback (bare `ABS_X`/`ABS_Y` + `BTN_TOUCH`) for devices that never emit slot/tracking
+events. Pinned against a verbatim excerpt of the real capture in `tests/test_device_recorder.py`,
+not synthetic data, plus a synthetic two-finger case to prove slot demuxing doesn't leak one
+finger's position into another's.
+
+**Raw-to-reference-resolution scaling** (`gesture_to_events`): the touch panel's raw coordinate
+range is *not* always the same as the announced screen resolution (§6.2), so it's probed
+separately via `adb shell getevent -pl` (`parse_axis_ranges`, matched to the device block whose
+name contains "touch") before being used to scale. On the test device the two ranges were within a
+pixel of each other (1199×2669 raw vs. 1200×2670 reported), but the code never assumes that.
+
+**Segmentation** (`segment_into_gestures`): groups the flat, possibly-interleaved (multiple
+concurrent fingers) touch stream into per-finger down→…→up runs. Each gesture then becomes either
+a single `TAP` (movement under `tap_threshold_px`, in raw units) or a `PRESS`→`MOVE`…→`RELEASE`
+sequence with `WAIT` gaps reflecting the *real* recorded timing between samples (same `FRAME_MS`
+assumption `connection.py`'s own `WAIT` playback already makes — see the backlog note below). No
+downsampling of a long drag's samples is done; every recorded point becomes its own `MOVE` event,
+trimmed by hand via the inspector if that's excessive for a given gesture.
+
+**GUI flow** (`main_window.py`, "Record from Device" button, left panel): requires a reference
+resolution (reuses `_require_reference_resolution()`) since recorded coordinates need scaling into
+it just like a canvas click's do. On start, probes axis ranges and rotation once and blocks with a
+clear reason if either can't be determined (rather than guessing). On stop, segments the capture,
+logs a one-line summary of each detected touch, then merges **all of them into a single Action**
+via `merge_gestures_into_events()` — **one recording session = one action**, prompted for a name
+once. This is deliberate, not incidental: a real combo like "hold right while tapping jump" is
+naturally two concurrent touches, and forcing a separate name onto each (an earlier version of this
+feature did exactly that) makes it impossible to represent the combo as one action at all — you'd
+get a `hold_right` action and a `jump` action, never a `right_jump` action that does both. If a
+session genuinely contains touches meant as separate actions, record them in separate start/stop
+sessions instead. New actions reuse the same pointer-conflict/orphan-release checks (§3.1) every
+other action gets.
+
+Two decisions inside the merge are worth being explicit about:
+
+- **Chronological, not gesture-grouped, ordering.** If touch B starts before touch A finishes, the
+  merged event list interleaves them by real timestamp (`merge_gestures_into_events` collects every
+  gesture's `(t, PrimitiveEvent)` pairs into one list and sorts once), not "all of A's events then
+  all of B's" — the whole point of recording a combo is that the *timing relationship* between the
+  touches is what makes it a combo.
+- **A held-but-motionless finger is not a tap.** The original tap/drag classifier
+  (`_gesture_to_timed_events`) judged only by movement distance — a finger held still for 200ms
+  and a finger tapped for 20ms both showed zero movement, so both became an instant `TAP`. That
+  silently destroys a hold's actual duration, which is exactly the "right" half of "hold right,
+  tap jump." Fixed by also checking duration (`tap_duration_s`, default 150ms): movement *or*
+  duration past its threshold routes a gesture to `PRESS → [MOVE...] → RELEASE` instead of a bare
+  `TAP`. Verified with a case built specifically to catch the old bug: a 200ms zero-movement hold
+  now produces `PRESS`/`WAIT`/`RELEASE`, not `TAP` (`test_held_still_finger_becomes_press_release_
+  not_a_tap`), while a genuinely brief zero-movement touch still correctly stays a plain `TAP`
+  (`test_brief_still_touch_stays_a_tap`) — confirmed end-to-end through the actual GUI flow too,
+  not just the library function.
+
+**Verification, in three separate layers** since no single test exercises the whole chain against
+real hardware: (1) the pure parser against a verbatim real-device capture excerpt (proves the
+*parsing* is correct); (2) `DeviceEventRecorder`'s `Popen`+background-thread plumbing against a
+fake process emitting known lines with real timing gaps (proves the *live streaming* mechanics are
+correct, independent of whether a human touch happens to land in a given test window); (3) an
+offscreen Qt smoke test driving the full GUI flow (button → fake recorder → stop → dialog → new
+`Action`) with the recorder's `adb` call swapped for the same fake process. What was **not**
+separately proven is a real finger touch flowing through the complete class end-to-end in one shot
+— worth being explicit about, since (1) and (2) each independently cover the two halves that
+compose it, but weren't combined in a single live-hardware run. `adb shell input tap` was tried as
+a way to generate a deterministic touch for testing and turned out **not** to be a valid stand-in:
+it injects at Android's software input layer, not through the physical digitizer driver, so
+`getevent` never sees it — a real finding, not a tooling detail, since it means this capture path
+is specifically about genuine hardware touches and cannot be exercised by any `adb input`/UI-
+automation command.
+
+### 11.1 The rotation bug: raw touch-panel axes aren't the display's axes
+
+Reported after first real use: a recorded "jump" button came out at roughly `(274, 1107)`; the
+button's actual location is roughly `(2416, 1073)`. Root cause, confirmed with `adb shell dumpsys
+input` against the real device: this phone's touch digitizer is natively **portrait** (raw
+`ABS_MT_POSITION_X/Y` max `1199×2669`, matching §11's already-probed axis ranges), but the game
+was displaying **landscape**, and Android's `InputReader` rotates every raw touch sample by the
+display's current rotation before it becomes a `MotionEvent` — the same logical space
+`CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT`'s target coordinates live in. `gesture_to_events` did a naive
+independent per-axis linear scale (`raw_x → ref_w`, `raw_y → ref_h`) with no rotation step at all,
+which is exactly wrong whenever raw and logical axes don't line up 1:1 — not an approximation
+error, a category error (right ballpark of numbers, wrong axis pairing).
+
+**Fix**: `parse_touch_rotation()` reads the *actual currently-applied* rotation (0/1/2/3 =
+`Surface.ROTATION_0/90/180/270`) from `adb shell dumpsys input`'s `Viewport INTERNAL` line, queried
+fresh every time a recording starts (rather than hardcoded once, since orientation can change
+between sessions) — probing failure now **blocks** recording with a clear reason, same
+refuse-rather-than-guess policy as an unset reference resolution. `apply_rotation()` applies the
+matching transform (four cases, one identity) to each raw sample *before* `gesture_to_events`
+scales it into the reference resolution; the scaling denominators swap for a 90°/270° rotation too
+(the "logical width" after rotation is the raw panel's Y-range, not its X-range), which is exactly
+what made the old bug read as "the X coordinate looks flipped" — it's actually an axis swap plus a
+flip on one axis, not a pure mirror, which is why a naive `screen_width - x` guess (which is
+roughly what a quick manual look at the wrong numbers suggests) wouldn't have generalized to other
+rotations or devices either.
+
+**Verified against the real regression case**, not just derived on paper: the last raw touch state
+cached in `adb shell dumpsys input`'s `AbsState` after the actual mis-recorded jump tap was `raw
+(123, 2462)` — applying the fix's rotation transform and scaling into this device's real `2670×1200`
+resolution lands at `(2462, 1076)` scaled appropriately to `~(2471, 1077)`, a few percent from the
+reported true location `(2416, 1073)` and comfortably inside a button's touch radius, versus the
+old code's `(274, 1107)`, which was off by an entire screen dimension. Both the pure-formula case
+(`ApplyRotationTest`) and the full `gesture_to_events` path (`GestureToEventsTest`) pin this exact
+raw coordinate as a regression test. `probe_rotation()` was additionally confirmed live against the
+real device (`rotation: 1`, i.e. `ROTATION_90`, matching the dumpsys output that diagnosed the bug),
+and the full GUI flow was re-run offscreen with the same raw coordinates through
+`_toggle_device_recording()`/`_finish_device_recording()`, confirming the fix holds through the
+actual code path a user hits, not just the underlying library function.
 
 ## Phase 2 (not yet built) — reward / score extraction
 
@@ -361,13 +485,20 @@ a new design:
 - **Multiple projects open at once** — today the window holds exactly one `Project`; a real
   project-tree explorer (open several games, switch between them) is a natural follow-on once
   Phase 2 makes a single project's editing surface bigger.
-- **Recording-assisted action discovery** — importing a `Ctrl+E`/`agent_client.py record` session
-  and clustering tap coordinates into suggested named actions, as discussed when this tool was
-  scoped; not implemented.
+- **Recording-assisted action discovery — implemented, via §11's "Record from Device", not the
+  originally-discussed `Ctrl+E`/`agent_client.py record` import.** That alternate source (clustering
+  *injected* tap coordinates from a mirror-driven session) is still undone and would be a smaller
+  addition on top of the same `segment_into_gestures`/naming-dialog flow if ever wanted — the two
+  differ only in where the raw touch coordinates come from.
 - **`WAIT` frame timing is an assumed constant** (`FRAME_MS = 33`, i.e. ~30 fps) in
-  `connection.py` — there's no real frame-rate handshake on the wire yet, so a `WAIT(frames=20)`
-  macro like `long_jump` is timed by wall-clock sleep, not by actually counting delivered video
-  frames. Fine for today's manual calibration use; worth revisiting if frame delivery rate proves
-  far from 30 fps in practice.
+  `connection.py`, also relied on by §11's recorded-gesture timing — there's no real frame-rate
+  handshake on the wire yet, so both a `WAIT(frames=20)` macro like `long_jump` and a recorded
+  drag's inter-sample gaps are timed by wall-clock sleep/estimate, not by actually counting
+  delivered video frames. Fine for today's manual calibration use; worth revisiting if frame
+  delivery rate proves far from 30 fps in practice.
+- **A long recorded drag produces one `MOVE` event per raw sample, unsimplified** — `getevent` can
+  emit updates every few milliseconds, so a slow one-second drag could become 50+ events. No path
+  simplification (e.g. Douglas-Peucker) is applied; trim via the inspector's remove/reorder buttons
+  if a specific recording is excessive. Not built speculatively without a concrete case needing it.
 - **`calibrate_buttons.py`** (referenced in plan §7.4 as a possible standalone script) is
   effectively superseded by this GUI's click-to-add flow — not built separately.

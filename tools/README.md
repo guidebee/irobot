@@ -171,8 +171,10 @@ agent can take — a GUI author for the `ActionMap` schema in
 Connects to the same two agent ports as `agent_client.py` (reusing its wire helpers directly, no
 duplicated protocol code), shows the live frame, and lets you click to place touch events, combine
 them into named actions, and test an action against the real device before any training code
-exists. See [`../docs/irobot_gym_ide_design.md`](../docs/irobot_gym_ide_design.md) for the design
-and [`irobot_gym_ide/requirements.txt`](irobot_gym_ide/requirements.txt) /
+exists. It can also **record real touches made directly on the phone** (not through the mirror) via
+`adb shell getevent` and turn them straight into named actions — see
+[`../docs/irobot_gym_ide_design.md`](../docs/irobot_gym_ide_design.md) §11. See that doc generally
+for the design, and [`irobot_gym_ide/requirements.txt`](irobot_gym_ide/requirements.txt) /
 [`irobot_gym_ide/examples/`](irobot_gym_ide/examples/) to try it. Reward/score extraction
 (logcat, OCR) is designed (plan §8) but not yet built into this tool.
 

@@ -26,6 +26,7 @@ from PySide6.QtCore import Qt
 from .. import io as project_io
 from ..model import Project, Action, EventKind, PrimitiveEvent, conflicting_pointer_actions, orphan_releases
 from ..connection import LiveConnection
+from ..device_recorder import DeviceEventRecorder, merge_gestures_into_events, segment_into_gestures
 from .canvas import CanvasView
 from .inspector import ActionInspector
 
@@ -43,6 +44,9 @@ class MainWindow(QMainWindow):
         self.connection: LiveConnection | None = None
         self._selected_action: Action | None = None
         self._resolution_notice_shown = False  # reset per-connect, see _reconcile_detected_resolution
+        self._device_recorder: DeviceEventRecorder | None = None
+        self._device_recording_axis_ranges = None
+        self._device_recording_rotation = 0
         # guards _sync_project_fields() while _load_project_into_fields() is
         # populating widgets one at a time -- without it, an early
         # setValue() (e.g. port) fires valueChanged, which reads back
@@ -136,6 +140,11 @@ class MainWindow(QMainWindow):
         release_btn = QPushButton("Release All Held Pointers")
         release_btn.clicked.connect(self._release_all)
         left_layout.addWidget(release_btn)
+
+        left_layout.addWidget(QLabel("Record real touches directly on the device (bypasses the mirror):"))
+        self._record_device_btn = QPushButton("Record from Device")
+        self._record_device_btn.clicked.connect(self._toggle_device_recording)
+        left_layout.addWidget(self._record_device_btn)
 
         left_dock = QDockWidget("Project", self)
         left_dock.setWidget(left)
@@ -495,7 +504,109 @@ class MainWindow(QMainWindow):
         self.connection.release_all_held(*ref)
         self._log_line("Released all held pointers.")
 
+    # -- record from device --------------------------------------------------------
+
+    def _toggle_device_recording(self) -> None:
+        if self._device_recorder is not None:
+            self._finish_device_recording()
+            return
+
+        ref = self._require_reference_resolution()
+        if ref is None:
+            return  # already logged why
+
+        self._sync_project_fields()
+        recorder = DeviceEventRecorder(serial=self.project.serial or None)
+        axis_ranges = recorder.probe_axis_ranges()
+        if axis_ranges is None:
+            self._log_line(
+                "Record from Device BLOCKED: could not determine the touchscreen's raw coordinate "
+                "range (`adb shell getevent -pl` found no device with \"touch\" in its name, or adb "
+                "isn't reachable) -- without it, recorded raw coordinates can't be scaled into the "
+                "project's reference resolution. Check the device is connected (`adb devices`) and "
+                "the project's Device serial field is correct if more than one device is attached.")
+            return
+        rotation = recorder.probe_rotation()
+        if rotation is None:
+            self._log_line(
+                "Record from Device BLOCKED: could not determine the display's current rotation "
+                "(`adb shell dumpsys input` had no \"Viewport INTERNAL\" orientation line) -- without "
+                "it, recorded coordinates can silently come out rotated/mirrored whenever the touch "
+                "panel's native orientation doesn't match the display's current one (a real bug this "
+                "was built to fix, not a hypothetical). Retry, or check the device is still connected.")
+            return
+        self._device_recording_axis_ranges = axis_ranges
+        self._device_recording_rotation = rotation
+        self._device_recorder = recorder
+        recorder.start()
+        self._record_device_btn.setText("Stop Recording")
+        self._log_line(
+            f"Recording real touches from the device directly (touch panel range "
+            f"{axis_ranges[0]}x{axis_ranges[1]}, display rotation {rotation}) -- touch/drag on the "
+            f"physical screen, then click 'Stop Recording'. This bypasses the mirror entirely, so "
+            f"nothing needs to be visible in the canvas above while you do it.")
+
+    def _finish_device_recording(self) -> None:
+        recorder = self._device_recorder
+        axis_ranges = self._device_recording_axis_ranges
+        rotation = self._device_recording_rotation
+        self._device_recorder = None
+        self._record_device_btn.setText("Record from Device")
+
+        touches = recorder.stop()
+        self._log_line(f"Stopped recording: captured {len(touches)} raw touch transition(s).")
+        gestures = segment_into_gestures(touches)
+        if not gestures:
+            self._log_line("No gestures captured -- nothing to import.")
+            return
+
+        ref = self._require_reference_resolution()
+        if ref is None:
+            self._log_line("Recording discarded: reference resolution became unset before it could be scaled.")
+            return
+        ref_w, ref_h = ref
+        raw_x_max, raw_y_max = axis_ranges
+
+        for i, gesture in enumerate(gestures):
+            self._log_line(f"  touch {i + 1}: {self._describe_gesture(gesture)}")
+
+        events = merge_gestures_into_events(gestures, raw_x_max, raw_y_max, ref_w, ref_h, rotation=rotation)
+        if not events:
+            self._log_line("Recording discarded: no usable events (all gestures were empty/positionless).")
+            return
+
+        plural = "es" if len(gestures) != 1 else ""
+        name, ok = QInputDialog.getText(
+            self, "Name Recorded Action",
+            f"{len(gestures)} touch{plural} recorded (see log for each) -> {len(events)} events combined "
+            f"into one action.\n\nName this action (Cancel to discard the whole recording):")
+        if not ok or not name:
+            self._log_line("Recording discarded (no name given).")
+            return
+        if name in self.project.actions:
+            self._log_line(f"Recording discarded: action {name!r} already exists.")
+            return
+
+        self.project.add_action(Action(name=name, events=events,
+                                        description=f"recorded from {len(gestures)} real device touch(es)"))
+        self._refresh_action_list()
+        self._warn_pointer_conflicts()
+        self._log_line(f"Imported as action {name!r} ({len(events)} events from {len(gestures)} touch(es)).")
+
+    @staticmethod
+    def _describe_gesture(gesture: list) -> str:
+        kinds = [t.kind for t in gesture]
+        first = gesture[0]
+        if len(gesture) <= 2 and "move" not in kinds:
+            return f"Tap-like touch at raw ({first.x}, {first.y})"
+        last = gesture[-1]
+        duration_ms = round((last.t - first.t) * 1000)
+        return (f"Drag from raw ({first.x}, {first.y}) to raw ({last.x}, {last.y}), "
+                f"{len(gesture)} samples over {duration_ms}ms")
+
     def closeEvent(self, event) -> None:
+        if self._device_recorder is not None:
+            self._device_recorder.stop()
         if self.connection is not None:
             self.connection.disconnect()
         super().closeEvent(event)

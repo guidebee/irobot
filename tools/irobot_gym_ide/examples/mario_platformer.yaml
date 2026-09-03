@@ -9,42 +9,80 @@ reference_resolution:
   width: 2670
   height: 1200
 actions:
-- name: move_left_start
-  description: press and hold the left d-pad button (releases with move_left_stop)
-  events:
-  - kind: press
-    x: 223
-    y: 1058
-  - kind: wait
-    frames: 10
-  - kind: release
-    key_name: back
-- name: move_right_start
-  description: press and hold the right d-pad button (releases with move_right_stop)
-  events:
-  - kind: press
-    x: 668
-    y: 1070
-  - kind: wait
-    frames: 10
-  - kind: release
-    key_name: back
-- name: jump
-  description: quick tap for a short hop
-  events:
-  - kind: press
-    x: 2400
-    y: 1067
-  - kind: wait
-    frames: 10
-  - kind: release
-    key_name: back
 - name: attack
   description: tap the attack/dash button
   events:
   - kind: press
     x: 1952
     y: 1060
+  - kind: wait
+    frames: 10
+  - kind: release
+    key_name: back
+- name: jump
+  description: recorded from 1 real device touch(es)
+  events:
+  - kind: press
+    x: 2396
+    y: 1070
+  - kind: wait
+    frames: 10
+  - kind: release
+    key_name: back
+- name: right_jump
+  description: recorded from 2 real device touch(es)
+  events:
+  - kind: press
+    x: 640
+    y: 1045
+  - kind: wait
+    frames: 1
+  - kind: press
+    pointer_id: 1
+    x: 2447
+    y: 1080
+  - kind: wait
+    pointer_id: 1
+    frames: 5
+  - kind: release
+  - kind: release
+    pointer_id: 1
+    key_name: back
+- name: left_jump
+  description: recorded from 2 real device touch(es)
+  events:
+  - kind: press
+    x: 289
+    y: 1054
+  - kind: wait
+    frames: 1
+  - kind: press
+    pointer_id: 1
+    x: 2445
+    y: 1099
+  - kind: wait
+    pointer_id: 1
+    frames: 4
+  - kind: release
+  - kind: release
+    pointer_id: 1
+    key_name: back
+- name: left
+  description: recorded from 1 real device touch(es)
+  events:
+  - kind: press
+    x: 265
+    y: 1072
+  - kind: wait
+    frames: 10
+  - kind: release
+    key_name: back
+- name: right
+  description: recorded from 1 real device touch(es)
+  events:
+  - kind: press
+    x: 742
+    y: 1063
   - kind: wait
     frames: 10
   - kind: release
