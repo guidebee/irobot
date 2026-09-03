@@ -83,7 +83,7 @@ jobs:
           mingw-w64-x86_64-SDL2
           mingw-w64-x86_64-nlohmann-json
           mingw-w64-x86_64-opencv
-          mingw-w64-x86_64-catch2
+          mingw-w64-x86_64-catch
           mingw-w64-x86_64-ffmpeg
 
     - name: Configure CMake
