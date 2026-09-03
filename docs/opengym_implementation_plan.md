@@ -136,7 +136,7 @@ existing consumer keep working unmodified.
    command now prints it directly; `record`/`interactive` already ignored non-`OPENCV_MAT` blob types
    so needed no change, but `stream` did (it reshaped every buffer as if it were image pixels and would
    have crashed reshaping the zero-length payload -- fixed alongside adding the constant). Consumed by
-   `tools/irobot_gym_ide/connection.py`/`main_window.py` (see docs/irobot_gym_ide_design.md §6.2): the
+   `irobot_gym_ide/connection.py`/`main_window.py` (see docs/irobot_gym_ide_design.md §6.2): the
    IDE auto-fills Reference width/height when unset, and warns (without silently overwriting) on a
    mismatch against an already-set value, since existing events' stored coordinates are only meaningful
    relative to whatever reference resolution was in effect when they were placed. This removes the

@@ -77,49 +77,24 @@ I/O to external AI clients over TCP sockets, enabling autonomous game playing.
 
 ### 1. Building the Android Server (`irobot-server`)
 
-The Android server is the APK that runs on the device. It is compiled from Java source under `irobot_server/` using a
-Gradle-free script to avoid SSL issues that can occur on some network configurations (e.g. VPN with TLS inspection).
-
-#### Requirements
-
-- Android SDK with **API level 37** and **Build Tools 35.0.0**
-- Java JDK 21 (the one bundled with Android Studio works: `<SDK>/openjdk/jdk-21.x.x`)
-- MSYS2 / Git Bash on Windows
-
-#### Build steps
+The Android server is the APK that runs on the device. It lives in [`irobot_server/`](irobot_server/README.md) and is
+compiled from Java source using a Gradle-free script to avoid SSL issues that can occur on some network configurations
+(e.g. VPN with TLS inspection). Full requirements, build steps, and known gotchas are in
+[`irobot_server/README.md`](irobot_server/README.md); the short version:
 
 ```bash
-cd /c/workspace/irobot_server
+cd irobot_server
 
-# Set SDK and JDK paths (adjust to your installation)
 export ANDROID_HOME="/c/Users/<user>/AppData/Local/Android/Sdk"
 export JAVA_HOME="/c/Program Files/Android/openjdk/jdk-21.0.8"
 export PATH="$JAVA_HOME/bin:$PATH"
 
 bash build_server.sh
+
+# deploy the built server to the desktop client
+cp build_manual/irobot-server ../server/irobot-server
+cp build_manual/irobot-server ../build/apps/server/irobot-server
 ```
-
-Output: `build_manual/irobot-server` (~100 KB DEX jar).
-
-#### Deploy to the desktop client
-
-Copy the built server to both locations so the desktop client can push it to devices:
-
-```bash
-cp build_manual/irobot-server /c/workspace/irobot/server/irobot-server
-cp build_manual/irobot-server /c/workspace/irobot/build/apps/server/irobot-server
-```
-
-#### Known gotchas (already handled by the script)
-
-| Issue                                                     | Fix                                             |
-|-----------------------------------------------------------|-------------------------------------------------|
-| Platform dir named `android-37.0` instead of `android-37` | Script falls back automatically                 |
-| `aidl.exe` rejects POSIX paths on Windows                 | Script converts paths with `cygpath -w`         |
-| `d8` not found on Windows                                 | Script uses `d8.bat`                            |
-| UTF-8 BOM in Java source files copied from Windows        | Strip with `python3 -c "..."` before building   |
-| Missing `android/content/IContentProvider.java`           | Fake stub included in source tree               |
-| Socket name mismatch with C++ client                      | `DesktopConnection.java` uses `"irobot"` prefix |
 
 ---
 
@@ -318,6 +293,12 @@ The `brain` module (`src/ai/brain.cpp`) provides:
 Every frame sent to an agent is paired with an OpenCV PHash (perceptual hash) for cheap frame-change detection — see [
 `tools/README.md`](tools/README.md#perceptual-hash-what-its-for).
 
+### Gym IDE — action-map editor
+
+[`irobot_gym_ide/`](irobot_gym_ide/README.md) is a desktop tool (PySide6), built on this same API, for defining the
+named actions an AI agent can take in a given game — click to place touch events, combine them into actions, and test
+them against a real device before any training code exists. See [`irobot_gym_ide/README.md`](irobot_gym_ide/README.md).
+
 ---
 
 ## Shortcuts
@@ -367,9 +348,12 @@ server/
 └── irobot-server       # compiled Android APK deployed to device
 libs/
 └── FFmpeg/             # bundled FFmpeg for Windows x64
-irobot_server/
+irobot_server/          # Android server source + build script (see irobot_server/README.md)
 ├── app/src/main/java/  # Android server Java source (scrcpy-based)
 └── build_server.sh     # Gradle-free build script
+irobot_gym_ide/         # action-map editor GUI (see irobot_gym_ide/README.md)
+irobot_gym_ide.sh       # launcher (Git Bash / WSL / Linux / macOS)
+irobot_gym_ide.cmd      # launcher (Windows)
 tools/
 ├── agent_client.py     # reference/test client for the AI agent API
 └── README.md           # its docs + wire-protocol reference

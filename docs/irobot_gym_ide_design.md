@@ -7,7 +7,7 @@ click-to-add / click-to-test loop). Reward/score extraction (logcat regex, OCR r
 [docs/opengym_implementation_plan.md §8](opengym_implementation_plan.md) for the design it will
 implement.
 
-Code: `tools/irobot_gym_ide/`. Tests: `tools/irobot_gym_ide/tests/` (13 tests, pure Python, no
+Code: `irobot_gym_ide/`. Tests: `irobot_gym_ide/tests/` (13 tests, pure Python, no
 device/Qt required — see [Testing](#testing)).
 
 ## 1. What this is
@@ -289,7 +289,7 @@ correctness bugs:
 
 ## 8. Worked example
 
-`tools/irobot_gym_ide/examples/mario_platformer.yaml` — calibrated (approximately, from the
+`irobot_gym_ide/examples/mario_platformer.yaml` — calibrated (approximately, from the
 screenshot that motivated this tool, not a real device) for a platformer with a fixed d-pad
 (`move_left_start`/`move_left_stop`, `move_right_start`/`move_right_stop`, pointer 0, shared and
 mutually exclusive), a jump button (`jump` a tap, `long_jump` a `PRESS`→`WAIT(20)`→`RELEASE`
@@ -299,13 +299,13 @@ warnings and zero orphaned releases — see `tests/test_io.py` and the manual ch
 ## 9. Setup / usage
 
 ```bash
-pip install -r tools/irobot_gym_ide/requirements.txt   # PySide6, PyYAML, numpy
-tools\irobot_gym_ide.cmd     # Windows
-tools/irobot_gym_ide.sh      # Git Bash / WSL / Linux / macOS
+pip install -r irobot_gym_ide/requirements.txt   # PySide6, PyYAML, numpy
+irobot_gym_ide.cmd     # Windows
+./irobot_gym_ide.sh    # Git Bash / WSL / Linux / macOS
 ```
 
-Same resolve-their-own-working-directory pattern as `agent_client.cmd`/`.sh` (both `cd` into
-`tools/` before running `python -m irobot_gym_ide.app`, since that's what makes the package
+Same resolve-their-own-working-directory pattern as `tools/agent_client.cmd`/`.sh` (both `cd` into
+the repo root before running `python -m irobot_gym_ide.app`, since that's what makes the package
 importable, then invoke `py -3` in preference to plain `python` for the same broken-shebang-stub
 reason `agent_client.cmd` documents). **Found while wiring this up**: this dev machine has two
 separate Python installs, and the interpreter `py -3` resolves to was not the one the
@@ -314,7 +314,7 @@ separate Python installs, and the interpreter `py -3` resolves to was not the on
 `pip install -r requirements.txt` needs to target whichever interpreter the launcher actually
 invokes on a given machine (run it via `py -3 -m pip install ...` if `.cmd`'s `py -3` path is the
 one that's missing packages). Equivalent direct invocation, if you'd rather skip the launcher:
-`python -m irobot_gym_ide.app` run from inside `tools/`.
+`python -m irobot_gym_ide.app` run from the repo root.
 
 Open `examples/mario_platformer.yaml` via File → Open Project to see a populated project without
 a device connected (the canvas stays blank until you Connect). Against a real `irobot` process,
@@ -331,7 +331,7 @@ Reference width/height, exactly as `agent_client.py --screen-size` still require
 ## 10. Testing
 
 ```bash
-python -m unittest discover -s tools/irobot_gym_ide/tests -t .
+python -m unittest discover -s irobot_gym_ide/tests -t .
 ```
 
 25 tests, all pure-Python (`model.py`/`io.py`/`device_recorder.py` round-trips, validation, and
