@@ -141,10 +141,12 @@ def touch_message(action, x, y, screen_width, screen_height,
 
 
 def send_json(sock, obj):
-    # AgentController::ProcessMessages treats each recv() as one JSON
-    # document (it doesn't do incremental/length-prefixed framing), so this
-    # client always sends exactly one JSON object per socket write.
-    sock.sendall(json.dumps(obj).encode("utf-8"))
+    # Wire framing: [4-byte big-endian length][JSON payload], matching
+    # AgentController::ProcessMessages (agent_controller.cpp). Without this
+    # prefix, two messages written back-to-back could coalesce into a single
+    # recv() on the server and fail to parse as one JSON document.
+    payload = json.dumps(obj).encode("utf-8")
+    sock.sendall(struct.pack(">I", len(payload)) + payload)
 
 
 # --------------------------------------------------------------------------
@@ -344,9 +346,6 @@ def cmd_play(args):
         if delay > 0:
             time.sleep(delay)
         send_json(sock, ev)
-        # small gap so each message is very likely read in its own recv()
-        # on the (currently non-length-prefixed) server side
-        time.sleep(0.002)
 
     sock.close()
     print("Playback complete.")

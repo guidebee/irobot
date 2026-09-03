@@ -27,16 +27,6 @@ from .model import Action, EventKind, PrimitiveEvent
 FRAME_MS = 33  # assumed ms/frame for WAIT events -- no real frame-rate handshake
                 # exists on the wire yet; see docs/irobot_gym_ide_design.md "Known limitations"
 
-SEND_GAP_S = 0.005  # gap between consecutive control-socket writes -- AgentController::ProcessMessages
-                     # (agent_controller.cpp) treats each recv() as exactly one JSON document (see plan
-                     # §3.1); two messages sent back-to-back with no gap routinely land in the same
-                     # recv() over loopback, fail json::accept() as invalid (concatenated) JSON, and get
-                     # silently stuck waiting for "more bytes" that never resolves them -- the message
-                     # never reaches PushMessage at all. agent_client.py's own `play` command already
-                     # works around this with an identical sleep between sends; this was missing here and
-                     # is the likely cause of a TAP (two writes: DOWN then UP) having no visible effect
-                     # despite one of the pair occasionally still logging as parsed on the irobot side.
-
 
 class LiveConnection:
     def __init__(self, host: str, port: int):
@@ -123,14 +113,11 @@ class LiveConnection:
     # -- control --------------------------------------------------------
 
     def _send_control(self, msg: dict) -> None:
-        """Sends one JSON control message, then waits SEND_GAP_S before
-        returning -- see the constant's comment for why this gap exists.
-        Every write to the control socket must go through this, not a bare
-        `ac.send_json(self._control_sock, ...)`, including a second write
-        that immediately follows within the same caller (e.g. a TAP's
-        DOWN+UP, or a KEY's DOWN+UP)."""
+        """Sends one JSON control message. Every write to the control socket
+        should go through this rather than a bare
+        `ac.send_json(self._control_sock, ...)`, so there's one place to
+        change if the control wire format needs adjusting again."""
         ac.send_json(self._control_sock, msg)
-        time.sleep(SEND_GAP_S)
 
     def send_primitive(self, event: PrimitiveEvent, ref_w: int, ref_h: int) -> str | None:
         """Sends one PrimitiveEvent's wire message(s). Returns None on success,

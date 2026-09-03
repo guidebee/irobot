@@ -6,6 +6,10 @@
 #include "agent_controller.hpp"
 #include "util/log.hpp"
 #include "util/lock.hpp"
+#include "util/buffer_util.hpp"
+
+#include <cstring>
+#include <vector>
 
 namespace irobot::agent
 {
@@ -41,23 +45,29 @@ namespace irobot::agent
         }
     }
 
+    // wire framing for the JSON control channel: [4-byte BE length][JSON payload].
+    // Without this, two messages written back-to-back can coalesce into a single
+    // recv() on the reader side and fail to parse as one JSON document -- see
+    // ProcessMessages() below and docs/opengym_implementation_plan.md §3.1/§4.1.
+    static constexpr size_t kFrameHeaderSize = 4;
+
     bool AgentController::SendMessage(
         message::ControlMessage* msg)
     {
         if (this->control_socket != INVALID_SOCKET)
         {
             auto json_str = msg->JsonSerialize();
-            int length = json_str.size();
-            char cstr[length + 1];
-            strcpy(cstr, json_str.c_str());
-
+            uint32_t length = (uint32_t)json_str.size();
             if (!length)
             {
                 return false;
             }
+            std::vector<unsigned char> frame(kFrameHeaderSize + length);
+            util::buffer_write32be(frame.data(), length);
+            memcpy(frame.data() + kFrameHeaderSize, json_str.data(), length);
             int w = platform::net_send_all(this->control_socket,
-                                           cstr, length);
-            return w == length;
+                                           frame.data(), frame.size());
+            return w == (int)frame.size();
         }
         return true;
     }
@@ -109,22 +119,36 @@ namespace irobot::agent
 
     ssize_t AgentController::ProcessMessages(const unsigned char* buf, size_t len)
     {
+        // max payload a well-formed frame can declare -- anything bigger than the
+        // read buffer itself can never be fully received, so it means a corrupt
+        // stream (or a pre-framing client) rather than "wait for more bytes".
+        constexpr size_t kMaxPayload = CONTROL_MSG_SERIALIZED_MAX_SIZE * 2 - kFrameHeaderSize;
+
         size_t head = 0;
         for (;;)
         {
-            message::ControlMessage msg{};
-            ssize_t r = msg.JsonDeserialize(&buf[head], len - head);
-            if (r == -1)
-            {
-                return -1;
-            }
-            if (r == 0)
+            if (len - head < kFrameHeaderSize)
             {
                 return head;
             }
-            ProcessMessage(&msg);
+            uint32_t payload_len = util::buffer_read32be(&buf[head]);
+            if (payload_len > kMaxPayload)
+            {
+                LOGW("Control message frame too large (%u bytes), dropping connection", payload_len);
+                return -1;
+            }
+            if (len - head < kFrameHeaderSize + payload_len)
+            {
+                return head;
+            }
+            message::ControlMessage msg{};
+            size_t r = msg.JsonDeserialize(&buf[head + kFrameHeaderSize], payload_len);
+            if (r > 0)
+            {
+                ProcessMessage(&msg);
+            }
             msg.Destroy();
-            head += r;
+            head += kFrameHeaderSize + payload_len;
             assert(head <= len);
             if (head == len)
             {
@@ -172,13 +196,16 @@ namespace irobot::agent
         {
             return 0;
         }
-        unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE * 2];
+        constexpr size_t kBufSize = CONTROL_MSG_SERIALIZED_MAX_SIZE * 2;
+        unsigned char buf[kBufSize];
         size_t head = 0;
         while (!controller->stopped)
         {
-            assert(head < CONTROL_MSG_SERIALIZED_MAX_SIZE * 2);
-            ssize_t r = platform::net_recv(controller->control_socket, buf,
-                                           CONTROL_MSG_SERIALIZED_MAX_SIZE * 2 - head);
+            assert(head < kBufSize);
+            // append new bytes after whatever partial frame is already buffered --
+            // recv()'ing into buf[0] here would clobber it instead
+            ssize_t r = platform::net_recv(controller->control_socket, buf + head,
+                                           kBufSize - head);
             if (r <= 0)
             {
                 LOGI("Control socket error ,trying to re-establish connection");
@@ -187,19 +214,24 @@ namespace irobot::agent
                     LOGD("Failed to re-establish connection");
                     break;
                 }
+                // the old connection's buffered partial frame (if any) is
+                // meaningless on a fresh connection
+                head = 0;
+                continue;
             }
-            ssize_t consumed = controller->ProcessMessages(buf, r);
+            size_t total = head + r;
+            ssize_t consumed = controller->ProcessMessages(buf, total);
             if (consumed == -1)
             {
                 // an error occurred
                 break;
             }
-            if (consumed)
+            if (consumed > 0 && (size_t)consumed < total)
             {
                 // shift the remaining data in the buffer
-                memmove(buf, &buf[consumed], r - consumed);
-                head = r - consumed;
+                memmove(buf, &buf[consumed], total - consumed);
             }
+            head = total - consumed;
         }
         return 0;
     }
