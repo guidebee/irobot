@@ -1,0 +1,126 @@
+# CI build for Linux and Windows, with a release job that publishes both
+# platform artifacts to a GitHub Release when a version tag is pushed.
+name: CMake build and release
+
+on:
+  push:
+    branches: [ "master" ]
+    tags: [ "v*.*.*" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
+  BUILD_TYPE: Release
+
+jobs:
+  build-ubuntu:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y \
+          libsdl2-dev \
+          nlohmann-json3-dev \
+          libopencv-dev \
+          catch2 \
+          libavcodec-dev \
+          libavformat-dev \
+          libavutil-dev \
+          libavdevice-dev \
+          libswscale-dev \
+          libavfilter-dev \
+          libswresample-dev
+
+    - name: Configure CMake
+      # Configure CMake in a 'build' subdirectory. `CMAKE_BUILD_TYPE` is only required if you are using a single-configuration generator such as make.
+      # See https://cmake.org/cmake/help/latest/variable/CMAKE_BUILD_TYPE.html?highlight=cmake_build_type
+      run: cmake -B ${{github.workspace}}/build -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      # Build your program with the given configuration
+      run: cmake --build ${{github.workspace}}/build --config ${{env.BUILD_TYPE}}
+
+    - name: Test
+      working-directory: ${{github.workspace}}/build
+      # Execute tests defined by the CMake configuration.
+      # See https://cmake.org/cmake/help/latest/manual/ctest.1.html for more detail
+      run: ctest -C ${{env.BUILD_TYPE}}
+
+    - name: Package artifact
+      run: |
+        mkdir -p package/irobot-linux-x64
+        cp build/apps/irobot package/irobot-linux-x64/
+        cp -r server package/irobot-linux-x64/
+        tar -C package -czf irobot-linux-x64.tar.gz irobot-linux-x64
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: irobot-linux-x64
+        path: irobot-linux-x64.tar.gz
+
+  build-windows:
+    runs-on: windows-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up MSYS2 (MinGW-w64)
+      uses: msys2/setup-msys2@v2
+      with:
+        msystem: MINGW64
+        update: true
+        install: >-
+          mingw-w64-x86_64-toolchain
+          mingw-w64-x86_64-cmake
+          mingw-w64-x86_64-ninja
+          mingw-w64-x86_64-SDL2
+          mingw-w64-x86_64-nlohmann-json
+          mingw-w64-x86_64-opencv
+
+    - name: Configure CMake
+      shell: msys2 {0}
+      run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}}
+
+    - name: Build
+      shell: msys2 {0}
+      run: cmake --build build --config ${{env.BUILD_TYPE}} --target irobot
+
+    - name: Package artifact
+      shell: msys2 {0}
+      run: |
+        mkdir -p package/irobot-windows-x64
+        cp build/apps/irobot.exe package/irobot-windows-x64/
+        cp -r server package/irobot-windows-x64/
+        cd package && 7z a -tzip ../irobot-windows-x64.zip irobot-windows-x64
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: irobot-windows-x64
+        path: irobot-windows-x64.zip
+
+  release:
+    needs: [ build-ubuntu, build-windows ]
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+    - name: Download artifacts
+      uses: actions/download-artifact@v4
+      with:
+        path: artifacts
+
+    - name: Create release
+      uses: softprops/action-gh-release@v2
+      with:
+        files: |
+          artifacts/irobot-linux-x64/irobot-linux-x64.tar.gz
+          artifacts/irobot-windows-x64/irobot-windows-x64.zip
