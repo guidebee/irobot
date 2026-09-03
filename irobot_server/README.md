@@ -6,17 +6,31 @@ stream, and relays control messages back as Android input events. It is pushed t
 ADB by the desktop client (`irobot`, built from [`../src/`](../src/)) at connection time — you
 don't install it manually.
 
-Source: `app/src/main/java/`. Built with a Gradle-free shell script (`build_server.sh`) rather than
-a normal Gradle build, specifically to avoid SSL/TLS issues some network configurations hit (e.g.
-VPN with TLS inspection) when Gradle tries to resolve dependencies.
+Source: `app/src/main/java/`. Built with a Gradle-free script (`build_server.sh` / `build_server.cmd`)
+rather than a normal Gradle build, specifically to avoid SSL/TLS issues some network configurations
+hit (e.g. VPN with TLS inspection) when Gradle tries to resolve dependencies.
 
 ## Requirements
 
 - Android SDK with **API level 37** and **Build Tools 35.0.0**
 - Java JDK 21 (the one bundled with Android Studio works: `<SDK>/openjdk/jdk-21.x.x`)
-- MSYS2 / Git Bash on Windows
+- MSYS2 / Git Bash — only needed for `build_server.sh`; `build_server.cmd` runs in plain `cmd.exe`
 
 ## Build
+
+**Windows, native `cmd.exe`** (no MSYS2/Git Bash required):
+
+```bat
+cd irobot_server
+
+set ANDROID_HOME=C:\Users\<user>\AppData\Local\Android\Sdk
+set JAVA_HOME=C:\Program Files\Android\openjdk\jdk-21.0.8
+set PATH=%JAVA_HOME%\bin;%PATH%
+
+build_server.cmd
+```
+
+**Git Bash / MSYS2 / Linux / macOS:**
 
 ```bash
 cd irobot_server   # from the repo root
@@ -29,8 +43,8 @@ export PATH="$JAVA_HOME/bin:$PATH"
 bash build_server.sh
 ```
 
-Output: `build_manual/irobot-server` (~100 KB DEX jar). This directory is a build artifact
-(gitignored) — rerun `build_server.sh` any time the Java source changes.
+Both produce the same output: `build_manual/irobot-server` (~100 KB DEX jar). This directory is a
+build artifact (gitignored) — rerun the script any time the Java source changes.
 
 ### Deploy to the desktop client
 
@@ -42,16 +56,22 @@ cp build_manual/irobot-server ../server/irobot-server
 cp build_manual/irobot-server ../build/apps/server/irobot-server
 ```
 
-### Known gotchas (already handled by the script)
+```bat
+copy /y build_manual\irobot-server ..\server\irobot-server
+copy /y build_manual\irobot-server ..\build\apps\server\irobot-server
+```
 
-| Issue                                                     | Fix                                             |
-|-------------------------------------------------------------|--------------------------------------------------|
-| Platform dir named `android-37.0` instead of `android-37` | Script falls back automatically                 |
-| `aidl.exe` rejects POSIX paths on Windows                 | Script converts paths with `cygpath -w`         |
-| `d8` not found on Windows                                 | Script uses `d8.bat`                            |
-| UTF-8 BOM in Java source files copied from Windows        | Strip with `python3 -c "..."` before building   |
-| Missing `android/content/IContentProvider.java`           | Fake stub included in source tree               |
-| Socket name mismatch with C++ client                      | `DesktopConnection.java` uses `"irobot"` prefix |
+### Known gotchas (already handled by the scripts)
+
+| Issue                                                       | Fix                                                                          |
+|--------------------------------------------------------------|-------------------------------------------------------------------------------|
+| Platform dir named `android-37.0` instead of `android-37`  | Both scripts fall back automatically                                        |
+| `aidl.exe` rejects POSIX paths on Git Bash/MSYS2            | `build_server.sh` converts paths with `cygpath -w`; `build_server.cmd` uses native Windows paths throughout, so it isn't affected |
+| `d8` not found on Windows                                   | Both scripts invoke `d8.bat`                                                |
+| Windows `cmd.exe` command-line length limit when dexing many `.class` files | `build_server.cmd` jars `classes/` into one file with `jar cf` and dexes that, instead of passing every `.class` path as an argument |
+| UTF-8 BOM in Java source files copied from Windows          | Strip with `python3 -c "..."` before building (bash script only)            |
+| Missing `android/content/IContentProvider.java`             | Fake stub included in source tree                                           |
+| Socket name mismatch with C++ client                        | `DesktopConnection.java` uses `"irobot"` prefix                             |
 
 ## Compatibility
 
