@@ -12,3 +12,4 @@ vs2017/
 vs2019/
 xcode/
 .vscode/
+__pycache__/
