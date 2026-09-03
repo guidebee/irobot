@@ -122,6 +122,7 @@ FFmpeg libs for Windows are bundled under `libs/FFmpeg/ffmpeg_x64-windows` — n
 # Configure (first time only)
 cmake -B build \
   -DCMAKE_TOOLCHAIN_FILE=$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake \
+  -DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic \
   -G Ninja
 
 # Build
