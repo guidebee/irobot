@@ -147,9 +147,9 @@ namespace irobot::platform
         return !shutdown(socket, how);
     }
 
-    socket_t listen_on_port(uint16_t port)
+    socket_t listen_on_port(uint16_t port, int backlog)
     {
-        return net_listen(IPV4_LOCALHOST, port, 1);
+        return net_listen(IPV4_LOCALHOST, port, backlog);
     }
 
     void close_socket(socket_t* socket)

@@ -53,8 +53,6 @@ namespace irobot::platform
 
     socket_t net_accept(socket_t server_socket);
 
-    bool net_try_recv(socket_t socket);
-
     // the _all versions wait/retry until len bytes have been written/read
     ssize_t net_recv(socket_t socket, void* buf, size_t len);
 
@@ -69,7 +67,10 @@ namespace irobot::platform
 
     bool net_close(socket_t socket);
 
-    socket_t listen_on_port(uint16_t port);
+    // backlog: pending-connection queue length passed to listen(); callers that
+    // may accept multiple concurrent clients (e.g. agent listeners) should pass
+    // a value greater than the default of 1
+    socket_t listen_on_port(uint16_t port, int backlog = 1);
 
     void close_socket(socket_t* socket);
 }

@@ -5,6 +5,7 @@
 
 #include "agent_stream.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <SDL2/SDL_events.h>
 
@@ -14,7 +15,7 @@
 
 namespace irobot::agent
 {
-    unsigned char data_buffer[2][BLOB_MSG_SERIALIZED_MAX_SIZE];
+    unsigned char data_buffer[BLOB_MSG_SERIALIZED_MAX_SIZE];
 
     bool AgentStream::Init(socket_t socket)
     {
@@ -24,30 +25,69 @@ namespace irobot::agent
         {
             return false;
         }
+        this->sessions_mutex = SDL_CreateMutex();
+        if (!this->sessions_mutex)
+        {
+            return false;
+        }
         this->video_server_socket = socket;
         this->stopped = false;
         return true;
     }
 
-
-    bool AgentStream::WaitForClientConnection()
+    void AgentStream::AddSession(VideoSession* session)
     {
-        if (this->video_socket != INVALID_SOCKET)
+        util::mutex_lock(this->sessions_mutex);
+        this->sessions.push_back(session);
+        std::vector<unsigned char> catch_up = this->last_resolution_frame;
+        bool send_catch_up = this->has_resolution;
+        util::mutex_unlock(this->sessions_mutex);
+
+        if (send_catch_up)
         {
-            platform::close_socket(&this->video_socket);
+            // unicast the current resolution to this session right away --
+            // AgentManager only re-broadcasts it when it *changes*, so a
+            // session joining after the first one would otherwise never see it
+            platform::net_send_all(session->socket, catch_up.data(), catch_up.size());
         }
-        this->video_socket = platform::net_accept(this->video_server_socket);
-        LOGI("Agent stream client connected");
+
         static SDL_Event new_opencv_frame_event = {
             .type = EVENT_NEW_OPENCV_FRAME,
         };
         SDL_PushEvent(&new_opencv_frame_event);
-        return this->video_socket != INVALID_SOCKET;
+    }
+
+    void AgentStream::RemoveAndCloseSession(VideoSession* session)
+    {
+        // RunStream (the only caller) may be broadcasting a snapshot that
+        // Stop() is concurrently tearing down -- if Stop() has already
+        // claimed ownership (stopping == true), it will close/delete this
+        // session itself once it joins RunStream, so back off here rather
+        // than risk a double-close/double-free
+        util::mutex_lock(this->sessions_mutex);
+        bool owner_self = !this->stopping;
+        if (owner_self)
+        {
+            auto it = std::find(this->sessions.begin(), this->sessions.end(), session);
+            if (it != this->sessions.end())
+            {
+                this->sessions.erase(it);
+            }
+        }
+        util::mutex_unlock(this->sessions_mutex);
+
+        if (owner_self)
+        {
+            LOGI("Video client #%d disconnected", session->id);
+            platform::close_socket(&session->socket);
+            delete session;
+        }
     }
 
     void AgentStream::Destroy()
     {
         Actor::Destroy();
+        SDL_DestroyMutex(this->sessions_mutex);
         message::BlobMessage msg{};
         while (cbuf_take(&this->queue, &msg))
         {
@@ -79,29 +119,6 @@ namespace irobot::agent
         }
     }
 
-    bool AgentStream::ProcessMessage(
-        message::BlobMessage* msg)
-    {
-        if (this->video_socket != INVALID_SOCKET)
-        {
-            int length = msg->Serialize(data_buffer[buffer_index % 2]);
-            if (!length)
-            {
-                return false;
-            }
-            int w = platform::net_send_all(this->video_socket,
-                                           data_buffer[buffer_index % 2], length);
-
-            buffer_index += 1;
-            this->total_bytes += length;
-            this->total_frame += 1;
-            GetTransferSpeed();
-            return w == length;
-        }
-        return true;
-    }
-
-
     float AgentStream::GetTransferSpeed()
     {
         Uint32 currentTime = SDL_GetTicks();
@@ -121,36 +138,35 @@ namespace irobot::agent
 
     bool AgentStream::IsConnected()
     {
-        if (this->video_socket != INVALID_SOCKET)
-        {
-            bool connected = platform::net_try_recv(this->video_socket);
-            return connected;
-        }
-        return false;
+        util::mutex_lock(this->sessions_mutex);
+        bool connected = !this->sessions.empty();
+        util::mutex_unlock(this->sessions_mutex);
+        return connected;
     }
 
-
-    int AgentStream::RunAgentReceiver(void* data)
+    int AgentStream::RunAcceptor(void* data)
     {
-        auto* controller = (AgentStream*)data;
-        if (!controller->WaitForClientConnection())
+        auto* stream = static_cast<AgentStream*>(data);
+        for (;;)
         {
-            return 0;
-        }
-
-        while (!controller->stopped)
-        {
-            bool connected = controller->IsConnected();
-            if (!connected)
+            socket_t client = platform::net_accept(stream->video_server_socket);
+            if (client == INVALID_SOCKET)
             {
-                LOGI("Control socket error ,trying to re-establish connection");
-                if (!controller->WaitForClientConnection())
-                {
-                    LOGD("Failed to re-establish connection");
-                    break;
-                }
+                break;
             }
-            SDL_Delay(1);
+            if (stream->stopped)
+            {
+                // shutting down: don't hand Stop() a session it never
+                // snapshotted -- just drop this straggler connection
+                platform::close_socket(&client);
+                continue;
+            }
+
+            auto* session = new VideoSession();
+            session->socket = client;
+            session->id = stream->next_session_id++;
+            LOGI("Video client #%d connected", session->id);
+            stream->AddSession(session);
         }
         return 0;
     }
@@ -176,33 +192,96 @@ namespace irobot::agent
             bool non_empty = cbuf_take(&stream->queue, &msg);
             assert(non_empty);
             (void)non_empty;
-            bool ok = stream->ProcessMessage(&msg);
-            msg.Destroy();
             util::mutex_unlock(stream->mutex);
 
-            if (!ok)
+            size_t length = msg.Serialize(data_buffer);
+            if (length)
             {
-                LOGD("stream socket error 2,trying to re-establish connection");
+                if (msg.type == message::BLOB_MSG_TYPE_RESOLUTION)
+                {
+                    util::mutex_lock(stream->sessions_mutex);
+                    stream->last_resolution_frame.assign(data_buffer, data_buffer + length);
+                    stream->has_resolution = true;
+                    util::mutex_unlock(stream->sessions_mutex);
+                }
+
+                util::mutex_lock(stream->sessions_mutex);
+                std::vector<VideoSession*> snapshot = stream->sessions;
+                util::mutex_unlock(stream->sessions_mutex);
+
+                for (VideoSession* session : snapshot)
+                {
+                    int w = platform::net_send_all(session->socket, data_buffer, length);
+                    if (w != (int)length)
+                    {
+                        stream->RemoveAndCloseSession(session);
+                    }
+                }
+
+                stream->total_bytes += length;
+                stream->total_frame += 1;
+                stream->GetTransferSpeed();
             }
+            msg.Destroy();
         }
         return 0;
     }
 
+    void AgentStream::Stop()
+    {
+        util::mutex_lock(this->sessions_mutex);
+        this->stopping = true;
+        for (VideoSession* session : this->sessions)
+        {
+            // closesocket() -- not shutdown() -- is what reliably aborts a
+            // concurrent blocking send() RunStream may be doing (shutdown()
+            // alone was observed not to reliably interrupt a blocked call)
+            platform::close_socket(&session->socket);
+        }
+        util::mutex_unlock(this->sessions_mutex);
+
+        // wakes RunStream out of cond_wait if it's idle between messages
+        Actor::Stop();
+
+        // RunStream will not touch a session again once it observes
+        // `stopped` (checked between messages) or a shut-down send() fails
+        // (RemoveAndCloseSession then becomes a no-op, since `stopping` is
+        // set) -- joining it here, before the close/delete pass below,
+        // guarantees no send() can still be in flight against a session
+        // this function is about to free
+        SDL_WaitThread(this->thread, nullptr);
+        this->thread = nullptr;
+
+        util::mutex_lock(this->sessions_mutex);
+        std::vector<VideoSession*> snapshot = std::move(this->sessions);
+        this->sessions.clear();
+        util::mutex_unlock(this->sessions_mutex);
+
+        for (VideoSession* session : snapshot)
+        {
+            // already closed above, before RunStream was joined
+            delete session;
+        }
+    }
+
     void AgentStream::Join()
     {
-        SDL_WaitThread(this->thread, nullptr);
-        SDL_WaitThread(this->receiver_thread, nullptr);
+        if (this->thread)
+        {
+            SDL_WaitThread(this->thread, nullptr);
+        }
+        SDL_WaitThread(this->acceptor_thread, nullptr);
     }
 
     bool AgentStream::Start()
     {
         this->start_ticks = SDL_GetTicks();
-        LOGI("Starting agent receiver thread");
-        this->receiver_thread = SDL_CreateThread(RunAgentReceiver, "agent receiver",
+        LOGI("Starting agent stream acceptor thread");
+        this->acceptor_thread = SDL_CreateThread(RunAcceptor, "agent stream acceptor",
                                                  this);
-        if (!this->receiver_thread)
+        if (!this->acceptor_thread)
         {
-            LOGC("Could not start agent receiver thread");
+            LOGC("Could not start agent stream acceptor thread");
             return false;
         }
 

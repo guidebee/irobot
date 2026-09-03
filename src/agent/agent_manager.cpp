@@ -43,17 +43,22 @@ static cv::Mat computePHash(const cv::Mat& img)
 
 namespace irobot::agent
 {
+    // multiple agent clients may connect (and reconnect) concurrently, so the
+    // listen backlog needs more than the single pending connection the
+    // default allows
+    static constexpr int kAgentListenBacklog = 16;
+
     bool AgentManager::Init(uint16_t port)
     {
         this->local_port = port;
-        this->control_server_socket = platform::listen_on_port(this->local_port + 1);
+        this->control_server_socket = platform::listen_on_port(this->local_port + 1, kAgentListenBacklog);
         if (this->control_server_socket == INVALID_SOCKET)
         {
             LOGE("Could not listen on control server port %" PRIu16,
                  (unsigned short)(this->local_port + 1));
             return false;
         }
-        this->video_server_socket = platform::listen_on_port(this->local_port + 2);
+        this->video_server_socket = platform::listen_on_port(this->local_port + 2, kAgentListenBacklog);
         if (this->video_server_socket == INVALID_SOCKET)
         {
             LOGE("Could not listen on video server port %" PRIu16,

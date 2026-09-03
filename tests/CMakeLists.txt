@@ -6,6 +6,7 @@ find_package(Catch2 CONFIG REQUIRED)
 
 SET(TEST_SOURCE ${COMMON_SOURCES}
         all_tests.cpp
+        test_agent_reconnect.cpp
         test_buffer_util.cpp
         test_cbuf.cpp
         test_cli.cpp
