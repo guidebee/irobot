@@ -85,6 +85,7 @@ jobs:
           mingw-w64-x86_64-opencv
           mingw-w64-x86_64-catch
           mingw-w64-x86_64-ffmpeg
+          7zip
 
     - name: Configure CMake
       shell: msys2 {0}
