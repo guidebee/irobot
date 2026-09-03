@@ -10,17 +10,25 @@ import unittest
 from ..model import Action, GameRun, RunEdge, RunNode, RunNodeKind
 from ..run_engine import GameRunExecutor
 
+try:
+    import numpy as np
+    HAVE_NUMPY = True
+except ImportError:
+    HAVE_NUMPY = False
+
 
 class FakeConnection:
     """Records every action name it's asked to run, in the order runs
     actually started (not finished) -- good enough to assert both strict
     sequencing and "these ran concurrently" without depending on wall-clock
-    timing."""
+    timing. `frame`, if given, is what latest_frame() returns -- for COMPARE
+    node tests, which need a live frame to crop and compare."""
 
-    def __init__(self, delay: float = 0.0):
+    def __init__(self, delay: float = 0.0, frame=None):
         self.delay = delay
         self.calls = []
         self._lock = threading.Lock()
+        self._frame = frame
 
     def run_action(self, action: Action, ref_w: int, ref_h: int) -> list:
         with self._lock:
@@ -28,6 +36,9 @@ class FakeConnection:
         if self.delay:
             time.sleep(self.delay)
         return []
+
+    def latest_frame(self):
+        return self._frame
 
 
 def _executor(connection, actions) -> GameRunExecutor:
@@ -119,6 +130,128 @@ class RepeatTest(unittest.TestCase):
         connection = FakeConnection()
         _executor(connection, actions).run(run)
         self.assertEqual(connection.calls, ["inner"] * 6)
+
+
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+class CompareTest(unittest.TestCase):
+    def _template_and_frame(self):
+        from ..model import ImageTemplate
+        frame = np.zeros((50, 100), dtype=np.uint8)
+        frame[10:30, 10:40] = 200
+        template = ImageTemplate.capture(
+            "hp_full", x=10, y=10, width=30, height=20,
+            frame_w=100, frame_h=50, frame=frame, ref_res_w=100, ref_res_h=50)
+        return template, frame
+
+    def _run(self, run, actions, templates, connection):
+        executor = GameRunExecutor(connection, actions, ref_w=100, ref_h=50, templates=templates)
+        executor.run(run)
+        return executor
+
+    def test_match_fires_match_edge_only(self):
+        template, frame = self._template_and_frame()
+        actions = {name: Action(name=name) for name in ("on_match", "on_no_match")}
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="c", kind=RunNodeKind.COMPARE, template_name="hp_full"))
+        run.add_node(RunNode(id="m", kind=RunNodeKind.ACTION, action_name="on_match"))
+        run.add_node(RunNode(id="n", kind=RunNodeKind.ACTION, action_name="on_no_match"))
+        run.add_edge(RunEdge(id="e1", source="c", target="m", via="match"))
+        run.add_edge(RunEdge(id="e2", source="c", target="n", via="no_match"))
+
+        connection = FakeConnection(frame=(100, 50, frame))
+        self._run(run, actions, {"hp_full": template}, connection)
+        self.assertEqual(connection.calls, ["on_match"])
+
+    def test_no_match_fires_no_match_edge_only(self):
+        template, _ = self._template_and_frame()
+        empty_frame = np.zeros((50, 100), dtype=np.uint8)
+        actions = {name: Action(name=name) for name in ("on_match", "on_no_match")}
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="c", kind=RunNodeKind.COMPARE, template_name="hp_full"))
+        run.add_node(RunNode(id="m", kind=RunNodeKind.ACTION, action_name="on_match"))
+        run.add_node(RunNode(id="n", kind=RunNodeKind.ACTION, action_name="on_no_match"))
+        run.add_edge(RunEdge(id="e1", source="c", target="m", via="match"))
+        run.add_edge(RunEdge(id="e2", source="c", target="n", via="no_match"))
+
+        connection = FakeConnection(frame=(100, 50, empty_frame))
+        self._run(run, actions, {"hp_full": template}, connection)
+        self.assertEqual(connection.calls, ["on_no_match"])
+
+    def test_unknown_template_is_treated_as_no_match(self):
+        actions = {"on_no_match": Action(name="on_no_match")}
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="c", kind=RunNodeKind.COMPARE, template_name="ghost"))
+        run.add_node(RunNode(id="n", kind=RunNodeKind.ACTION, action_name="on_no_match"))
+        run.add_edge(RunEdge(id="e1", source="c", target="n", via="no_match"))
+
+        connection = FakeConnection()
+        logs = []
+        executor = GameRunExecutor(connection, actions, ref_w=100, ref_h=50, templates={}, on_log=logs.append)
+        executor.run(run)
+        self.assertEqual(connection.calls, ["on_no_match"])
+        self.assertTrue(any("unknown template" in line for line in logs))
+
+
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+class FindTemplateTest(unittest.TestCase):
+    def _template_and_frame(self):
+        from ..model import ImageTemplate
+        frame = np.zeros((50, 100), dtype=np.uint8)
+        frame[10:30, 10:40] = 200
+        template = ImageTemplate.capture(
+            "coin", x=10, y=10, width=30, height=20,
+            frame_w=100, frame_h=50, frame=frame, ref_res_w=100, ref_res_h=50)
+        return template, frame
+
+    def test_found_fires_found_edge_and_stashes_coordinate(self):
+        template, frame = self._template_and_frame()
+        actions = {name: Action(name=name) for name in ("on_found", "on_not_found")}
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="f", kind=RunNodeKind.FIND_TEMPLATE, template_name="coin"))
+        run.add_node(RunNode(id="m", kind=RunNodeKind.ACTION, action_name="on_found"))
+        run.add_node(RunNode(id="n", kind=RunNodeKind.ACTION, action_name="on_not_found"))
+        run.add_edge(RunEdge(id="e1", source="f", target="m", via="found"))
+        run.add_edge(RunEdge(id="e2", source="f", target="n", via="not_found"))
+
+        connection = FakeConnection(frame=(100, 50, frame))
+        executor = GameRunExecutor(connection, actions, ref_w=100, ref_h=50, templates={"coin": template})
+        executor.run(run)
+        self.assertEqual(connection.calls, ["on_found"])
+        self.assertIn("f", executor.last_found)
+        x, y = executor.last_found["f"]
+        self.assertAlmostEqual(x, 10, delta=2)
+        self.assertAlmostEqual(y, 10, delta=2)
+
+    def test_not_found_fires_not_found_edge_only(self):
+        template, _ = self._template_and_frame()
+        empty_frame = np.zeros((50, 100), dtype=np.uint8)
+        actions = {name: Action(name=name) for name in ("on_found", "on_not_found")}
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="f", kind=RunNodeKind.FIND_TEMPLATE, template_name="coin"))
+        run.add_node(RunNode(id="m", kind=RunNodeKind.ACTION, action_name="on_found"))
+        run.add_node(RunNode(id="n", kind=RunNodeKind.ACTION, action_name="on_not_found"))
+        run.add_edge(RunEdge(id="e1", source="f", target="m", via="found"))
+        run.add_edge(RunEdge(id="e2", source="f", target="n", via="not_found"))
+
+        connection = FakeConnection(frame=(100, 50, empty_frame))
+        executor = GameRunExecutor(connection, actions, ref_w=100, ref_h=50, templates={"coin": template})
+        executor.run(run)
+        self.assertEqual(connection.calls, ["on_not_found"])
+        self.assertNotIn("f", executor.last_found)
+
+    def test_unknown_template_is_treated_as_not_found(self):
+        actions = {"on_not_found": Action(name="on_not_found")}
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="f", kind=RunNodeKind.FIND_TEMPLATE, template_name="ghost"))
+        run.add_node(RunNode(id="n", kind=RunNodeKind.ACTION, action_name="on_not_found"))
+        run.add_edge(RunEdge(id="e1", source="f", target="n", via="not_found"))
+
+        connection = FakeConnection()
+        logs = []
+        executor = GameRunExecutor(connection, actions, ref_w=100, ref_h=50, templates={}, on_log=logs.append)
+        executor.run(run)
+        self.assertEqual(connection.calls, ["on_not_found"])
+        self.assertTrue(any("unknown template" in line for line in logs))
 
 
 class StopTest(unittest.TestCase):

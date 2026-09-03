@@ -34,7 +34,20 @@ _KIND_COLORS = {
     RunNodeKind.ACTION: QColor("#3498db"),
     RunNodeKind.DELAY: QColor("#95a5a6"),
     RunNodeKind.REPEAT: QColor("#e67e22"),
+    RunNodeKind.COMPARE: QColor("#8e44ad"),
+    RunNodeKind.FIND_TEMPLATE: QColor("#16a085"),
 }
+
+# Node kinds with more than one named output port, each capped at one connection via
+# the GUI (see RunGraphScene.try_add_edge) -- every other kind has a single "out" port.
+_MULTI_PORT_KINDS = {
+    RunNodeKind.REPEAT: ("body", "after"),
+    RunNodeKind.COMPARE: ("match", "no_match"),
+    RunNodeKind.FIND_TEMPLATE: ("found", "not_found"),
+}
+
+# Node kinds whose properties panel shows the template combo (see RunEditorWidget).
+_TEMPLATE_KINDS = (RunNodeKind.COMPARE, RunNodeKind.FIND_TEMPLATE)
 
 
 def _new_id() -> str:
@@ -43,9 +56,11 @@ def _new_id() -> str:
 
 class PortItem(QGraphicsEllipseItem):
     """A small circle anchored to a NodeItem's edge. `role` is "in" for the
-    single input port every node has, or "out"/"body"/"after" for an output
-    port -- see RunEdge.via for what "body"/"after" mean (REPEAT nodes only;
-    every other node kind has a single "out" output port)."""
+    single input port every node has, or "out"/"body"/"after"/"match"/
+    "no_match"/"found"/"not_found" for an output port -- see RunEdge.via for
+    what the named roles mean (REPEAT's "body"/"after", COMPARE's "match"/
+    "no_match", FIND_TEMPLATE's "found"/"not_found"; every other node kind
+    has a single "out" output port)."""
 
     def __init__(self, node_item: "NodeItem", role: str):
         super().__init__(-_PORT_R, -_PORT_R, _PORT_R * 2, _PORT_R * 2, parent=node_item)
@@ -77,9 +92,10 @@ class NodeItem(QGraphicsRectItem):
         self.in_port = PortItem(self, "in")
         self.in_port.setPos(0, _NODE_H / 2)
         self.out_ports: dict = {}
-        if node.kind == RunNodeKind.REPEAT:
-            self._add_out_port("body", QPointF(_NODE_W, _NODE_H * 0.3))
-            self._add_out_port("after", QPointF(_NODE_W, _NODE_H * 0.7))
+        if node.kind in _MULTI_PORT_KINDS:
+            first_role, second_role = _MULTI_PORT_KINDS[node.kind]
+            self._add_out_port(first_role, QPointF(_NODE_W, _NODE_H * 0.3))
+            self._add_out_port(second_role, QPointF(_NODE_W, _NODE_H * 0.7))
         else:
             self._add_out_port("out", QPointF(_NODE_W, _NODE_H / 2))
 
@@ -94,6 +110,8 @@ class NodeItem(QGraphicsRectItem):
             text = f"[{node.action_name or '(pick action)'}]"
         elif node.kind == RunNodeKind.DELAY:
             text = f"delay {node.frames}f"
+        elif node.kind in (RunNodeKind.COMPARE, RunNodeKind.FIND_TEMPLATE):
+            text = f"[{node.template_name or '(pick template)'}]"
         else:
             text = f"repeat x{node.times}"
         self._label.setText(f"{node.kind.value}\n{text}")
@@ -219,10 +237,11 @@ class RunGraphScene(QGraphicsScene):
     def try_add_edge(self, source_item: NodeItem, role: str, target_item: NodeItem) -> None:
         if source_item is target_item:
             return
-        if source_item.node.kind != RunNodeKind.REPEAT and self.game_run.outgoing(source_item.node.id, via=role):
-            return   # a non-repeat node's single "out" port -- one connection is enough to fork from
-        if role in ("body", "after") and self.game_run.outgoing(source_item.node.id, via=role):
-            return   # a repeat node's body/after port already has its one connection
+        if source_item.node.kind not in _MULTI_PORT_KINDS and self.game_run.outgoing(source_item.node.id, via=role):
+            return   # a plain node's single "out" port -- one connection is enough to fork from
+        if role in ("body", "after", "match", "no_match", "found", "not_found") \
+                and self.game_run.outgoing(source_item.node.id, via=role):
+            return   # a repeat/compare/find_template node's named port already has its one connection
         edge = RunEdge(id=_new_id(), source=source_item.node.id, target=target_item.node.id, via=role)
         self.game_run.add_edge(edge)
         self._add_edge_item(edge)
@@ -300,9 +319,10 @@ class RunEditorWidget(QWidget):
     runRequested = Signal(object)   # GameRun
     stopRequested = Signal()
 
-    def __init__(self, get_action_names, parent=None):
+    def __init__(self, get_action_names, get_template_names=lambda: [], parent=None):
         super().__init__(parent)
         self._get_action_names = get_action_names
+        self._get_template_names = get_template_names
         self.game_run: GameRun | None = None
         self._loading = False
 
@@ -312,11 +332,14 @@ class RunEditorWidget(QWidget):
         add_action_btn = QPushButton("+ Action Node")
         add_delay_btn = QPushButton("+ Delay Node")
         add_repeat_btn = QPushButton("+ Repeat Node")
+        add_compare_btn = QPushButton("+ Compare Node")
+        add_find_template_btn = QPushButton("+ Find Template Node")
         delete_btn = QPushButton("Delete Selected")
         self._run_btn = QPushButton("Run")
         self._stop_btn = QPushButton("Stop")
         self._stop_btn.setEnabled(False)
-        for b in (add_action_btn, add_delay_btn, add_repeat_btn, delete_btn, self._run_btn, self._stop_btn):
+        for b in (add_action_btn, add_delay_btn, add_repeat_btn, add_compare_btn, add_find_template_btn,
+                  delete_btn, self._run_btn, self._stop_btn):
             toolbar.addWidget(b)
         toolbar.addStretch(1)
         layout.addLayout(toolbar)
@@ -324,6 +347,8 @@ class RunEditorWidget(QWidget):
         add_action_btn.clicked.connect(lambda: self._add_node(RunNodeKind.ACTION))
         add_delay_btn.clicked.connect(lambda: self._add_node(RunNodeKind.DELAY))
         add_repeat_btn.clicked.connect(lambda: self._add_node(RunNodeKind.REPEAT))
+        add_compare_btn.clicked.connect(lambda: self._add_node(RunNodeKind.COMPARE))
+        add_find_template_btn.clicked.connect(lambda: self._add_node(RunNodeKind.FIND_TEMPLATE))
         delete_btn.clicked.connect(self._delete_selected)
         self._run_btn.clicked.connect(lambda: self.runRequested.emit(self.game_run))
         self._stop_btn.clicked.connect(self.stopRequested.emit)
@@ -341,6 +366,9 @@ class RunEditorWidget(QWidget):
         self._action_combo = QComboBox()
         self._action_combo.currentTextChanged.connect(self._on_action_combo_changed)
         props_row.addWidget(self._action_combo)
+        self._template_combo = QComboBox()
+        self._template_combo.currentTextChanged.connect(self._on_template_combo_changed)
+        props_row.addWidget(self._template_combo)
         self._value_spin = QSpinBox()
         self._value_spin.setRange(1, 100000)
         self._value_spin.valueChanged.connect(self._on_value_spin_changed)
@@ -375,11 +403,11 @@ class RunEditorWidget(QWidget):
         self._run_btn.setEnabled(not running and self.game_run is not None)
         self._stop_btn.setEnabled(running)
 
-    def refresh_warnings(self, project_actions: dict) -> None:
+    def refresh_warnings(self, project_actions: dict, project_templates: dict | None = None) -> None:
         if self.game_run is None:
             self._warnings.setText("")
             return
-        self._warnings.setText("\n".join(self.game_run.validate(project_actions)))
+        self._warnings.setText("\n".join(self.game_run.validate(project_actions, project_templates)))
 
     # -- toolbar actions --------------------------------------------------------
 
@@ -398,6 +426,7 @@ class RunEditorWidget(QWidget):
 
     def _set_props_visible(self, node: RunNode | None) -> None:
         self._action_combo.setVisible(node is not None and node.kind == RunNodeKind.ACTION)
+        self._template_combo.setVisible(node is not None and node.kind in _TEMPLATE_KINDS)
         self._value_spin.setVisible(node is not None and node.kind in (RunNodeKind.DELAY, RunNodeKind.REPEAT))
 
     def _on_node_selected(self, node: RunNode | None) -> None:
@@ -413,6 +442,11 @@ class RunEditorWidget(QWidget):
                 names = self._get_action_names()
                 self._action_combo.addItems([""] + names)
                 self._action_combo.setCurrentText(node.action_name)
+            elif node.kind in _TEMPLATE_KINDS:
+                self._template_combo.clear()
+                names = self._get_template_names()
+                self._template_combo.addItems([""] + names)
+                self._template_combo.setCurrentText(node.template_name)
             elif node.kind == RunNodeKind.DELAY:
                 self._value_spin.setRange(0, 100000)
                 self._value_spin.setValue(node.frames)
@@ -433,6 +467,16 @@ class RunEditorWidget(QWidget):
         if node is None or node.kind != RunNodeKind.ACTION:
             return
         node.action_name = text
+        self._scene._node_items[node.id].refresh_label()
+        self.graphChanged.emit()
+
+    def _on_template_combo_changed(self, text: str) -> None:
+        if self._loading:
+            return
+        node = self._selected_node()
+        if node is None or node.kind not in _TEMPLATE_KINDS:
+            return
+        node.template_name = text
         self._scene._node_items[node.id].refresh_label()
         self.graphChanged.emit()
 

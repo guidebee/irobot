@@ -1,12 +1,19 @@
 """Pure model tests -- no Qt, no socket, no device. Run with:
     python -m unittest discover -s irobot_gym_ide/tests
 (or via pytest, which auto-discovers unittest.TestCase classes too)."""
+import base64
 import unittest
 
 from ..model import (
-    Action, EventKind, GameRun, PrimitiveEvent, Project, RunEdge, RunNode, RunNodeKind,
+    Action, EventKind, GameRun, ImageTemplate, PrimitiveEvent, Project, RunEdge, RunNode, RunNodeKind,
     conflicting_pointer_actions, orphan_releases,
 )
+
+try:
+    import numpy as np
+    HAVE_NUMPY = True
+except ImportError:
+    HAVE_NUMPY = False
 
 
 class PrimitiveEventRoundTripTest(unittest.TestCase):
@@ -157,7 +164,65 @@ class GameRunGraphTest(unittest.TestCase):
         run.add_node(RunNode(id="b", kind=RunNodeKind.DELAY))
         run.add_edge(RunEdge(id="e1", source="a", target="b", via="body"))
         warnings = run.validate(project_actions={})
-        self.assertTrue(any("only valid from a repeat node" in w for w in warnings))
+        self.assertTrue(any("only valid from a repeat, compare, or find_template node" in w for w in warnings))
+
+    def test_validate_flags_unknown_template_reference(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="c", kind=RunNodeKind.COMPARE, template_name="missing"))
+        warnings = run.validate(project_actions={}, project_templates={})
+        self.assertTrue(any("unknown template" in w for w in warnings))
+
+    def test_validate_compare_defaults_to_no_templates_known(self):
+        # project_templates is optional -- omitting it should still flag any
+        # COMPARE reference, same spirit as project_actions always being required.
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="c", kind=RunNodeKind.COMPARE, template_name="hp_full"))
+        warnings = run.validate(project_actions={})
+        self.assertTrue(any("unknown template" in w for w in warnings))
+
+    def test_validate_flags_compare_with_two_match_edges(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="c", kind=RunNodeKind.COMPARE, template_name="hp_full"))
+        run.add_node(RunNode(id="a", kind=RunNodeKind.DELAY))
+        run.add_node(RunNode(id="b", kind=RunNodeKind.DELAY))
+        run.add_edge(RunEdge(id="e1", source="c", target="a", via="match"))
+        run.add_edge(RunEdge(id="e2", source="c", target="b", via="match"))
+        warnings = run.validate(project_actions={}, project_templates={"hp_full": object()})
+        self.assertTrue(any("more than one match connection" in w for w in warnings))
+
+    def test_clean_compare_graph_has_no_warnings(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="c", kind=RunNodeKind.COMPARE, template_name="hp_full"))
+        run.add_node(RunNode(id="a", kind=RunNodeKind.DELAY))
+        run.add_node(RunNode(id="b", kind=RunNodeKind.DELAY))
+        run.add_edge(RunEdge(id="e1", source="c", target="a", via="match"))
+        run.add_edge(RunEdge(id="e2", source="c", target="b", via="no_match"))
+        self.assertEqual(run.validate(project_actions={}, project_templates={"hp_full": object()}), [])
+
+    def test_validate_flags_unknown_find_template_reference(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="f", kind=RunNodeKind.FIND_TEMPLATE, template_name="missing"))
+        warnings = run.validate(project_actions={}, project_templates={})
+        self.assertTrue(any("unknown template" in w for w in warnings))
+
+    def test_validate_flags_find_template_with_two_found_edges(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="f", kind=RunNodeKind.FIND_TEMPLATE, template_name="coin"))
+        run.add_node(RunNode(id="a", kind=RunNodeKind.DELAY))
+        run.add_node(RunNode(id="b", kind=RunNodeKind.DELAY))
+        run.add_edge(RunEdge(id="e1", source="f", target="a", via="found"))
+        run.add_edge(RunEdge(id="e2", source="f", target="b", via="found"))
+        warnings = run.validate(project_actions={}, project_templates={"coin": object()})
+        self.assertTrue(any("more than one found connection" in w for w in warnings))
+
+    def test_clean_find_template_graph_has_no_warnings(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="f", kind=RunNodeKind.FIND_TEMPLATE, template_name="coin"))
+        run.add_node(RunNode(id="a", kind=RunNodeKind.DELAY))
+        run.add_node(RunNode(id="b", kind=RunNodeKind.DELAY))
+        run.add_edge(RunEdge(id="e1", source="f", target="a", via="found"))
+        run.add_edge(RunEdge(id="e2", source="f", target="b", via="not_found"))
+        self.assertEqual(run.validate(project_actions={}, project_templates={"coin": object()}), [])
 
     def test_validate_flags_repeat_with_two_body_edges(self):
         run = GameRun(name="r")
@@ -179,6 +244,103 @@ class GameRunGraphTest(unittest.TestCase):
         run.add_edge(RunEdge(id="e2", source="rep", target="body", via="body"))
         run.add_edge(RunEdge(id="e3", source="rep", target="after", via="after"))
         self.assertEqual(run.validate(project_actions={"jump": object()}), [])
+
+
+class ImageTemplateRoundTripTest(unittest.TestCase):
+    def test_round_trip_preserves_fields(self):
+        template = ImageTemplate(name="hp_full", x=10, y=20, width=100, height=30,
+                                  threshold=0.85, image_w=100, image_h=30, pixels_b64="AAAA")
+        restored = ImageTemplate.from_dict(template.to_dict())
+        self.assertEqual(restored.name, "hp_full")
+        self.assertEqual((restored.x, restored.y, restored.width, restored.height), (10, 20, 100, 30))
+        self.assertEqual(restored.threshold, 0.85)
+        self.assertEqual(restored.pixels_b64, "AAAA")
+
+    def test_project_templates_survive_to_dict_from_dict(self):
+        project = Project(name="game")
+        project.add_template(ImageTemplate(name="hp_full", x=1, y=2, width=3, height=4))
+        restored = Project.from_dict(project.to_dict())
+        self.assertIn("hp_full", restored.templates)
+        self.assertEqual(restored.templates["hp_full"].width, 3)
+
+
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+class ImageTemplateCaptureCompareTest(unittest.TestCase):
+    def test_capture_then_compare_identical_frame_is_a_perfect_match(self):
+        # a 100x50 frame, reference resolution equal to frame size for simplicity;
+        # a mid-gray rectangle at (10, 10)-(40, 30) is the "hp bar" being captured.
+        frame = np.zeros((50, 100), dtype=np.uint8)
+        frame[10:30, 10:40] = 200
+        template = ImageTemplate.capture(
+            "hp_full", x=10, y=10, width=30, height=20,
+            frame_w=100, frame_h=50, frame=frame, ref_res_w=100, ref_res_h=50)
+        self.assertEqual((template.image_w, template.image_h), (30, 20))
+        similarity = template.similarity(frame_w=100, frame_h=50, frame=frame, ref_w=100, ref_h=50)
+        self.assertAlmostEqual(similarity, 1.0, places=6)
+        self.assertTrue(template.matches(frame_w=100, frame_h=50, frame=frame, ref_w=100, ref_h=50))
+
+    def test_compare_against_a_different_region_is_not_a_match(self):
+        frame = np.zeros((50, 100), dtype=np.uint8)
+        frame[10:30, 10:40] = 200
+        template = ImageTemplate.capture(
+            "hp_full", x=10, y=10, width=30, height=20,
+            frame_w=100, frame_h=50, frame=frame, ref_res_w=100, ref_res_h=50)
+
+        empty_frame = np.zeros((50, 100), dtype=np.uint8)
+        similarity = template.similarity(frame_w=100, frame_h=50, frame=empty_frame, ref_w=100, ref_h=50)
+        self.assertLess(similarity, 0.9)
+        self.assertFalse(template.matches(frame_w=100, frame_h=50, frame=empty_frame, ref_w=100, ref_h=50))
+
+    def test_compare_scales_region_to_a_differently_sized_live_frame(self):
+        # captured at 100x50, compared against a 200x100 frame (e.g. a less-downscaled
+        # mirror on a later connection) -- the region must still be found by ratio.
+        frame = np.zeros((50, 100), dtype=np.uint8)
+        frame[10:30, 10:40] = 200
+        template = ImageTemplate.capture(
+            "hp_full", x=10, y=10, width=30, height=20,
+            frame_w=100, frame_h=50, frame=frame, ref_res_w=100, ref_res_h=50)
+
+        bigger_frame = np.zeros((100, 200), dtype=np.uint8)
+        bigger_frame[20:60, 20:80] = 200   # same region, doubled
+        similarity = template.similarity(frame_w=200, frame_h=100, frame=bigger_frame, ref_w=100, ref_h=50)
+        self.assertGreater(similarity, 0.95)
+
+
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+class ImageTemplateFindTest(unittest.TestCase):
+    def test_find_locates_template_moved_elsewhere_in_the_frame(self):
+        # captured at (10, 10)-(40, 30); the live frame has since moved the same
+        # patch down and to the right, to (60, 25)-(90, 45) -- find() must not
+        # just re-check the original (x, y), it must search for the new spot.
+        capture_frame = np.zeros((50, 100), dtype=np.uint8)
+        capture_frame[10:30, 10:40] = 200
+        template = ImageTemplate.capture(
+            "coin", x=10, y=10, width=30, height=20,
+            frame_w=100, frame_h=50, frame=capture_frame, ref_res_w=100, ref_res_h=50)
+
+        moved_frame = np.zeros((50, 100), dtype=np.uint8)
+        moved_frame[25:45, 60:90] = 200
+        result = template.find(frame_w=100, frame_h=50, frame=moved_frame, ref_w=100, ref_h=50, stride=2)
+        self.assertIsNotNone(result)
+        x, y, similarity = result
+        self.assertAlmostEqual(x, 60, delta=2)
+        self.assertAlmostEqual(y, 25, delta=2)
+        self.assertGreater(similarity, 0.95)
+
+    def test_find_returns_none_for_an_uncaptured_template(self):
+        template = ImageTemplate(name="coin", x=0, y=0, width=10, height=10)
+        frame = np.zeros((50, 100), dtype=np.uint8)
+        self.assertIsNone(template.find(frame_w=100, frame_h=50, frame=frame, ref_w=100, ref_h=50))
+
+    def test_find_returns_none_when_template_region_is_bigger_than_the_frame(self):
+        # width=150 in a reference resolution equal to the frame size (100x50, so
+        # ImageTemplate's ref->frame scaling is identity) means the region can
+        # never fit -- e.g. a template captured before a reference-resolution
+        # change that shrank the frame.
+        template = ImageTemplate(name="coin", x=0, y=0, width=150, height=80,
+                                  image_w=1, image_h=1, pixels_b64=base64.b64encode(b"\x00").decode("ascii"))
+        frame = np.zeros((50, 100), dtype=np.uint8)
+        self.assertIsNone(template.find(frame_w=100, frame_h=50, frame=frame, ref_w=100, ref_h=50))
 
 
 if __name__ == "__main__":

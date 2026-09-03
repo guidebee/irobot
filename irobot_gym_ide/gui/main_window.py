@@ -12,13 +12,15 @@ the right button.
 """
 from __future__ import annotations
 
+import base64
 import threading
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QMainWindow, QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QListWidget, QListWidgetItem, QLineEdit, QSpinBox, QPushButton, QLabel,
+    QListWidget, QListWidgetItem, QLineEdit, QSpinBox, QDoubleSpinBox, QPushButton, QLabel,
     QComboBox, QPlainTextEdit, QSplitter, QFileDialog, QMessageBox, QInputDialog,
     QCheckBox, QTabWidget,
 )
@@ -26,7 +28,7 @@ from PySide6.QtCore import Qt
 
 from .. import io as project_io
 from ..model import (
-    Project, Action, EventKind, GameRun, PrimitiveEvent,
+    Project, Action, EventKind, GameRun, ImageTemplate, PrimitiveEvent,
     conflicting_pointer_actions, orphan_releases,
 )
 from ..connection import LiveConnection
@@ -63,6 +65,8 @@ class MainWindow(QMainWindow):
         self._device_recording_axis_ranges = None
         self._device_recording_rotation = 0
         self._selected_run: GameRun | None = None
+        self._selected_template: ImageTemplate | None = None
+        self._loading_template_fields = False   # same guard purpose as _loading_fields, for the template props row
         self._run_executor: GameRunExecutor | None = None
         self._run_signals = _RunSignals()
         self._run_signals.logLine.connect(lambda text: self._run_editor.log_line(text))
@@ -180,6 +184,38 @@ class MainWindow(QMainWindow):
         run_btn_row.addWidget(remove_run_btn)
         left_layout.addLayout(run_btn_row)
 
+        left_layout.addWidget(QLabel("Image Templates (for Game Run Compare / Find Template nodes)"))
+        self._template_list = QListWidget()
+        self._template_list.currentItemChanged.connect(self._on_template_selected)
+        left_layout.addWidget(self._template_list)
+
+        self._template_preview = QLabel()
+        self._template_preview.setFixedHeight(60)
+        self._template_preview.setAlignment(Qt.AlignCenter)
+        self._template_preview.setStyleSheet("border: 1px solid #888;")
+        left_layout.addWidget(self._template_preview)
+
+        template_threshold_row = QHBoxLayout()
+        template_threshold_row.addWidget(QLabel("Match threshold"))
+        self._template_threshold_spin = QDoubleSpinBox()
+        self._template_threshold_spin.setRange(0.0, 1.0)
+        self._template_threshold_spin.setSingleStep(0.01)
+        self._template_threshold_spin.setDecimals(2)
+        self._template_threshold_spin.valueChanged.connect(self._on_template_threshold_changed)
+        template_threshold_row.addWidget(self._template_threshold_spin)
+        template_threshold_row.addStretch(1)
+        left_layout.addLayout(template_threshold_row)
+
+        template_btn_row = QHBoxLayout()
+        self._capture_region_btn = QPushButton("Capture Region")
+        self._capture_region_btn.setCheckable(True)
+        self._capture_region_btn.toggled.connect(self._toggle_capture_mode)
+        remove_template_btn = QPushButton("Remove Template")
+        remove_template_btn.clicked.connect(self._remove_template)
+        template_btn_row.addWidget(self._capture_region_btn)
+        template_btn_row.addWidget(remove_template_btn)
+        left_layout.addLayout(template_btn_row)
+
         left_dock = QDockWidget("Project", self)
         left_dock.setWidget(left)
         self.addDockWidget(Qt.LeftDockWidgetArea, left_dock)
@@ -194,6 +230,7 @@ class MainWindow(QMainWindow):
         # center: tabbed -- live mirror/canvas+log, and the game-run node graph editor
         self._canvas = CanvasView()
         self._canvas.pointClicked.connect(self._on_canvas_clicked)
+        self._canvas.regionSelected.connect(self._on_region_selected)
         self._log = QPlainTextEdit()
         self._log.setReadOnly(True)
         self._log.setMaximumBlockCount(500)
@@ -204,7 +241,9 @@ class MainWindow(QMainWindow):
         splitter.setStretchFactor(0, 4)
         splitter.setStretchFactor(1, 1)
 
-        self._run_editor = RunEditorWidget(get_action_names=lambda: list(self.project.actions.keys()))
+        self._run_editor = RunEditorWidget(
+            get_action_names=lambda: list(self.project.actions.keys()),
+            get_template_names=lambda: list(self.project.templates.keys()))
         self._run_editor.graphChanged.connect(self._on_run_graph_changed)
         self._run_editor.runRequested.connect(self._run_game_run)
         self._run_editor.stopRequested.connect(self._stop_game_run)
@@ -261,9 +300,11 @@ class MainWindow(QMainWindow):
         self.project_path = None
         self._selected_action = None
         self._selected_run = None
+        self._selected_template = None
         self._load_project_into_fields()
         self._refresh_action_list()
         self._refresh_run_list()
+        self._refresh_template_list()
         self._inspector.set_action(None)
         self._run_editor.set_run(None)
 
@@ -278,9 +319,11 @@ class MainWindow(QMainWindow):
             return
         self.project_path = Path(path)
         self._selected_run = None
+        self._selected_template = None
         self._load_project_into_fields()
         self._refresh_action_list()
         self._refresh_run_list()
+        self._refresh_template_list()
         self._inspector.set_action(None)
         self._run_editor.set_run(None)
         self._log_line(f"Opened {path}")
@@ -377,7 +420,7 @@ class MainWindow(QMainWindow):
         self._on_run_graph_changed()
 
     def _on_run_graph_changed(self) -> None:
-        self._run_editor.refresh_warnings(self.project.actions)
+        self._run_editor.refresh_warnings(self.project.actions, self.project.templates)
 
     def _run_game_run(self, game_run: GameRun | None) -> None:
         if game_run is None:
@@ -391,7 +434,7 @@ class MainWindow(QMainWindow):
         ref_w, ref_h = ref
         self._run_executor = GameRunExecutor(
             self.connection, self.project.actions, ref_w, ref_h,
-            on_log=self._run_signals.logLine.emit)
+            on_log=self._run_signals.logLine.emit, templates=self.project.templates)
         self._run_editor.set_running(True)
         self._run_editor.log_line(f"Running {game_run.name!r}...")
 
@@ -411,6 +454,87 @@ class MainWindow(QMainWindow):
     def _on_run_finished(self) -> None:
         self._run_editor.set_running(False)
         self._run_editor.log_line("Run finished.")
+
+    # -- compare templates --------------------------------------------------------
+
+    def _refresh_template_list(self) -> None:
+        self._template_list.clear()
+        for name in self.project.templates:
+            self._template_list.addItem(QListWidgetItem(name))
+
+    def _on_template_selected(self, current: QListWidgetItem, _previous) -> None:
+        if current is None:
+            self._selected_template = None
+        else:
+            self._selected_template = self.project.templates.get(current.text())
+        self._update_template_props()
+
+    def _update_template_props(self) -> None:
+        template = self._selected_template
+        self._loading_template_fields = True
+        try:
+            self._template_threshold_spin.setValue(template.threshold if template else 0.9)
+        finally:
+            self._loading_template_fields = False
+        if template is not None and template.pixels_b64 and template.image_w and template.image_h:
+            raw = base64.b64decode(template.pixels_b64)
+            image = QImage(raw, template.image_w, template.image_h, template.image_w, QImage.Format_Grayscale8)
+            self._template_preview.setPixmap(
+                QPixmap.fromImage(image).scaledToHeight(60, Qt.SmoothTransformation))
+        else:
+            self._template_preview.clear()
+
+    def _on_template_threshold_changed(self, value: float) -> None:
+        if self._loading_template_fields or self._selected_template is None:
+            return
+        self._selected_template.threshold = value
+
+    def _remove_template(self) -> None:
+        item = self._template_list.currentItem()
+        if item is None:
+            return
+        self.project.remove_template(item.text())
+        self._selected_template = None
+        self._refresh_template_list()
+        self._update_template_props()
+        self._on_run_graph_changed()
+
+    def _toggle_capture_mode(self, enabled: bool) -> None:
+        self._canvas.set_capture_mode(enabled)
+        self._capture_region_btn.setText("Click-drag on the frame to select..." if enabled else "Capture Region")
+
+    def _on_region_selected(self, x0: int, y0: int, x1: int, y1: int) -> None:
+        self._capture_region_btn.setChecked(False)   # one-shot: drop back into normal click mode after a capture
+        if self.connection is None:
+            self._log_line("Capture ignored: connect first so a live frame is available.")
+            return
+        frame = self.connection.latest_frame()
+        if frame is None:
+            self._log_line("Capture ignored: no frame received yet.")
+            return
+        frame_w, frame_h, frame_arr = frame
+        ref = self._require_reference_resolution()
+        if ref is None:
+            return  # already logged why
+        ref_w, ref_h = ref
+        rx0, ry0 = self._frame_to_reference(x0, y0, frame_w, frame_h)
+        rx1, ry1 = self._frame_to_reference(x1, y1, frame_w, frame_h)
+        rw, rh = max(1, rx1 - rx0), max(1, ry1 - ry0)
+
+        name, ok = QInputDialog.getText(self, "Capture Template", "Template name:")
+        if not ok or not name:
+            self._log_line("Capture discarded (no name given).")
+            return
+        if name in self.project.templates:
+            QMessageBox.warning(self, "Capture Region", f"Template {name!r} already exists.")
+            return
+
+        template = ImageTemplate.capture(name, rx0, ry0, rw, rh, frame_w, frame_h, frame_arr, ref_w, ref_h)
+        self.project.add_template(template)
+        self._refresh_template_list()
+        self._on_run_graph_changed()
+        self._log_line(f"Captured template {name!r}: region ({rx0},{ry0}) {rw}x{rh} (reference space), "
+                        f"{template.image_w}x{template.image_h}px.")
 
     def _warn_pointer_conflicts(self) -> None:
         conflicts = conflicting_pointer_actions(self.project.actions)

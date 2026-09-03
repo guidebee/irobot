@@ -76,6 +76,25 @@ Action node pointing at a deleted action, a malformed repeat) — see `model.py`
 and `run_engine.py`'s module docstring for exactly what is and isn't checked. Saved as part of
 `project.yaml`, alongside the actions it references.
 
+### Compare Templates and the Compare node
+
+The left panel's **Compare Templates** section captures a reference image from the live frame:
+click **Capture Region**, then click-drag a rectangle over the mirror (game-over banner, a
+health bar, a specific button's icon — whatever the game run needs to react to), release, and
+name it. The captured region is stored in the project's reference resolution (so it's still found
+at the right spot even if the live mirror's own pixel size changes between runs) alongside its own
+captured pixels; a **Match threshold** (0–1 similarity) controls how close a live comparison has to
+be to count as a match, adjustable per template with the template selected.
+
+A **Compare** node in the Game Run tab tests one of these templates against the live frame at that
+point in the graph: pick a template in its property combo, then connect its **match** output port
+to whatever should run when the region currently looks like the template, and its **no_match**
+port to whatever should run otherwise — an if/else condition wired into the run graph, e.g. "if the
+game-over banner is showing, tap Retry; otherwise keep playing." See `model.py`'s `ImageTemplate`
+and `RunNodeKind.COMPARE`, and `run_engine.py`'s `_run_compare` for exactly how the comparison
+works (nearest-neighbor-resized mean absolute grayscale difference — approximate, not
+pixel-perfect, by design).
+
 ## Testing
 
 Pure-Python model tests, no Qt/socket/device required:

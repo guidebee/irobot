@@ -6,12 +6,21 @@ own width/height) -- callers scale to the project's reference resolution
 agent_client.py's `interactive`/`record` commands already do and for the
 same reason: touch coordinates must land in the real device resolution,
 not the (possibly downscaled) frame's own dimensions.
+
+Capture mode (see `set_capture_mode`) repurposes the same canvas for a second
+kind of interaction: instead of a single click placing a touch event, a
+click-drag-release marks a rectangle, emitted by `regionSelected` (also in
+frame pixel space) so MainWindow can crop that region out of the live frame
+into an ImageTemplate for a Compare run-node -- see model.py's ImageTemplate
+and gui/run_editor.py's COMPARE node support.
 """
 from __future__ import annotations
 
-from PySide6.QtCore import Qt, Signal
+from PySide6.QtCore import QRectF, Qt, Signal
 from PySide6.QtGui import QImage, QPixmap, QPen, QBrush, QColor, QPainter
-from PySide6.QtWidgets import QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsSimpleTextItem
+from PySide6.QtWidgets import (
+    QGraphicsView, QGraphicsScene, QGraphicsEllipseItem, QGraphicsRectItem, QGraphicsSimpleTextItem,
+)
 
 _POINTER_COLORS = [
     QColor("#e74c3c"), QColor("#3498db"), QColor("#2ecc71"),
@@ -23,8 +32,12 @@ def pointer_color(pointer_id: int) -> QColor:
     return _POINTER_COLORS[pointer_id % len(_POINTER_COLORS)]
 
 
+_MIN_CAPTURE_SIZE = 4   # px, in frame space -- below this, treat a drag as an accidental click, not a capture
+
+
 class CanvasView(QGraphicsView):
     pointClicked = Signal(int, int)   # frame-space (x, y)
+    regionSelected = Signal(int, int, int, int)   # frame-space (x0, y0, x1, y1), x0<x1, y0<y1 -- capture mode only
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -33,8 +46,22 @@ class CanvasView(QGraphicsView):
         self._pixmap_item = None
         self._markers = []
         self._frame_size = (0, 0)
+        self._capture_mode = False
+        self._rect_origin = None
+        self._rect_item = None
         self.setRenderHint(QPainter.Antialiasing)
         self.setDragMode(QGraphicsView.NoDrag)
+
+    def set_capture_mode(self, enabled: bool) -> None:
+        """Toggles between the default click-to-place-a-point behavior and
+        click-drag-release-to-select-a-rectangle. Cancels any in-progress drag
+        when turned off mid-drag."""
+        self._capture_mode = enabled
+        self.setCursor(Qt.CrossCursor if enabled else Qt.ArrowCursor)
+        if not enabled and self._rect_item is not None:
+            self._scene.removeItem(self._rect_item)
+            self._rect_item = None
+            self._rect_origin = None
 
     def update_frame(self, width: int, height: int, frame) -> None:
         """`frame` is a 2D grayscale numpy array, shape (height, width)."""
@@ -74,6 +101,13 @@ class CanvasView(QGraphicsView):
             self.fitInView(self._pixmap_item, Qt.KeepAspectRatio)
 
     def mousePressEvent(self, event) -> None:
+        if self._capture_mode and self._pixmap_item is not None and event.button() == Qt.LeftButton:
+            self._rect_origin = self.mapToScene(event.pos())
+            self._rect_item = QGraphicsRectItem(QRectF(self._rect_origin, self._rect_origin))
+            self._rect_item.setPen(QPen(QColor("#f1c40f"), 2, Qt.DashLine))
+            self._rect_item.setZValue(3)
+            self._scene.addItem(self._rect_item)
+            return
         if self._pixmap_item is not None and event.button() == Qt.LeftButton:
             pos = self.mapToScene(event.pos())
             w, h = self._frame_size
@@ -81,3 +115,26 @@ class CanvasView(QGraphicsView):
             if 0 <= x < w and 0 <= y < h:
                 self.pointClicked.emit(x, y)
         super().mousePressEvent(event)
+
+    def mouseMoveEvent(self, event) -> None:
+        if self._rect_origin is not None:
+            pos = self.mapToScene(event.pos())
+            self._rect_item.setRect(QRectF(self._rect_origin, pos).normalized())
+            return
+        super().mouseMoveEvent(event)
+
+    def mouseReleaseEvent(self, event) -> None:
+        if self._rect_origin is not None:
+            rect = self._rect_item.rect()
+            self._scene.removeItem(self._rect_item)
+            self._rect_item = None
+            self._rect_origin = None
+            w, h = self._frame_size
+            x0 = max(0, min(w, round(rect.left())))
+            y0 = max(0, min(h, round(rect.top())))
+            x1 = max(0, min(w, round(rect.right())))
+            y1 = max(0, min(h, round(rect.bottom())))
+            if x1 - x0 >= _MIN_CAPTURE_SIZE and y1 - y0 >= _MIN_CAPTURE_SIZE:
+                self.regionSelected.emit(x0, y0, x1, y1)
+            return
+        super().mouseReleaseEvent(event)

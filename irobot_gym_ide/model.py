@@ -24,6 +24,7 @@ events, build actions as combinations" scoping:
 """
 from __future__ import annotations
 
+import base64
 import copy
 from dataclasses import dataclass, field
 from enum import Enum
@@ -176,11 +177,194 @@ def conflicting_pointer_actions(actions: dict) -> list:
     return [(pid, names) for pid, names in groups.items() if len(names) > 1]
 
 
+def _scale_rect(x: int, y: int, w: int, h: int, ref_w: int, ref_h: int, target_w: int, target_h: int):
+    """Scales a rectangle given in `ref_w`x`ref_h` space into `target_w`x`target_h`
+    space -- same ratio scaling as MainWindow._reference_to_frame/_frame_to_reference,
+    extracted here so ImageTemplate can do it from run_engine.py too (which has no Qt
+    import and must not gain one -- see this module's and run_engine.py's docstrings).
+    Falls back to an identity mapping when no reference resolution is set, same as the
+    GUI helpers do."""
+    if not ref_w or not ref_h:
+        return x, y, w, h
+    sx, sy = target_w / ref_w, target_h / ref_h
+    return round(x * sx), round(y * sy), max(1, round(w * sx)), max(1, round(h * sy))
+
+
+def _resize_nearest(arr, new_w: int, new_h: int):
+    """Nearest-neighbor resize of a 2D numpy array. Needed because the live video
+    frame's own resolution (a downscaled mirror, see connection.py) can differ from
+    whatever it was when a template was captured -- e.g. after a resolution/orientation
+    change -- so the region cropped out of a fresh frame at compare time isn't
+    guaranteed to already be pixel-for-pixel the same size as the stored template.
+    Deliberately not a real interpolation library (no such dependency exists in this
+    package, see requirements.txt) -- this is a same-region approximate match for
+    scripting game-run conditions, not pixel-perfect comparison."""
+    h, w = arr.shape
+    if (w, h) == (new_w, new_h):
+        return arr
+    import numpy as np
+    ys = (np.arange(new_h) * h / new_h).astype(int).clip(0, h - 1)
+    xs = (np.arange(new_w) * w / new_w).astype(int).clip(0, w - 1)
+    return arr[ys][:, xs]
+
+
+@dataclass
+class ImageTemplate:
+    """A named reference image captured from a region of the live frame, for a
+    Compare run-node to test "does the screen currently look like this" (e.g. a
+    game-over banner, a full health bar) as a condition in a GameRun graph.
+
+    `x`/`y`/`width`/`height` are in the project's reference resolution, same
+    convention as PrimitiveEvent's (x, y) -- resolution-independent, so the region
+    still lines up with the right part of the screen even if the live (downscaled)
+    frame's own pixel size differs between capture and comparison. `pixels_b64` is
+    the captured region's own grayscale pixels (`image_w`x`image_h`, whatever size
+    that crop came out to at capture time), base64-encoded raw bytes -- no PNG/image
+    codec dependency needed since the source frames are already raw grayscale numpy
+    arrays (see connection.py's latest_frame)."""
+    name: str
+    x: int = 0
+    y: int = 0
+    width: int = 0
+    height: int = 0
+    threshold: float = 0.9   # similarity in [0, 1] at/above which run_engine.py calls it a match
+    image_w: int = 0
+    image_h: int = 0
+    pixels_b64: str = ""
+
+    @staticmethod
+    def capture(name: str, x: int, y: int, width: int, height: int, frame_w: int, frame_h: int, frame,
+                ref_res_w: int, ref_res_h: int, threshold: float = 0.9) -> "ImageTemplate":
+        """Builds a template named `name` covering the rectangle (x, y, width,
+        height), given in the project's reference resolution (ref_res_w, ref_res_h)
+        -- same convention as PrimitiveEvent.x/y, and same reference/frame split as
+        MainWindow's _frame_to_reference/_reference_to_frame -- by cropping `frame`
+        (a grayscale numpy array, shape (frame_h, frame_w), what connection.py's
+        latest_frame() returns) at that rectangle scaled into the frame's own size."""
+        fx, fy, fw, fh = _scale_rect(x, y, width, height, ref_res_w, ref_res_h, frame_w, frame_h)
+        fx, fy = max(0, fx), max(0, fy)
+        fx2, fy2 = min(frame_w, fx + fw), min(frame_h, fy + fh)
+        crop = frame[fy:fy2, fx:fx2]
+        return ImageTemplate(
+            name=name, x=x, y=y, width=width, height=height, threshold=threshold,
+            image_w=int(crop.shape[1]), image_h=int(crop.shape[0]),
+            pixels_b64=base64.b64encode(crop.tobytes()).decode("ascii"),
+        )
+
+    def similarity(self, frame_w: int, frame_h: int, frame, ref_w: int, ref_h: int) -> float:
+        """Compares this template's stored pixels against the matching region of a
+        fresh live `frame`, scaling the stored (reference-space) region into that
+        frame's own size the same way `capture` scaled it out in the first place.
+        Returns a value in [0, 1] -- 1.0 is a pixel-identical match, computed as
+        1 - mean absolute grayscale difference / 255. Returns 0.0 if the template
+        has no captured pixels yet, or the scaled region falls entirely off-frame."""
+        if not self.pixels_b64 or not self.image_w or not self.image_h:
+            return 0.0
+        import numpy as np
+        template_pixels = np.frombuffer(base64.b64decode(self.pixels_b64), dtype=np.uint8)
+        template_pixels = template_pixels.reshape((self.image_h, self.image_w))
+        fx, fy, fw, fh = _scale_rect(self.x, self.y, self.width, self.height, ref_w, ref_h, frame_w, frame_h)
+        fx, fy = max(0, fx), max(0, fy)
+        fx2, fy2 = min(frame_w, fx + fw), min(frame_h, fy + fh)
+        crop = frame[fy:fy2, fx:fx2]
+        if crop.size == 0:
+            return 0.0
+        crop = _resize_nearest(crop, self.image_w, self.image_h)
+        diff = np.abs(crop.astype(np.int16) - template_pixels.astype(np.int16))
+        return 1.0 - float(diff.mean()) / 255.0
+
+    def matches(self, frame_w: int, frame_h: int, frame, ref_w: int, ref_h: int) -> bool:
+        return self.similarity(frame_w, frame_h, frame, ref_w, ref_h) >= self.threshold
+
+    def find(self, frame_w: int, frame_h: int, frame, ref_w: int, ref_h: int,
+              stride: int = 4) -> Optional[tuple]:
+        """Slides this template's own captured region size across the *whole*
+        live `frame` looking for the best match, unlike `similarity`/`matches`
+        which only ever look at this template's own fixed (x, y) region --
+        this is what a Find Template run-node needs to locate something that
+        may have moved (e.g. a coin, an enemy) rather than test a fixed HUD
+        region. Returns (x, y, similarity) with (x, y) the best-matching
+        top-left corner converted into the project's reference resolution --
+        same convention as PrimitiveEvent.x/y -- or None if the template has
+        no captured pixels or its region no longer fits inside the frame.
+
+        Two passes trade search speed for precision: a coarse pass checks
+        positions `stride` pixels apart (the frame's final row/column is
+        always included so the search still reaches the far edge), then a
+        single-pixel refinement pass re-scans just the neighborhood around
+        the coarse winner -- without it, a target that doesn't happen to
+        land on the coarse grid would score artificially low (its true
+        position is between two checked points) and could read as a false
+        not_found even sitting right on top of an exact match."""
+        if not self.pixels_b64 or not self.image_w or not self.image_h:
+            return None
+        import numpy as np
+        template_pixels = np.frombuffer(base64.b64decode(self.pixels_b64), dtype=np.uint8)
+        template_pixels = template_pixels.reshape((self.image_h, self.image_w))
+        _, _, fw, fh = _scale_rect(self.x, self.y, self.width, self.height, ref_w, ref_h, frame_w, frame_h)
+        if fw > frame_w or fh > frame_h or fw <= 0 or fh <= 0:
+            return None
+        tmpl = _resize_nearest(template_pixels, fw, fh)
+        best_similarity = None
+        best_fx, best_fy = 0, 0
+
+        def scan(xs, ys) -> None:
+            nonlocal best_similarity, best_fx, best_fy
+            for fy in ys:
+                for fx in xs:
+                    crop = frame[fy:fy + fh, fx:fx + fw]
+                    diff = np.abs(crop.astype(np.int16) - tmpl.astype(np.int16))
+                    similarity = 1.0 - float(diff.mean()) / 255.0
+                    if best_similarity is None or similarity > best_similarity:
+                        best_similarity = similarity
+                        best_fx, best_fy = fx, fy
+
+        def steps(limit: int, step: int) -> list:
+            values = list(range(0, limit + 1, step))
+            if values[-1] != limit:
+                values.append(limit)
+            return values
+
+        stride = max(1, stride)
+        scan(steps(frame_w - fw, stride), steps(frame_h - fh, stride))
+        if stride > 1:
+            x_lo, x_hi = max(0, best_fx - stride), min(frame_w - fw, best_fx + stride)
+            y_lo, y_hi = max(0, best_fy - stride), min(frame_h - fh, best_fy + stride)
+            scan(range(x_lo, x_hi + 1), range(y_lo, y_hi + 1))
+        rx, ry, _, _ = _scale_rect(best_fx, best_fy, fw, fh, frame_w, frame_h, ref_w, ref_h)
+        return (rx, ry, best_similarity)
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name, "x": self.x, "y": self.y, "width": self.width, "height": self.height,
+            "threshold": self.threshold, "image_w": self.image_w, "image_h": self.image_h,
+            "pixels_b64": self.pixels_b64,
+        }
+
+    @staticmethod
+    def from_dict(d: dict) -> "ImageTemplate":
+        return ImageTemplate(
+            name=d["name"], x=d.get("x", 0), y=d.get("y", 0),
+            width=d.get("width", 0), height=d.get("height", 0),
+            threshold=d.get("threshold", 0.9),
+            image_w=d.get("image_w", 0), image_h=d.get("image_h", 0),
+            pixels_b64=d.get("pixels_b64", ""),
+        )
+
+
 class RunNodeKind(str, Enum):
     ACTION = "action"   # runs one already-defined Action (by name) against the device
     DELAY = "delay"      # waits `frames` frames, no wire message -- same unit as PrimitiveEvent.WAIT
     REPEAT = "repeat"     # runs its "body"-edge target's subgraph to completion `times` times,
                           # then continues once through its "after"-edge target, if any
+    COMPARE = "compare"    # crops the live frame to a stored ImageTemplate's region and compares it;
+                           # fires its "match" edge or its "no_match" edge depending on the result
+                           # (see ImageTemplate.matches and run_engine.py's _run_node)
+    FIND_TEMPLATE = "find_template"   # searches the whole live frame for a stored ImageTemplate,
+                           # regardless of where it was originally captured; fires its "found" edge
+                           # (having stashed the best-matching (x, y) for the executor to hand out)
+                           # or its "not_found" edge if nothing over threshold turned up
+                           # (see ImageTemplate.find and run_engine.py's _run_node)
 
 
 @dataclass
@@ -192,6 +376,7 @@ class RunNode:
     action_name: str = ""   # ACTION only
     frames: int = 0          # DELAY only
     times: int = 1            # REPEAT only
+    template_name: str = ""   # COMPARE and FIND_TEMPLATE only
 
     def to_dict(self) -> dict:
         d = {"id": self.id, "kind": self.kind.value, "x": self.x, "y": self.y}
@@ -201,6 +386,8 @@ class RunNode:
             d["frames"] = self.frames
         elif self.kind == RunNodeKind.REPEAT:
             d["times"] = self.times
+        elif self.kind in (RunNodeKind.COMPARE, RunNodeKind.FIND_TEMPLATE):
+            d["template_name"] = self.template_name
         return d
 
     @staticmethod
@@ -208,6 +395,7 @@ class RunNode:
         return RunNode(
             id=d["id"], kind=RunNodeKind(d["kind"]), x=d.get("x", 0.0), y=d.get("y", 0.0),
             action_name=d.get("action_name", ""), frames=d.get("frames", 0), times=d.get("times", 1),
+            template_name=d.get("template_name", ""),
         )
 
 
@@ -216,10 +404,13 @@ class RunEdge:
     id: str
     source: str   # RunNode.id
     target: str   # RunNode.id
-    # "out" for a plain fork edge (any non-REPEAT source, or a REPEAT source that hasn't been
-    # assigned a role yet). Meaningful only when `source` is a REPEAT node: "body" marks the one
-    # edge that starts the loop body, "after" marks the one edge that runs once after all
-    # iterations finish. See GameRun docstring for why REPEAT needs this and no other node does.
+    # "out" for a plain fork edge (any source that isn't REPEAT/COMPARE/FIND_TEMPLATE, or one of
+    # those that hasn't been assigned a role yet). Meaningful only when `source` is a REPEAT node
+    # ("body" marks the one edge that starts the loop body, "after" the one edge that runs once
+    # after all iterations finish), a COMPARE node ("match"/"no_match" mark the one edge each that
+    # fires depending on the comparison result), or a FIND_TEMPLATE node ("found"/"not_found",
+    # same spirit as COMPARE's). See GameRun docstring for why these node kinds need this and no
+    # other kind does.
     via: str = "out"
 
     def to_dict(self) -> dict:
@@ -239,13 +430,21 @@ class GameRun:
     GameRunExecutor is the runtime for this: a node with more than one outgoing
     edge forks (all targets start concurrently); a node with more than one
     incoming edge joins (it waits until every incoming edge's source has
-    finished before it starts). REPEAT is the one node kind that isn't just
-    fork/join: rather than firing all its outgoing edges once, it repeats its
-    "body" edge's target subgraph to completion `times` times, then fires its
-    single "after" edge once (see RunEdge.via). There's no explicit
-    start/end node kind -- a node with no incoming edges is a root and starts
-    immediately (multiple roots start in parallel); a node with no outgoing
-    edges just ends its branch.
+    finished before it starts). Two node kinds aren't just fork/join: REPEAT
+    repeats its "body" edge's target subgraph to completion `times` times, then
+    fires its single "after" edge once; COMPARE crops the live frame to a stored
+    ImageTemplate's region, compares it, and fires its single "match" edge or its
+    single "no_match" edge depending on the result -- an if/else condition for
+    scripting game-run logic off of what's currently on screen (see RunEdge.via,
+    ImageTemplate.matches, run_engine.py's _run_node). FIND_TEMPLATE is COMPARE's
+    "where is it" sibling: instead of testing one fixed region it searches the
+    whole live frame for a stored ImageTemplate and fires its single "found" edge
+    or its single "not_found" edge, stashing the best match's (x, y) -- in the
+    project's reference resolution -- on the executor for the caller to read back
+    (see ImageTemplate.find, run_engine.py's GameRunExecutor.last_found). There's
+    no explicit start/end node kind -- a node with no incoming edges is a root and
+    starts immediately (multiple roots start in parallel); a node with no
+    outgoing edges just ends its branch.
     """
     name: str
     nodes: dict = field(default_factory=dict)   # dict[str, RunNode]
@@ -274,11 +473,15 @@ class GameRun:
         """Node ids with no incoming edge -- see class docstring."""
         return [node_id for node_id in self.nodes if not self.incoming(node_id)]
 
-    def validate(self, project_actions: dict) -> list:
+    def validate(self, project_actions: dict, project_templates: Optional[dict] = None) -> list:
         """Static authoring-time checks. Returns human-readable warnings, empty
         if the graph looks internally consistent. Does not catch every
         possible malformed graph (e.g. a node shared between a repeat body and
-        the outer graph) -- see run_engine.py's module docstring."""
+        the outer graph) -- see run_engine.py's module docstring.
+        `project_templates` defaults to empty (every COMPARE node reference then
+        warns) rather than being required, so existing callers that only pass
+        `project_actions` keep working."""
+        project_templates = project_templates or {}
         warnings = []
         for edge in self.edges:
             if edge.source not in self.nodes:
@@ -295,10 +498,24 @@ class GameRun:
                     warnings.append(f"node {node.id}: repeat has more than one body connection")
                 if len(self.outgoing(node.id, via="after")) > 1:
                     warnings.append(f"node {node.id}: repeat has more than one after-loop connection")
+            elif node.kind == RunNodeKind.COMPARE:
+                if node.template_name not in project_templates:
+                    warnings.append(f"node {node.id}: unknown template {node.template_name!r}")
+                if len(self.outgoing(node.id, via="match")) > 1:
+                    warnings.append(f"node {node.id}: compare has more than one match connection")
+                if len(self.outgoing(node.id, via="no_match")) > 1:
+                    warnings.append(f"node {node.id}: compare has more than one no_match connection")
+            elif node.kind == RunNodeKind.FIND_TEMPLATE:
+                if node.template_name not in project_templates:
+                    warnings.append(f"node {node.id}: unknown template {node.template_name!r}")
+                if len(self.outgoing(node.id, via="found")) > 1:
+                    warnings.append(f"node {node.id}: find_template has more than one found connection")
+                if len(self.outgoing(node.id, via="not_found")) > 1:
+                    warnings.append(f"node {node.id}: find_template has more than one not_found connection")
             else:
                 for e in self.outgoing(node.id):
                     if e.via != "out":
-                        warnings.append(f"edge {e.id}: via={e.via!r} is only valid from a repeat node")
+                        warnings.append(f"edge {e.id}: via={e.via!r} is only valid from a repeat, compare, or find_template node")
         return warnings
 
     def to_dict(self) -> dict:
@@ -330,6 +547,7 @@ class Project:
     reference_height: int = 0
     actions: dict = field(default_factory=dict)   # dict[str, Action]
     runs: dict = field(default_factory=dict)        # dict[str, GameRun]
+    templates: dict = field(default_factory=dict)    # dict[str, ImageTemplate]
 
     def add_action(self, action: Action) -> None:
         self.actions[action.name] = action
@@ -343,6 +561,12 @@ class Project:
     def remove_run(self, name: str) -> None:
         self.runs.pop(name, None)
 
+    def add_template(self, template: ImageTemplate) -> None:
+        self.templates[template.name] = template
+
+    def remove_template(self, name: str) -> None:
+        self.templates.pop(name, None)
+
     def to_dict(self) -> dict:
         return {
             "schema_version": 1,
@@ -355,6 +579,7 @@ class Project:
             "reference_resolution": {"width": self.reference_width, "height": self.reference_height},
             "actions": [a.to_dict() for a in self.actions.values()],
             "runs": [r.to_dict() for r in self.runs.values()],
+            "templates": [t.to_dict() for t in self.templates.values()],
         }
 
     @staticmethod
@@ -374,6 +599,8 @@ class Project:
             p.add_action(Action.from_dict(a))
         for r in d.get("runs", []):
             p.add_run(GameRun.from_dict(r))
+        for t in d.get("templates", []):
+            p.add_template(ImageTemplate.from_dict(t))
         return p
 
     def copy(self) -> "Project":
