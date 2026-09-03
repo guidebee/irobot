@@ -268,6 +268,51 @@ namespace irobot::agent
         }
     }
 
+    void AgentManager::SendResolution()
+    {
+        if (!this->agent_stream->IsConnected())
+        {
+            return;
+        }
+        util::mutex_lock(this->video_buffer->mutex);
+        int width = this->video_buffer->rgb_frame->width;
+        int height = this->video_buffer->rgb_frame->height;
+        util::mutex_unlock(this->video_buffer->mutex);
+
+        // only send when it actually changed (first connect, or a rotation)
+        // -- avoids repeating an unchanging value on every single frame
+        if (width == this->last_resolution_width && height == this->last_resolution_height)
+        {
+            return;
+        }
+
+        struct message::BlobMessage msg{};
+        msg.type = message::BLOB_MSG_TYPE_RESOLUTION;
+        struct timeval tm_now{};
+        gettimeofday(&tm_now, nullptr);
+        msg.timestamp = tm_now.tv_sec * 1000LL + tm_now.tv_usec / 1000;
+        msg.id = 0;
+        msg.count = 1;
+        // [width:u64][height:u64], zero-length pixel payload -- same buffer
+        // framing SendOpenCVImage uses for images, see blob_msg.hpp
+        msg.buffers[0].data = (unsigned char*)SDL_malloc(16);
+        if (msg.buffers[0].data == nullptr)
+        {
+            LOGW("Unable to allocate memory for resolution message");
+            return;
+        }
+        util::buffer_write64be(msg.buffers[0].data, (uint64_t)width);
+        util::buffer_write64be(msg.buffers[0].data + 8, (uint64_t)height);
+        msg.buffers[0].length = 0;
+        msg.total_length = 16;
+
+        if (this->agent_stream->PushMessage(&msg))
+        {
+            this->last_resolution_width = width;
+            this->last_resolution_height = height;
+        }
+    }
+
     ui::EventResult AgentManager::HandleEvent(SDL_Event* event, bool has_screen)
     {
         switch (event->type)
@@ -283,6 +328,7 @@ namespace irobot::agent
             util::mutex_lock(this->video_buffer->mutex);
             //LOGD("Agent Manager received Opencv Frame %d\r", this->video_buffer->frame_number);
             {
+                this->SendResolution();
                 this->SendOpenCVImage(message::BLOB_MSG_TYPE_OPENCV_MAT, 800, false);
                 this->SendOpenCVImage(message::BLOB_MSG_TYPE_SCREEN_SHOT, 240, true);
             }

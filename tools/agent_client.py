@@ -68,6 +68,14 @@ POINTER_ID_MOUSE = -1
 
 BLOB_MSG_TYPE_SCREEN_SHOT = 1
 BLOB_MSG_TYPE_OPENCV_MAT = 2
+# real, undownscaled device resolution -- see AgentManager::SendResolution
+# (src/agent/agent_manager.cpp). Same [width:u64][height:u64][pixels] buffer
+# framing as the image types, with a zero-length pixel payload. Sent once
+# after connect and again on a rotation/resize; this is the value
+# touch_message()'s screen_size must exactly equal (irobot_server's
+# PositionMapper.map() silently drops any mismatch, see cmd_interactive's
+# comment above for why --screen-size existed before this message did).
+BLOB_MSG_TYPE_RESOLUTION = 3
 
 _NAMED_KEYCODES = {
     "back": 4, "esc": 4, "home": 3, "enter": 66, "space": 62, "tab": 61,
@@ -348,7 +356,12 @@ def cmd_play(args):
 # stream
 # --------------------------------------------------------------------------
 
-BLOB_TYPE_NAMES = {0: "unknown", BLOB_MSG_TYPE_SCREEN_SHOT: "screen_shot", BLOB_MSG_TYPE_OPENCV_MAT: "opencv_mat"}
+BLOB_TYPE_NAMES = {
+    0: "unknown",
+    BLOB_MSG_TYPE_SCREEN_SHOT: "screen_shot",
+    BLOB_MSG_TYPE_OPENCV_MAT: "opencv_mat",
+    BLOB_MSG_TYPE_RESOLUTION: "resolution",
+}
 
 
 def recv_exact(sock, n):
@@ -397,6 +410,12 @@ def cmd_stream(args):
             if not buffers:
                 continue
             width, height, pixels = buffers[0]
+            if msg_type == BLOB_MSG_TYPE_RESOLUTION:
+                print(f"resolution: device is {width}x{height} "
+                      f"(the value touch_message()'s screen_size must exactly match)")
+                continue
+            if not pixels:
+                continue  # a non-image blob type with a zero-length pixel payload
             channels = len(pixels) // (width * height)
             arr = np.frombuffer(pixels, dtype=np.uint8)
             frame = arr.reshape((height, width, channels)) if channels > 1 else arr.reshape((height, width))

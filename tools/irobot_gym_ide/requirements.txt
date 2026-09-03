@@ -1,0 +1,3 @@
+PySide6         # GUI (QGraphicsView-based live-frame canvas, docked panels)
+PyYAML          # project.yaml load/save
+numpy           # decoding grayscale video frames for display

@@ -1,0 +1,51 @@
+schema_version: 1
+name: mario_platformer_example
+package: ''
+activity: ''
+serial: ''
+host: 127.0.0.1
+port: 27183
+reference_resolution:
+  width: 2670
+  height: 1200
+actions:
+- name: move_left_start
+  description: press and hold the left d-pad button (releases with move_left_stop)
+  events:
+  - kind: press
+    x: 223
+    y: 1058
+  - kind: wait
+    frames: 10
+  - kind: release
+    key_name: back
+- name: move_right_start
+  description: press and hold the right d-pad button (releases with move_right_stop)
+  events:
+  - kind: press
+    x: 668
+    y: 1070
+  - kind: wait
+    frames: 10
+  - kind: release
+    key_name: back
+- name: jump
+  description: quick tap for a short hop
+  events:
+  - kind: press
+    x: 2400
+    y: 1067
+  - kind: wait
+    frames: 10
+  - kind: release
+    key_name: back
+- name: attack
+  description: tap the attack/dash button
+  events:
+  - kind: press
+    x: 1952
+    y: 1060
+  - kind: wait
+    frames: 10
+  - kind: release
+    key_name: back

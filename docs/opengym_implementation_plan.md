@@ -121,13 +121,29 @@ existing consumer keep working unmodified.
    direct fix for the stall risk in §3.1. Bump a protocol version so `agent_client.py` (old framing)
    and any future length-prefixed clients don't get silently misread — simplest: a new listen port or
    a 1-byte protocol flag in the existing connect handshake; decide in implementation, not here.
-2. **Resolution announcement.** Add a new `BlobMessageType` (e.g. `BLOB_MSG_TYPE_RESOLUTION`) sent once
-   right after `AgentStream` accepts a client connection, and again whenever `src/ui/screen.cpp`'s
-   "New texture" rotation path fires — same trigger point as the existing stdout log line. Payload:
-   just `width`/`height` (reuse the existing buffer `[width:u64][height:u64]` framing already used for
-   image buffers, with a zero-length pixel payload). This removes the manual `--screen-size` step
-   entirely and lets the env recover automatically from an in-episode rotation instead of silently
-   dropping every touch event afterward.
+2. **Resolution announcement — implemented.** `BLOB_MSG_TYPE_RESOLUTION` (`blob_msg.hpp`) is sent by
+   `AgentManager::SendResolution()` (`agent_manager.cpp`) alongside the existing per-frame image sends,
+   reading the real, undownscaled resolution directly off `video_buffer->rgb_frame->width/height` (the
+   same source `ai::ConvertToMat` reads before downscaling) rather than hooking `src/ui/screen.cpp` --
+   this works whether or not `--no-display` is in effect, and picks up a rotation automatically since
+   `rgb_frame` changes size when the decoder produces a differently-sized frame, with no separate
+   rotation-path hook needed. It only actually re-sends when the value changes (tracked via
+   `AgentManager::last_resolution_width/height`, public data members rather than private ones because
+   `AgentManager` is constructed as an aggregate with designated initializers in `irobot_core.cpp` --
+   private non-static data members would break that construction, a real build error hit and fixed
+   while implementing this). Payload: the existing `[width:u64][height:u64][pixels]` buffer framing,
+   zero-length pixel payload, exactly as originally speced here. `tools/agent_client.py`'s `stream`
+   command now prints it directly; `record`/`interactive` already ignored non-`OPENCV_MAT` blob types
+   so needed no change, but `stream` did (it reshaped every buffer as if it were image pixels and would
+   have crashed reshaping the zero-length payload -- fixed alongside adding the constant). Consumed by
+   `tools/irobot_gym_ide/connection.py`/`main_window.py` (see docs/irobot_gym_ide_design.md §6.2): the
+   IDE auto-fills Reference width/height when unset, and warns (without silently overwriting) on a
+   mismatch against an already-set value, since existing events' stored coordinates are only meaningful
+   relative to whatever reference resolution was in effect when they were placed. This removes the
+   manual `--screen-size`/"read irobot's stdout" step for any client built on `connection.py`, and the
+   design's original motivation held up in practice: an IDE user's touch events were being silently
+   dropped by `PositionMapper.map()` specifically because Reference width/height didn't match the real
+   device resolution, with no error anywhere in the pipeline to point at it.
 
 Everything past this point (Phases 1+) is pure Python and does not require another C++ change,
 *except* Phase 6's optional headless/no-window mode consideration (§9).
@@ -147,11 +163,14 @@ tools/irobot_gym/
 │   ├── score/
 │   │   ├── region_changed.py   # RegionChangedScoreSignal (§8.3.5) -- v1 default
 │   │   ├── digit_template.py   # DigitTemplateScoreSignal (§8.3.3) -- v1
+│   │   ├── icon_state.py       # IconStateSignal (§8.3.6) -- v1
 │   │   └── tesseract_ocr.py    # TesseractScoreSignal (§8.3.4) -- documented extension point, not v1
 │   └── terminal/
 │       ├── phash_stuck.py      # PHashStuckTerminalSignal (§8.4.4) -- v1
-│       └── template_match.py   # TemplateMatchTerminalSignal (§8.4.3) -- v1
+│       ├── template_match.py   # TemplateMatchTerminalSignal (§8.4.3) -- v1
+│       └── signal_rule.py      # terminal_rule over a named ScoreSignal (§8.4.5) -- v1
 ├── calibrate_digits.py     # one-time per-game tool: click-crop digit glyphs 0-9 from a paused frame
+├── calibrate_buttons.py    # one-time per-game tool: click-crop virtual-button regions (§7.4 Tier 1.5)
 ├── launcher.py             # spawns N `irobot` subprocesses (distinct --serial/--port) for VecEnv use
 ├── examples/
 │   ├── logcat_reward_recipe.md  # how to find/wire a LogcatScoreSignal/LogcatTerminalSignal (§8.3.1/§8.4.1)
@@ -290,10 +309,78 @@ rare game needing 3+ finger chords. Pure Python/`spaces.py` work if a real game 
 C++ or `irobot_server` change required, the server-side capacity already exists.
 
 **Per-game action config**: since different games need different discrete action sets/tiers, define
-a small YAML/JSON schema (`ActionMap`) that `env.py` loads at construction time — `tier: 0|0.1|1|2`
+a small YAML/JSON schema (`ActionMap`) that `env.py` loads at construction time — `tier: 0|0.1|1|1.5|2`
 plus tier-specific params (grid size, keycode list, pointer count) — the plug-in point analogous to
 the `GameAdapter` config in §8, so wrapping a new game is "write a config," not "write a new env
 subclass," and Tier 1/2's cost is opt-in rather than paid by every game.
+
+### 7.4 Tier 1.5 — Named virtual-button actions (config-driven gamepad)
+
+Motivating case, verified against a real screenshot of a target game (a Mario-style platformer):
+controls are not "tap anywhere on the play area," which is what Tier 0/0.1's grid/continuous `(x, y)`
+assume — they're a **fixed on-screen virtual gamepad**: a left/right d-pad in the bottom-left corner
+and jump/attack buttons in the bottom-right, each always at the same screen position for the life of
+the app. This control scheme recurs across platformers, runners, and mobile fighting games — the same
+genre §1.1.5 targets — often enough to deserve a named tier rather than making every such game
+hand-roll Tier 1's raw dual-pointer coordinates.
+
+**Design**: same wire mechanism as Tier 1 (§7.1) — one `touch_message()` per pointer, `PointersState`
+combines them server-side — but the *agent-facing* action space is a `Dict` of **named buttons**, not
+free coordinates. Each button in a per-game `ActionMap` declares:
+
+- `region`: the fixed tap point (`cx`, `cy`, `radius`) captured at a reference resolution; `env.py`
+  rescales to the resolution actually announced per §4.2, so one config survives a `--max-size` change.
+- `pointer_id`: which of the (up to `MAX_POINTERS`, §7.1) concurrent touches this button uses. Buttons
+  meant to be pressed together with other buttons (e.g. hold `left` while tapping `jump`) get
+  *different* `pointer_id`s; buttons that are physically the same thumb and mutually exclusive (e.g.
+  `left`/`right` on one d-pad) share one `pointer_id` — `env.py` validates this at load time and treats
+  a simultaneous `left`+`right` action as a no-op (same "malformed action → no-op, not a wire error"
+  principle §7.1 already establishes for LIFT-without-TOUCH).
+- `press_modes`: which of `tap` (DOWN immediately followed by UP) and `hold` (DOWN now, stays down
+  across consecutive `step()`s until the agent releases it) this button accepts. A d-pad direction is
+  `hold`-only; a jump button is often both — a fast tap for a short hop, a longer hold for a variable-
+  height jump (real platformers commonly tie jump height to press duration, which is why `long_jump`
+  needs to be a distinct semantic action rather than just "jump called twice").
+
+Per-step, `env.py` only emits a wire message on a **state transition** (released→held sends DOWN,
+held→released sends UP; an unchanged button emits nothing that step) — most steps in a hold-heavy
+episode (e.g. "running right for 40 frames") cost zero control-socket writes, which both reduces
+traffic and sidesteps §3.1's back-to-back-JSON-coalescing risk for the common case; only genuine
+multi-button transitions within the same step (e.g. release `left`, tap `jump`, in one frame) produce
+the 2+-write pattern that depends on Phase 0 landing first, exactly as Tier 1 already requires.
+
+**`long_jump` as a macro, not a new primitive**: rather than asking the agent to learn "hold `jump` for
+~20 steps then release" through exploration, an integrator who already knows the game's mechanic can
+declare it as a fixed macro in the `ActionMap` — one agent decision (`long_jump`) expands into a
+scripted DOWN-now/auto-hold-for-`hold_duration_frames`/auto-UP sequence that `env.py` executes as an
+atomic multi-frame "macro-step" (intermediate frames aren't offered as separate `step()` calls; their
+reward is summed into the one macro-step's return). This trades away fine-grained agent control over
+exact jump height for a sample-efficiency win, and is opt-in per button — `jump` can keep
+`press_modes: [tap, hold]` as the raw primitive *and* `long_jump` can exist alongside it as a
+convenience macro over the same button, so an integrator can start with the macro for a fast baseline
+and switch to the raw hold-duration primitive later if the agent needs finer control.
+
+Example `ActionMap` for the screenshotted game:
+
+```yaml
+schema_version: 1
+tier: button
+reference_resolution: {width: 1080, height: 2400}
+buttons:
+  left:   {region: {cx: 178,  cy: 823, radius: 90}, pointer_id: 0, press_modes: [hold]}
+  right:  {region: {cx: 497,  cy: 823, radius: 90}, pointer_id: 0, press_modes: [hold]}
+  jump:   {region: {cx: 1802, cy: 823, radius: 90}, pointer_id: 1, press_modes: [tap, hold]}
+  attack: {region: {cx: 1478, cy: 823, radius: 90}, pointer_id: 2, press_modes: [tap]}
+macros:
+  long_jump: {button: jump, mode: hold, hold_duration_frames: 20}
+```
+
+This slots into §7.3's tier list as **Tier 1.5**: reuses Tier 1's wire mechanics and multi-pointer
+capability, but replaces its free/continuous coordinate space with named, pre-calibrated buttons — the
+right default for any game whose controls are a static on-screen gamepad rather than free-form taps.
+A `calibrate_buttons.py` tool (click each button's center + drag its radius on a paused frame, same
+UX pattern as `calibrate_digits.py`, §8.3.3) is worth building alongside it so integrators don't
+hand-measure pixel coordinates.
 
 ## 8. Reward and episode boundaries — a tiered, pluggable signal architecture
 
@@ -373,6 +460,47 @@ class GameAdapter:
 report what they observed, never compute the final scalar reward — that keeps the clipping/scaling
 policy (§8.4) in one place instead of duplicated per adapter.
 
+#### 8.2.1 Multiple named signals per adapter (HUD with several independent counters)
+
+A single `score_signal` is too narrow once a game's HUD has several independent counters worth
+tracking — the screenshotted game alone has a coin count, a key count (2 of 3 collected), a lives
+count, and a level number, and only one of them (coins) should plausibly drive the primary reward.
+Generalize `GameAdapter.score_signal` from one instance to a **named dict**:
+
+```python
+class GameAdapter:
+    signals: dict[str, ScoreSignal]     # e.g. {"coins": ..., "keys": ..., "lives": ..., "level": ...}
+    reward_signal: str                  # key into `signals` that drives §8.5's reward composition
+    terminal_signal: TerminalSignal
+    def reset_episode(self, adb_client) -> None: ...
+```
+
+`env.py` reads every entry in `signals` each step and reports each as `info[name] = {"value": ...,
+"delta": ...}`, but only the one named by `reward_signal` feeds §8.5's reward math — the rest are
+observability/curriculum-shaping data, not silently folded into the scalar reward. This is backward
+compatible with §8.2's single-signal shape (a game with just one counter has a one-entry `signals`
+dict equal to `reward_signal`) and is what makes reading "level" or "keys" for logging/shaping
+possible without inventing a second reward channel per counter.
+
+#### 8.3.6 `IconStateSignal` — counting filled/empty icon pips (vision, same cost tier as §8.3.5)
+
+Neither digit-template matching (§8.3.3) nor OCR (§8.3.4) fits a HUD counter rendered as a **row of
+icons** rather than digits — the screenshotted game's key count is 2 filled key icons + 1 outlined/
+"locked" key icon (2 of 3 collected), and its lives display pairs a digit ("×2") with heart icons
+showing current HP. `IconStateSignal` crops a configured ROI containing a known, fixed number of icon
+slots and classifies each slot filled/empty independently — either by color-threshold (the filled and
+empty variants of a game's icon are almost always different colors/opacity, e.g. red heart vs. grey
+outline) or by `cv2.matchTemplate` against one filled-glyph and one empty-glyph template, whichever is
+more robust for a given icon's art style. The reading is the **count of filled slots**, reported as a
+`Value` (usable directly as a reward-shaping delta, e.g. `+1` per key collected) — no OCR, no digit
+calibration, and — like `HealthBarFillRatioSignal` (§8.3) — naturally low-noise since it's a discrete
+classification per fixed slot rather than a parse. `calibrate_digits.py`'s click-crop UX (§8.3.3)
+extends naturally to capturing one filled/empty template pair per icon type.
+
+A `lives`/HP-pip reading of this kind doubles usefully as a **rule-based terminal signal**: "lives
+count reaches 0" is a cheap, first-class terminal condition an integrator already gets for free once
+`IconStateSignal` is wired for that HUD region — see the `terminal_rule` option in §8.4.
+
 ### 8.3 `ScoreSignal` tiers, in order of preference — pick the cheapest one that works per game
 
 1. **Logcat regex** (`LogcatScoreSignal`) — tail `adb logcat` filtered by a per-game regex, e.g. `Score:\s*(\d+)` or a
@@ -429,6 +557,16 @@ best-fit `ScoreSignal` for this project's stated target genre.
    see the bootstrapping note below) after N consecutive near-zero-Hamming-distance frames, reusing
    the phash stream already sent today. This is a safety net so episodes can't run forever before an
    integrator has captured real terminal templates, not a substitute for a real terminal signal.
+5. **Signal-value rule** (`terminal_rule`, vision, cheap when a §8.2.1 `ScoreSignal` already exists) —
+   a small declarative condition over one of the adapter's own named `signals`, e.g. `{signal: "lives",
+   condition: "== 0"}`, evaluated every step alongside tier 3. For games whose "death" state is exactly
+   "the lives/HP pip row hit zero" (common for the `IconStateSignal`/`HealthBarFillRatioSignal` cases
+   in §8.3.6/§8.3), this needs no captured end-screen template at all and is more precise than
+   template-matching a screen that may vary (different death animations, random background). Use
+   `terminated=True` for this tier (it's reading real game state, not a stall heuristic) — combine with
+   tier 3 rather than replace it where a game has both a reliable lives-pip and a generic "Game Over"
+   screen, since some death paths (instant-kill hazards) may skip straight to the end screen without
+   the pip row ever visibly reaching 0 on a sampled frame.
 
 **`terminated` vs. `truncated` matters for training, not just Gym API compliance**: SB3/most modern
 algorithms bootstrap the value function across a `truncated` boundary (episode cut off by a time/stuck
@@ -486,6 +624,9 @@ Given §8.3–8.4, the concrete v1 set (all already implied by existing infra, n
 5. `HealthBarFillRatioSignal` (§8.3) — cheap, continuous, and the best-fit default for the shooting/
    fighting genre this project's feasibility case (§1.1.5) targets; worth shipping alongside 3–4
    rather than treating as an extension point.
+6. `IconStateSignal` (§8.3.6) — the discrete pip-counting cousin of 5, for HUD counters rendered as
+   icon rows (keys, lives, ammo pips) rather than a continuous bar or a digit string; ships alongside
+   5 for the same reason, and doubles as the cheapest `terminal_rule` (§8.4.5) input once wired.
 
 `LogcatScoreSignal`/`LogcatTerminalSignal` (§8.3.1/§8.4.1) are the cheapest to build and should
 genuinely be tried **first** against a real target game (a `grep` while playing manually costs
@@ -550,9 +691,10 @@ emulator instances are the realistic scaling bottleneck (CPU/RAM), not the socke
    unchanged, pure refactor, easy to review).
 4. `connection.py` (background frame reader) + `env.py` skeleton with **Tier 0 only** (§7.3, single
    pointer, discrete tap grid), grayscale observation, no reward/episode-boundary logic yet
-   (`reward=0`, `terminated=False` always) — get `check_env()` passing first. Tiers 0.1/1/2 stay
-   documented-not-built until Tier 0 is validated end-to-end against a real device; Tier 1
-   additionally can't land before step 1 (Phase 0.1 framing fix) per §7.1.
+   (`reward=0`, `terminated=False` always) — get `check_env()` passing first. Tiers 0.1/1/1.5/2 stay
+   documented-not-built until Tier 0 is validated end-to-end against a real device; Tiers 1 and 1.5
+   additionally can't land before step 1 (Phase 0.1 framing fix) per §7.1, since both routinely need
+   2+ back-to-back control-socket writes in one `step()`.
 5. `adapters/base.py` (`ScoreSignal`/`TerminalSignal`/`GameAdapter`, §8.2) +
    `PHashStuckTerminalSignal`, wire into `reset()`/`step()`.
 6. Manual validation against one real, simple game: **first** `adb logcat | grep -i score` while

@@ -163,6 +163,33 @@ total_length`, all `u64`), then `count` buffers of `[length: u64][width: u64][he
 `opencv_mat`) — not JPEG/PNG. `type` is `1` = `screen_shot` (small, color), `2` =
 `opencv_mat` (larger, grayscale). Channel count per buffer = `length / (width * height)`.
 
+## irobot Gym IDE — action-map editor
+
+`irobot_gym_ide/` is a desktop tool (PySide6) for defining, per game, the named actions an AI
+agent can take — a GUI author for the `ActionMap` schema in
+[`../docs/opengym_implementation_plan.md` §7.4](../docs/opengym_implementation_plan.md#74-tier-15--named-virtual-button-actions-config-driven-gamepad).
+Connects to the same two agent ports as `agent_client.py` (reusing its wire helpers directly, no
+duplicated protocol code), shows the live frame, and lets you click to place touch events, combine
+them into named actions, and test an action against the real device before any training code
+exists. See [`../docs/irobot_gym_ide_design.md`](../docs/irobot_gym_ide_design.md) for the design
+and [`irobot_gym_ide/requirements.txt`](irobot_gym_ide/requirements.txt) /
+[`irobot_gym_ide/examples/`](irobot_gym_ide/examples/) to try it. Reward/score extraction
+(logcat, OCR) is designed (plan §8) but not yet built into this tool.
+
+```bash
+pip install -r irobot_gym_ide/requirements.txt   # once per machine: PySide6, PyYAML, numpy
+tools\irobot_gym_ide.cmd   # Windows
+tools/irobot_gym_ide.sh    # Git Bash / WSL / Linux / macOS
+```
+
+Same resolve-their-own-working-directory launcher pattern as `agent_client.cmd`/`.sh` above — run
+from anywhere. **If you have more than one Python install** (e.g. `py -3` resolves to a different
+interpreter than the `python`/`pip` you ran the install command with), install the requirements
+into whichever interpreter the launcher actually uses (`.cmd` prefers `py -3` when present, same
+as `agent_client.cmd`) — `ModuleNotFoundError: No module named 'PySide6'` at launch means a
+mismatch, not a missing install; run `py -3 -m pip install -r irobot_gym_ide/requirements.txt` to
+fix it.
+
 ## Roadmap
 
 See [`../docs/opengym_implementation_plan.md`](../docs/opengym_implementation_plan.md) for the detailed, phased

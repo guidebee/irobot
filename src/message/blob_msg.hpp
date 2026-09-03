@@ -18,7 +18,15 @@ namespace irobot::message
     {
         BLOB_MSG_TYPE_UNKNOWN = 0,
         BLOB_MSG_TYPE_SCREEN_SHOT = 1,
-        BLOB_MSG_TYPE_OPENCV_MAT = 2
+        BLOB_MSG_TYPE_OPENCV_MAT = 2,
+        // real, undownscaled device resolution -- see AgentManager::SendResolution.
+        // Uses the same [width:u64][height:u64][pixels] buffer framing as the
+        // image types, with a zero-length pixel payload (buffers[0].length == 0).
+        // Exists so an AI-agent client can learn the exact value
+        // CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT's screen_size must match --
+        // PositionMapper.map() on the device side requires an exact match and
+        // silently drops any touch event that doesn't, with no visible error.
+        BLOB_MSG_TYPE_RESOLUTION = 3
     };
 
     struct BlobMessage

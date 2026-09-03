@@ -35,6 +35,13 @@ namespace irobot::agent
         AgentController* agent_controller = nullptr; // (2 threads)
         AgentStream* agent_stream = nullptr;
 
+        // last resolution sent via SendResolution() -- public (not private)
+        // because AgentManager is constructed as an aggregate with designated
+        // initializers (see irobot_core.cpp); a private non-static data member
+        // would make it a non-aggregate and break that construction
+        int last_resolution_width = 0;
+        int last_resolution_height = 0;
+
         bool Init(uint16_t port);
 
         bool Start();
@@ -46,6 +53,12 @@ namespace irobot::agent
         void Join();
 
         void SendOpenCVImage(message::BlobMessageType type, int size, bool color);
+
+        // sends the real, undownscaled device resolution as a
+        // BLOB_MSG_TYPE_RESOLUTION blob (only when it differs from the last
+        // resolution sent, to avoid repeating it every frame -- see
+        // agent_manager.cpp for why this value matters to an agent client)
+        void SendResolution();
 
         ui::EventResult HandleEvent(SDL_Event* event, bool has_screen);
 
