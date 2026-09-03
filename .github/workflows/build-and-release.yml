@@ -8,6 +8,7 @@ on:
     tags: [ "v*.*.*" ]
   pull_request:
     branches: [ "master" ]
+  workflow_dispatch: {}
 
 env:
   # Customize the CMake build type here (Release, Debug, RelWithDebInfo, etc.)
@@ -107,7 +108,7 @@ jobs:
 
   release:
     needs: [ build-ubuntu, build-windows ]
-    if: startsWith(github.ref, 'refs/tags/v')
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -121,6 +122,7 @@ jobs:
     - name: Create release
       uses: softprops/action-gh-release@v2
       with:
+        tag_name: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || format('manual-{0}', github.run_number) }}
         files: |
           artifacts/irobot-linux-x64/irobot-linux-x64.tar.gz
           artifacts/irobot-windows-x64/irobot-windows-x64.zip
