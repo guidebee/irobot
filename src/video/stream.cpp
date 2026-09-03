@@ -226,7 +226,7 @@ namespace irobot::video
     {
         auto* stream = (struct VideoStream*)data;
 
-        AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264);
+        const AVCodec* codec = avcodec_find_decoder(AV_CODEC_ID_H264);
         if (!codec)
         {
             LOGE("H.264 decoder not found");

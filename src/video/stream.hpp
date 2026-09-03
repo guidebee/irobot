@@ -12,6 +12,7 @@ extern "C" {
 
 #include <unistd.h>
 #include <libavformat/avformat.h>
+#include <libavcodec/avcodec.h>
 
 #if defined (__cplusplus)
 }
