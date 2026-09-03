@@ -293,11 +293,31 @@ The `brain` module (`src/ai/brain.cpp`) provides:
 Every frame sent to an agent is paired with an OpenCV PHash (perceptual hash) for cheap frame-change detection — see [
 `tools/README.md`](tools/README.md#perceptual-hash-what-its-for).
 
-### Gym IDE — action-map editor
+### Gym IDE — action-map editor and Game Run editor
 
-[`irobot_gym_ide/`](irobot_gym_ide/README.md) is a desktop tool (PySide6), built on this same API, for defining the
-named actions an AI agent can take in a given game — click to place touch events, combine them into actions, and test
-them against a real device before any training code exists. See [`irobot_gym_ide/README.md`](irobot_gym_ide/README.md).
+[`irobot_gym_ide/`](irobot_gym_ide/README.md) is a desktop tool (PySide6), built on this same API, for two things:
+
+1. **Defining actions** — click to place touch events on the live mirror, combine them into named actions (a tap, a
+   held d-pad direction, a jump-then-move combo), and test each one against a real device before any training or
+   automation code exists.
+2. **Scripting a Game Run** — a node-graph editor (drag Action/Delay/Repeat/Compare/Find-Template nodes onto a canvas
+   and connect them) that lets a human design a sequence of actions — including branches on what's currently on
+   screen, e.g. "if the game-over banner is showing, tap Retry" — then click **Run** to replay that graph against a
+   live device and auto-play the game. See [`irobot_gym_ide/GAME_RUN_EDITOR_GUIDE.md`](irobot_gym_ide/GAME_RUN_EDITOR_GUIDE.md)
+   for the full node reference, and
+   [`irobot_gym_ide/GAME_RUN_AI_ASSIST_DESIGN.md`](irobot_gym_ide/GAME_RUN_AI_ASSIST_DESIGN.md) for an in-progress
+   design adding reusable sub-graphs, position-aware conditions, and AI-assisted authoring of new node sequences.
+
+```bash
+pip install -r irobot_gym_ide/requirements.txt   # PySide6, PyYAML, numpy
+irobot_gym_ide.cmd     # Windows
+./irobot_gym_ide.sh    # Git Bash / WSL / Linux / macOS
+```
+
+It is not itself a game or a training tool — it produces `project.yaml` files, which double as the human-facing
+front end for the action vocabulary `tools/irobot_gym/env.py` (the planned Gym env, see Roadmap below) will
+eventually load. See [`irobot_gym_ide/README.md`](irobot_gym_ide/README.md) for full setup, project layout, and
+testing instructions.
 
 ---
 
