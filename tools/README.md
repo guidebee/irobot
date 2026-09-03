@@ -165,6 +165,9 @@ total_length`, all `u64`), then `count` buffers of `[length: u64][width: u64][he
 
 ## Roadmap
 
+See [`../docs/opengym_implementation_plan.md`](../docs/opengym_implementation_plan.md) for the detailed, phased
+implementation plan.
+
 The near-term goal for this API is a proper **OpenAI Gym / Gymnasium-compatible environment** (`reset()`, `step(action) -> (observation, reward, terminated, truncated,
 info)`, defined action/observation spaces) built on top of these same two sockets, so an RL agent can train against
 Android games directly. `agent_client.py` is the exploratory/manual layer that came first; a `gymnasium.Env` wrapper is

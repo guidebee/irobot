@@ -408,6 +408,10 @@ caused by the old header format.
 
 ## Roadmap
 
+See [`docs/opengym_implementation_plan.md`](docs/opengym_implementation_plan.md) for the detailed, phased
+implementation plan for the Gym/Gymnasium `Env` described below (protocol facts verified against source, package
+layout, build order).
+
 iRobot's AI agent API was originally built with this goal in mind, and the pieces exist today (video + phash streaming,
 touch/keycode injection, event recording) but only as raw sockets plus a manual [reference client](tools/README.md) —
 not yet a drop-in RL environment. The next step is an **OpenAI Gym / Gymnasium-compatible `Env`** on top of the same two
