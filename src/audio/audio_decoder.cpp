@@ -36,8 +36,12 @@ namespace irobot::audio
         // The device always captures/encodes with a fixed format; the
         // config packet (if any) is not needed to decode individual packets
         this->codec_ctx->sample_rate = sample_rate;
+#if LIBAVUTIL_VERSION_MAJOR >= 59
+        av_channel_layout_default(&this->codec_ctx->ch_layout, channels);
+#else
         this->codec_ctx->channels = channels;
         this->codec_ctx->channel_layout = av_get_default_channel_layout(channels);
+#endif
 
         if (avcodec_open2(this->codec_ctx, codec, nullptr) < 0)
         {
@@ -79,16 +83,32 @@ namespace irobot::audio
             return true;
         }
 
+#if LIBAVUTIL_VERSION_MAJOR >= 59
+        AVChannelLayout out_channel_layout;
+        av_channel_layout_default(&out_channel_layout, this->out_channels);
+        int ret = swr_alloc_set_opts2(&this->swr_ctx,
+                                      &out_channel_layout, AUDIO_OUT_SAMPLE_FMT, this->out_sample_rate,
+                                      &this->frame->ch_layout, (AVSampleFormat)this->frame->format,
+                                      this->frame->sample_rate,
+                                      0, nullptr);
+        av_channel_layout_uninit(&out_channel_layout);
+        if (ret < 0)
+        {
+            LOGE("Could not configure audio resampler");
+            swr_free(&this->swr_ctx);
+            return false;
+        }
+#else
         int64_t in_channel_layout = this->frame->channel_layout
                                         ? (int64_t)this->frame->channel_layout
                                         : av_get_default_channel_layout(this->frame->channels);
         int64_t out_channel_layout = av_get_default_channel_layout(this->out_channels);
-
         this->swr_ctx = swr_alloc_set_opts(nullptr,
                                            out_channel_layout, AUDIO_OUT_SAMPLE_FMT, this->out_sample_rate,
                                            in_channel_layout, (AVSampleFormat)this->frame->format,
                                            this->frame->sample_rate,
                                            0, nullptr);
+#endif
         if (!this->swr_ctx || swr_init(this->swr_ctx) < 0)
         {
             LOGE("Could not initialize audio resampler");
