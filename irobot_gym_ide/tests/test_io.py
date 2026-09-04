@@ -39,6 +39,35 @@ class ProjectIoTest(unittest.TestCase):
         self.assertEqual([e.kind for e in events], [EventKind.PRESS, EventKind.WAIT, EventKind.RELEASE])
         self.assertEqual(events[1].frames, 20)
 
+    def test_save_splits_into_section_files(self):
+        project = Project(name="game")
+        project.add_action(Action(name="jump", events=[PrimitiveEvent(kind=EventKind.TAP, x=1, y=1)]))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "project.yaml"
+            project_io.save_project(project, path)
+            for filename in ("project.yaml", "actions.yaml", "templates.yaml", "hud.yaml", "runs.yaml"):
+                self.assertTrue((Path(tmp) / filename).is_file(), f"missing {filename}")
+
+    def test_migrate_legacy_project(self):
+        project = Project(name="legacy_game")
+        project.add_action(Action(name="jump", events=[PrimitiveEvent(kind=EventKind.TAP, x=1, y=1)]))
+
+        with tempfile.TemporaryDirectory() as tmp:
+            old_path = Path(tmp) / "legacy_game.yaml"
+            with open(old_path, "w", encoding="utf-8") as f:
+                import yaml
+                yaml.safe_dump(project.to_dict(), f, sort_keys=False)
+
+            new_dir = Path(tmp) / "legacy_game"
+            new_path = project_io.migrate_legacy_project(old_path, new_dir)
+
+            self.assertEqual(new_path, new_dir / "project.yaml")
+            self.assertTrue((new_dir / "actions.yaml").is_file())
+            restored = project_io.load_project(new_path)
+            self.assertEqual(restored.name, "legacy_game")
+            self.assertEqual(list(restored.actions), ["jump"])
+
 
 @unittest.skipUnless(HAVE_YAML, "PyYAML not installed")
 class SessionIoTest(unittest.TestCase):

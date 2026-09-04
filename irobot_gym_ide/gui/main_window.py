@@ -150,6 +150,7 @@ class MainWindow(QMainWindow):
 
         form = QFormLayout()
         self._name_edit = QLineEdit(self.project.name)
+        self._description_edit = QLineEdit(self.project.description)
         self._package_edit = QLineEdit(self.project.package)
         self._serial_edit = QLineEdit(self.project.serial)
         self._host_edit = QLineEdit(self.project.host)
@@ -157,13 +158,14 @@ class MainWindow(QMainWindow):
         self._ref_w_spin = QSpinBox(); self._ref_w_spin.setRange(0, 10000); self._ref_w_spin.setValue(self.project.reference_width)
         self._ref_h_spin = QSpinBox(); self._ref_h_spin.setRange(0, 10000); self._ref_h_spin.setValue(self.project.reference_height)
         form.addRow("Name", self._name_edit)
+        form.addRow("Description", self._description_edit)
         form.addRow("Package", self._package_edit)
         form.addRow("Device serial", self._serial_edit)
         form.addRow("Host", self._host_edit)
         form.addRow("Port", self._port_spin)
         form.addRow("Reference width", self._ref_w_spin)
         form.addRow("Reference height", self._ref_h_spin)
-        for w in (self._name_edit, self._package_edit, self._serial_edit, self._host_edit):
+        for w in (self._name_edit, self._description_edit, self._package_edit, self._serial_edit, self._host_edit):
             w.editingFinished.connect(self._sync_project_fields)
         for w in (self._port_spin, self._ref_w_spin, self._ref_h_spin):
             w.valueChanged.connect(self._sync_project_fields)
@@ -312,6 +314,7 @@ class MainWindow(QMainWindow):
         if self._loading_fields:
             return
         self.project.name = self._name_edit.text()
+        self.project.description = self._description_edit.text()
         self.project.package = self._package_edit.text()
         self.project.serial = self._serial_edit.text()
         self.project.host = self._host_edit.text()
@@ -324,6 +327,7 @@ class MainWindow(QMainWindow):
         self._loading_fields = True
         try:
             self._name_edit.setText(self.project.name)
+            self._description_edit.setText(self.project.description)
             self._package_edit.setText(self.project.package)
             self._serial_edit.setText(self.project.serial)
             self._host_edit.setText(self.project.host)
@@ -355,9 +359,10 @@ class MainWindow(QMainWindow):
         self._run_editor.set_run(None)
 
     def _open_project(self) -> None:
-        path, _ = QFileDialog.getOpenFileName(self, "Open Project", "", "YAML (*.yaml *.yml)")
-        if not path:
+        project_dir = QFileDialog.getExistingDirectory(self, "Open Project (select its folder)")
+        if not project_dir:
             return
+        path = str(Path(project_dir) / project_io.PROJECT_FILENAME)
         try:
             self.project = project_io.load_project(path)
         except Exception as e:  # noqa: BLE001 -- surfaced to the user, not swallowed
@@ -384,14 +389,16 @@ class MainWindow(QMainWindow):
         if self.project_path is None:
             self._save_project_as()
             return
+        self.project.updated_at = datetime.now(timezone.utc).isoformat()
         project_io.save_project(self.project, self.project_path)
         self._log_line(f"Saved {self.project_path}")
 
     def _save_project_as(self) -> None:
-        path, _ = QFileDialog.getSaveFileName(self, "Save Project As", f"{self.project.name}.yaml", "YAML (*.yaml)")
-        if not path:
+        project_dir = QFileDialog.getExistingDirectory(self, "Save Project As (select or create a folder)")
+        if not project_dir:
             return
-        self.project_path = Path(path)
+        self.project_path = Path(project_dir) / project_io.PROJECT_FILENAME
+        self.project.updated_at = datetime.now(timezone.utc).isoformat()
         project_io.save_project(self.project, self.project_path)
         self._refresh_session_list()
         self._log_line(f"Saved {self.project_path}")

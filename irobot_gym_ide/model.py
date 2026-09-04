@@ -26,7 +26,9 @@ from __future__ import annotations
 
 import base64
 import copy
+import uuid
 from dataclasses import dataclass, field
+from datetime import datetime, timezone
 from enum import Enum
 from typing import Optional
 
@@ -730,6 +732,10 @@ class GameRun:
 @dataclass
 class Project:
     name: str
+    id: str = field(default_factory=lambda: uuid.uuid4().hex)
+    description: str = ""
+    created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
+    updated_at: str = ""
     package: str = ""
     activity: str = ""
     serial: str = ""
@@ -776,7 +782,11 @@ class Project:
     def to_dict(self) -> dict:
         return {
             "schema_version": 1,
+            "id": self.id,
             "name": self.name,
+            "description": self.description,
+            "created_at": self.created_at,
+            "updated_at": self.updated_at,
             "package": self.package,
             "activity": self.activity,
             "serial": self.serial,
@@ -795,6 +805,10 @@ class Project:
         res = d.get("reference_resolution", {})
         p = Project(
             name=d["name"],
+            id=d.get("id") or uuid.uuid4().hex,
+            description=d.get("description", ""),
+            created_at=d.get("created_at") or datetime.now(timezone.utc).isoformat(),
+            updated_at=d.get("updated_at", ""),
             package=d.get("package", ""),
             activity=d.get("activity", ""),
             serial=d.get("serial", ""),

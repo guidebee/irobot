@@ -1,0 +1,14 @@
+schema_version: 1
+id: ad7c672912394809a1952433f99a2ca9
+name: warships
+description: ''
+created_at: '2026-09-04T10:35:20.612807+00:00'
+updated_at: ''
+package: ''
+activity: ''
+serial: ''
+host: 127.0.0.1
+port: 27183
+reference_resolution:
+  width: 2670
+  height: 1200

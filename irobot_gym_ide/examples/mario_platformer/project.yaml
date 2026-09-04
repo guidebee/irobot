@@ -1,0 +1,14 @@
+schema_version: 1
+id: ce9402b9c96d4cecb92648a8c509a23e
+name: mario_platformer_example
+description: ''
+created_at: '2026-09-04T10:35:20.553600+00:00'
+updated_at: ''
+package: ''
+activity: ''
+serial: ''
+host: 127.0.0.1
+port: 27183
+reference_resolution:
+  width: 2670
+  height: 1200

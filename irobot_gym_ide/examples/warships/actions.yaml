@@ -1,13 +1,3 @@
-schema_version: 1
-name: warships
-package: ''
-activity: ''
-serial: ''
-host: 127.0.0.1
-port: 27183
-reference_resolution:
-  width: 2670
-  height: 1200
 actions:
 - name: up
   description: recorded from 1 real device touch(es)
@@ -513,4 +503,3 @@ actions:
   - kind: tap
     x: 1313
     y: 1056
-runs: []

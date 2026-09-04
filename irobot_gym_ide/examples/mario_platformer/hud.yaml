@@ -1,0 +1,26 @@
+hud_regions:
+- name: left_button
+  x: 117
+  y: 950
+  width: 253
+  height: 203
+  action_name: ''
+- name: right_button
+  x: 534
+  y: 947
+  width: 267
+  height: 203
+  action_name: ''
+- name: fire_button
+  x: 1856
+  y: 967
+  width: 233
+  height: 190
+  action_name: ''
+- name: jump_button
+  x: 2270
+  y: 960
+  width: 270
+  height: 210
+  action_name: ''
+hud_region_combos: []

@@ -102,7 +102,8 @@ The left panel's **Gameplay Sessions** section records a whole playthrough as on
 recording into a single named `Action`. Click **Record Gameplay Session** (same `adb shell getevent`
 capture as "Record from Device", so it needs the project saved first and the device reachable over
 adb), play through the game for as long as you like, click **Stop Recording Session**, and name it.
-The session is saved to `recordings/<name>.session.yaml`, next to `project.yaml` (see `model.py`'s
+The session is saved to `recordings/<name>.session.yaml`, inside the project's own directory next
+to `project.yaml` (see `model.py`'s
 `GameplaySession`/`SessionSegment` and `io.py`'s `save_session`/`load_session`/`list_sessions`) --
 kept out of `project.yaml` itself since a raw session's event list can be large and isn't part of
 the `ActionMap`-shaped authoring schema `env.py` will load.
@@ -179,12 +180,31 @@ irobot_gym_ide/
 ├── session_replay.py        # replays a GameplaySession (raw events, or its classified segments)
 ├── hud_classifier.py         # classifies a session's gestures against HudRegions -> SessionSegments
 ├── device_recorder.py          # adb shell getevent -> named actions / raw gameplay sessions
-├── io.py                        # project.yaml + gameplay session (recordings/*.session.yaml) load/save
+├── io.py                        # project directory (project/actions/templates/hud/runs.yaml)
+│                                    + gameplay session (recordings/*.session.yaml) load/save
 ├── _agent_client.py             # bundled copy of tools/agent_client.py's wire helpers
 ├── gui/                          # PySide6 widgets (canvas, inspector, run_editor, main window)
-├── examples/                      # sample project.yaml files
+├── examples/                      # sample projects, one directory per game
 └── tests/                          # pure-Python model tests
 ```
+
+Each project is its own directory (open it by picking that folder), split into section files so
+large blobs (template pixels) and independently-edited concerns don't all churn on every save:
+
+```text
+examples/mario_platformer/
+├── project.yaml     # meta + connection: schema_version, id, name, description,
+│                       timestamps, package/activity/serial, host, port, reference_resolution
+├── actions.yaml
+├── templates.yaml
+├── hud.yaml           # hud_regions + hud_region_combos
+├── runs.yaml
+└── recordings/          # this project's gameplay sessions, scoped to it (not shared)
+```
+
+`io.py`'s `save_project`/`load_project` still take the `project.yaml` path (its directory is the
+project directory); `migrate_legacy_project()` converts an old single-file `<name>.yaml` project
+into this layout.
 
 ## Roadmap
 
