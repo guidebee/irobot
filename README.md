@@ -161,7 +161,6 @@ turning raw device input into a reusable, testable action vocabulary — no trai
    or a whole playthrough as a gameplay session, and classify it against HUD regions into named actions
    automatically.
 
-![irobot_agent](https://github.com/guidebee/irobot/blob/master/docs/irobot_agent.png)
 
 ```bash
 pip install -r irobot_gym_ide/requirements.txt   # PySide6, PyYAML, numpy
@@ -213,6 +212,8 @@ This is exploratory direction, not a committed timeline. Feasibility notes for l
 ---
 
 ## Screen mirroring and manual control
+
+![irobot_agent](https://github.com/guidebee/irobot/blob/master/docs/irobot_agent.png)
 
 Because iRobot is built on scrcpy, everything below the agent layer also works as a standalone mirroring and
 remote-control tool — useful on its own, and for driving a device by hand while building or debugging an agent.
