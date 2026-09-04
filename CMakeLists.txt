@@ -8,7 +8,7 @@ if (DEFINED ENV{VCPKG_DEFAULT_TRIPLET})
     set(VCPKG_TARGET_TRIPLET $ENV{VCPKG_DEFAULT_TRIPLET} CACHE STRING "" FORCE)
 endif ()
 
-project(Android_iRobot VERSION 1.0.0 DESCRIPTION "Android iRobot Agent"
+project(Android_iRobot VERSION 1.0.1 DESCRIPTION "Android iRobot Agent"
         LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 23)
