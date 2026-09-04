@@ -100,7 +100,7 @@ jobs:
         mkdir -p package/irobot-windows-x64
         cp build/apps/irobot.exe package/irobot-windows-x64/
         cp -r server package/irobot-windows-x64/
-        cd package && 7z a -tzip ../irobot-windows-x64.zip irobot-windows-x64
+        cd package && cmake -E tar cf ../irobot-windows-x64.zip --format=zip irobot-windows-x64
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
