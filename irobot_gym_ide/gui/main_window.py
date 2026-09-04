@@ -22,7 +22,7 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
-from PySide6.QtCore import QObject, QTimer, Signal
+from PySide6.QtCore import QObject, QSettings, QTimer, Signal
 from PySide6.QtWidgets import (
     QMainWindow, QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QListWidgetItem, QLineEdit, QSpinBox, QPushButton, QLabel, QScrollArea,
@@ -69,6 +69,8 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("irobot Gym IDE")
         self.resize(1400, 900)
 
+        self._settings = QSettings("irobot", "GymIDE")
+
         self.project = Project(name="untitled")
         self.project_path: Path | None = None
         self.connection: LiveConnection | None = None
@@ -106,6 +108,7 @@ class MainWindow(QMainWindow):
 
         self._build_ui()
         self._refresh_action_list()
+        self._maybe_open_last_project()
 
         self._poll_timer = QTimer(self)
         self._poll_timer.timeout.connect(self._poll_frame)
@@ -300,6 +303,8 @@ class MainWindow(QMainWindow):
         menu = self.menuBar().addMenu("&File")
         menu.addAction("New Project", self._new_project)
         menu.addAction("Open Project...", self._open_project)
+        self._recent_menu = menu.addMenu("Recent Projects")
+        self._update_recent_menu()
         menu.addAction("Save Project", self._save_project)
         menu.addAction("Save Project As...", self._save_project_as)
 
@@ -363,11 +368,14 @@ class MainWindow(QMainWindow):
         if not project_dir:
             return
         path = str(Path(project_dir) / project_io.PROJECT_FILENAME)
+        self._load_project_from_path(path)
+
+    def _load_project_from_path(self, path: str) -> bool:
         try:
             self.project = project_io.load_project(path)
         except Exception as e:  # noqa: BLE001 -- surfaced to the user, not swallowed
             QMessageBox.critical(self, "Open failed", str(e))
-            return
+            return False
         self.project_path = Path(path)
         self._selected_run = None
         self._selected_template = None
@@ -384,6 +392,8 @@ class MainWindow(QMainWindow):
         self._run_editor.set_run(None)
         self._log_line(f"Opened {path}")
         self._warn_pointer_conflicts()
+        self._add_recent_project(path)
+        return True
 
     def _save_project(self) -> None:
         if self.project_path is None:
@@ -402,6 +412,59 @@ class MainWindow(QMainWindow):
         project_io.save_project(self.project, self.project_path)
         self._refresh_session_list()
         self._log_line(f"Saved {self.project_path}")
+        self._add_recent_project(str(self.project_path))
+
+    # -- recent projects --------------------------------------------------------
+
+    _MAX_RECENT_PROJECTS = 10
+
+    def _recent_projects(self) -> list[str]:
+        value = self._settings.value("recent_projects", [])
+        if not value:
+            return []
+        # QSettings collapses a single-element string list back to a bare str
+        # on some platforms/backends -- normalize so callers always get a list.
+        if isinstance(value, str):
+            return [value]
+        return list(value)
+
+    def _add_recent_project(self, path: str) -> None:
+        paths = [p for p in self._recent_projects() if p != path]
+        paths.insert(0, path)
+        paths = paths[: self._MAX_RECENT_PROJECTS]
+        self._settings.setValue("recent_projects", paths)
+        self._settings.setValue("last_project", path)
+        self._update_recent_menu()
+
+    def _update_recent_menu(self) -> None:
+        self._recent_menu.clear()
+        paths = self._recent_projects()
+        if not paths:
+            action = self._recent_menu.addAction("(none)")
+            action.setEnabled(False)
+            return
+        for path in paths:
+            self._recent_menu.addAction(path, lambda checked=False, p=path: self._open_recent_project(p))
+        self._recent_menu.addSeparator()
+        self._recent_menu.addAction("Clear Recent Projects", self._clear_recent_projects)
+
+    def _open_recent_project(self, path: str) -> None:
+        if not Path(path).exists():
+            QMessageBox.warning(self, "Open failed", f"{path} no longer exists.")
+            self._settings.setValue("recent_projects", [p for p in self._recent_projects() if p != path])
+            self._update_recent_menu()
+            return
+        self._load_project_from_path(path)
+
+    def _clear_recent_projects(self) -> None:
+        self._settings.setValue("recent_projects", [])
+        self._update_recent_menu()
+
+    def _maybe_open_last_project(self) -> None:
+        last = self._settings.value("last_project", "")
+        if not last or not Path(last).exists():
+            return
+        self._load_project_from_path(last)
 
     # -- actions --------------------------------------------------------
 
