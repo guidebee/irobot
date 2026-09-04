@@ -97,204 +97,143 @@ namespace irobot::message
 
     std::string ControlMessage::JsonSerialize()
     {
-        char buffer[2 * CONTROL_MSG_SERIALIZED_MAX_SIZE];
-        char temp[256];
-        strcpy(buffer, "{\n");
-        sprintf(temp, R"(    "event_time" : ")");
-        strcat(buffer, temp);
+        using nlohmann::json;
+        json j;
+
+        // event_time is "YYYY-MM-DD HH:MM:SS.mmm" -- tools/agent_client.py
+        // parses it with strptime("%Y-%m-%d %H:%M:%S.%f"), so the format must
+        // be kept exactly as-is
         timeval tm_now{};
-        int milli_seconds;
         gettimeofday(&tm_now, nullptr);
-        milli_seconds = (int)lrint(tm_now.tv_usec / 1000.0); // Round to nearest milli seconds
+        int milli_seconds = (int)lrint(tm_now.tv_usec / 1000.0); // round to nearest millisecond
         if (milli_seconds >= 1000)
         {
-            // Allow for rounding up to nearest second
+            // allow for rounding up to nearest second
             milli_seconds -= 1000;
             tm_now.tv_sec++;
         }
         struct tm* t = localtime(reinterpret_cast<const time_t*>(&tm_now.tv_sec));
-        strftime(temp, sizeof(temp) - 1, "%Y-%m-%d %H:%M:%S", t);
-        strcat(buffer, temp);
-        strcat(buffer, ".");
-        sprintf(temp, "%03d", milli_seconds);
-        strcat(buffer, temp);
-        strcat(buffer, "\",\n");
+        char ts_buf[32];
+        strftime(ts_buf, sizeof(ts_buf), "%Y-%m-%d %H:%M:%S", t);
+        // milli_seconds is always in [0, 999) at this point (clamped above);
+        // the unsigned cast + wider buffer just keep -Wformat-truncation
+        // happy, since it can't see that invariant statically
+        char event_time[64];
+        snprintf(event_time, sizeof(event_time), "%s.%03u", ts_buf, (unsigned)milli_seconds);
+        j["event_time"] = event_time;
 
+        // text fields below come straight from JsonDeserialize() (network- or
+        // clipboard-derived, unbounded in length) -- building the payload
+        // through nlohmann::json rather than sprintf/strcat into fixed
+        // buffers means there is no buffer to overflow, and strings are
+        // escaped correctly for free
         switch (this->type)
         {
         case CONTROL_MSG_TYPE_INJECT_KEYCODE:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_INJECT_KEYCODE");
-                strcat(buffer, temp);
-                sprintf(temp, "    \"key_code\" : {\n");
-                strcat(buffer, temp);
-                sprintf(temp, "        \"action\" : %d,\n", this->inject_keycode.action);
-                strcat(buffer, temp);
-                sprintf(temp, "        \"key_code\" : %d,\n", this->inject_keycode.keycode);
-                strcat(buffer, temp);
-                sprintf(temp, "        \"meta_state\" : %d\n", this->inject_keycode.metastate);
-                strcat(buffer, temp);
-                strcat(buffer, "    }\n");
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_INJECT_KEYCODE";
+            j["key_code"] = {
+                {"action", (int)this->inject_keycode.action},
+                {"key_code", (int)this->inject_keycode.keycode},
+                {"meta_state", (int)this->inject_keycode.metastate},
+            };
             break;
         case CONTROL_MSG_TYPE_INJECT_TEXT:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_INJECT_TEXT");
-                strcat(buffer, temp);
-                sprintf(temp, "    \"inject_text\" : {\n");
-                strcat(buffer, temp);
-                sprintf(temp, "        \"text\" : \"%s\"\n", this->inject_text.text);
-                strcat(buffer, temp);
-                strcat(buffer, "    }\n");
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_INJECT_TEXT";
+            j["inject_text"] = {
+                {"text", this->inject_text.text ? std::string(this->inject_text.text) : std::string()},
+            };
             break;
         case CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\"\n", "CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL");
-                strcat(buffer, temp);
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_EXPAND_NOTIFICATION_PANEL";
             break;
         case CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\"\n", "CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL");
-                strcat(buffer, temp);
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_COLLAPSE_NOTIFICATION_PANEL";
             break;
         case CONTROL_MSG_TYPE_ROTATE_DEVICE:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\"\n", "CONTROL_MSG_TYPE_ROTATE_DEVICE");
-                strcat(buffer, temp);
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_ROTATE_DEVICE";
             break;
         case CONTROL_MSG_TYPE_START_RECORDING:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\"\n", "CONTROL_MSG_TYPE_START_RECORDING");
-                strcat(buffer, temp);
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_START_RECORDING";
             break;
         case CONTROL_MSG_TYPE_END_RECORDING:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\"\n", "CONTROL_MSG_TYPE_END_RECORDING");
-                strcat(buffer, temp);
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_END_RECORDING";
             break;
         case CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON");
-                strcat(buffer, temp);
-                sprintf(temp, "    \"action\" : %d\n", this->back_or_screen_on.action);
-                strcat(buffer, temp);
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON";
+            j["action"] = (int)this->back_or_screen_on.action;
             break;
         case CONTROL_MSG_TYPE_GET_CLIPBOARD:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_GET_CLIPBOARD");
-                strcat(buffer, temp);
-                sprintf(temp, "    \"copy_key\" : %d\n", this->get_clipboard.copy_key);
-                strcat(buffer, temp);
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_GET_CLIPBOARD";
+            j["copy_key"] = (int)this->get_clipboard.copy_key;
             break;
         case CONTROL_MSG_TYPE_SET_CLIPBOARD:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_SET_CLIPBOARD");
-                strcat(buffer, temp);
-                sprintf(temp, "    \"set_clipboard\" : {\n");
-                strcat(buffer, temp);
-                sprintf(temp, "        \"text\" : \"%s\"\n", this->set_clipboard.text);
-                strcat(buffer, temp);
-                strcat(buffer, "    }\n");
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_SET_CLIPBOARD";
+            j["set_clipboard"] = {
+                {"text", this->set_clipboard.text ? std::string(this->set_clipboard.text) : std::string()},
+            };
             break;
         case CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE");
-                strcat(buffer, temp);
-                sprintf(temp, "    \"mode\" : %d\n", this->set_screen_power_mode.mode);
-                strcat(buffer, temp);
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE";
+            j["mode"] = (int)this->set_screen_power_mode.mode;
             break;
-
         case CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT");
-                strcat(buffer, temp);
-                sprintf(temp, "    \"touch_event\" : {\n");
-                strcat(buffer, temp);
-                sprintf(temp, "        \"action\" : %d,\n", this->inject_touch_event.action);
-                strcat(buffer, temp);
-                sprintf(temp, "        \"buttons\" : %d,\n", this->inject_touch_event.buttons);
-                strcat(buffer, temp);
-                sprintf(temp, "        \"pointer\" : %lld,\n", this->inject_touch_event.pointer_id);
-                strcat(buffer, temp);
-                sprintf(temp, "        \"pressure\" : %f,\n", this->inject_touch_event.pressure);
-                strcat(buffer, temp);
-                sprintf(temp, "        \"position\" : {\n");
-                strcat(buffer, temp);
-                sprintf(temp, "            \"screen_size\" : {\n");
-                strcat(buffer, temp);
-                sprintf(temp, "                \"width\" : %d,\n",
-                        this->inject_touch_event.position.screen_size.width);
-                strcat(buffer, temp);
-                sprintf(temp, "                \"height\" : %d\n",
-                        this->inject_touch_event.position.screen_size.height);
-                strcat(buffer, temp);
-                strcat(buffer, "            },\n");
-                sprintf(temp, "            \"point\" : {\n");
-                strcat(buffer, temp);
-                sprintf(temp, "                \"x\" : %d,\n", this->inject_touch_event.position.point.x);
-                strcat(buffer, temp);
-                sprintf(temp, "                \"y\" : %d\n", this->inject_touch_event.position.point.y);
-                strcat(buffer, temp);
-
-                strcat(buffer, "            }\n");
-                strcat(buffer, "        }\n");
-                strcat(buffer, "    }\n");
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT";
+            j["touch_event"] = {
+                {"action", (int)this->inject_touch_event.action},
+                {"buttons", (int)this->inject_touch_event.buttons},
+                {"pointer", (long long)this->inject_touch_event.pointer_id},
+                {"pressure", this->inject_touch_event.pressure},
+                {
+                    "position", {
+                        {
+                            "screen_size", {
+                                {"width", this->inject_touch_event.position.screen_size.width},
+                                {"height", this->inject_touch_event.position.screen_size.height},
+                            }
+                        },
+                        {
+                            "point", {
+                                {"x", this->inject_touch_event.position.point.x},
+                                {"y", this->inject_touch_event.position.point.y},
+                            }
+                        },
+                    }
+                },
+            };
             break;
         case CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT:
-            {
-                sprintf(temp, "    \"msg_type\" : \"%s\",\n", "CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT");
-                strcat(buffer, temp);
-                sprintf(temp, "    \"scroll_event\" : {\n");
-                strcat(buffer, temp);
-                sprintf(temp, "        \"h_scroll\" : %d,\n", this->inject_scroll_event.hscroll);
-                strcat(buffer, temp);
-                sprintf(temp, "        \"v_scroll\" : %d,\n", this->inject_scroll_event.vscroll);
-                strcat(buffer, temp);
-                sprintf(temp, "        \"position\" : {\n");
-                strcat(buffer, temp);
-                sprintf(temp, "            \"screen_size\" : {\n");
-                strcat(buffer, temp);
-                sprintf(temp, "                \"width\" : %d,\n",
-                        this->inject_scroll_event.position.screen_size.width);
-                strcat(buffer, temp);
-                sprintf(temp, "                \"height\" : %d\n",
-                        this->inject_scroll_event.position.screen_size.height);
-                strcat(buffer, temp);
-                strcat(buffer, "            },\n");
-                sprintf(temp, "            \"point\" : {\n");
-                strcat(buffer, temp);
-                sprintf(temp, "                \"x\" : %d,\n", this->inject_scroll_event.position.point.x);
-                strcat(buffer, temp);
-                sprintf(temp, "                \"y\" : %d\n", this->inject_scroll_event.position.point.y);
-                strcat(buffer, temp);
-
-                strcat(buffer, "            }\n");
-                strcat(buffer, "        }\n");
-                strcat(buffer, "    }\n");
-            }
+            j["msg_type"] = "CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT";
+            j["scroll_event"] = {
+                {"h_scroll", this->inject_scroll_event.hscroll},
+                {"v_scroll", this->inject_scroll_event.vscroll},
+                {
+                    "position", {
+                        {
+                            "screen_size", {
+                                {"width", this->inject_scroll_event.position.screen_size.width},
+                                {"height", this->inject_scroll_event.position.screen_size.height},
+                            }
+                        },
+                        {
+                            "point", {
+                                {"x", this->inject_scroll_event.position.point.x},
+                                {"y", this->inject_scroll_event.position.point.y},
+                            }
+                        },
+                    }
+                },
+            };
             break;
         default:
             // always emit a msg_type, even for types with no dedicated
             // case above (including CONTROL_MSG_TYPE_UNKNOWN itself):
             // JsonDeserialize() requires the key to be present, and a
             // record missing it entirely would crash on replay
-            sprintf(temp, "    \"msg_type\" : \"%s\"\n", "CONTROL_MSG_TYPE_UNKNOWN");
-            strcat(buffer, temp);
+            j["msg_type"] = "CONTROL_MSG_TYPE_UNKNOWN";
             break;
         }
-        strcat(buffer, "}");
-        return buffer;
+
+        return j.dump(4);
     }
 
     size_t ControlMessage::JsonDeserialize(const unsigned char* buf, size_t len)
@@ -392,7 +331,11 @@ namespace irobot::message
                         if (inject_text != nullptr)
                         {
                             std::string message = inject_text["text"];
-                            int clipboard_len = message.length();
+                            // clamp to the same bound the binary wire format
+                            // enforces (WriteString()/CONTROL_MSG_TEXT_MAX_LENGTH)
+                            // -- JSON input has no length limit otherwise
+                            size_t clipboard_len = util::utf8_truncation_index(
+                                message.c_str(), CONTROL_MSG_TEXT_MAX_LENGTH);
                             char* text = (char*)SDL_malloc(clipboard_len + 1);
                             message.copy(text, clipboard_len);
                             text[clipboard_len] = '\0';
@@ -460,7 +403,11 @@ namespace irobot::message
                     {
                         auto set_clipboard = j.value("set_clipboard", json::object());
                         std::string message = set_clipboard.value("text", std::string());
-                        int text_len = message.length();
+                        // clamp to the same bound the binary wire format
+                        // enforces (WriteString()/CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH)
+                        // -- JSON input has no length limit otherwise
+                        size_t text_len = util::utf8_truncation_index(
+                            message.c_str(), CONTROL_MSG_CLIPBOARD_TEXT_MAX_LENGTH);
                         char* text = (char*)SDL_malloc(text_len + 1);
                         message.copy(text, text_len);
                         text[text_len] = '\0';

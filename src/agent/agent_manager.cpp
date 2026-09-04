@@ -129,20 +129,25 @@ namespace irobot::agent
     {
         LOGI("Start event recording...");
         this->fp_events = SDL_RWFromFile(EVENT_FILE_NAME, "w");
-        std::string json_str = "[\n";
-        char cstr[json_str.size() + 1];
-        strcpy(cstr, json_str.c_str());
-        SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
+        if (!this->fp_events)
+        {
+            LOGW("Could not open " EVENT_FILE_NAME " for event recording");
+            return;
+        }
+        static const char json_str[] = "[\n";
+        SDL_RWwrite(this->fp_events, json_str, sizeof(json_str) - 1, 1);
     }
 
     void AgentManager::StopRecordEvents()
     {
         LOGI("stop event recording...");
-        std::string json_str =
+        if (!this->fp_events)
+        {
+            return;
+        }
+        static const char json_str[] =
             "{\"event_time\": \"2020-12-12 20:20:20.200\",\n\"msg_type\": \"CONTROL_MSG_TYPE_UNKNOWN\"\n}\n]";
-        char cstr[json_str.size() + 1];
-        strcpy(cstr, json_str.c_str());
-        SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
+        SDL_RWwrite(this->fp_events, json_str, sizeof(json_str) - 1, 1);
         SDL_RWclose(this->fp_events);
         this->fp_events = nullptr;
     }
@@ -362,9 +367,7 @@ namespace irobot::agent
         {
             auto json_str = ((message::ControlMessage*)msg)->JsonSerialize();
             json_str += ",\n";
-            char cstr[json_str.size() + 1];
-            strcpy(cstr, json_str.c_str());
-            SDL_RWwrite(this->fp_events, cstr, strlen(cstr), 1);
+            SDL_RWwrite(this->fp_events, json_str.data(), json_str.size(), 1);
         }
         return this->controller->PushMessage(msg);
     }

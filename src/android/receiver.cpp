@@ -90,7 +90,9 @@ namespace irobot::android
         for (;;)
         {
             assert(head < DEVICE_MSG_SERIALIZED_MAX_SIZE);
-            ssize_t r = platform::net_recv(receiver->control_socket, buf,
+            // read after the leftover partial-message bytes from the
+            // previous iteration, not over them
+            ssize_t r = platform::net_recv(receiver->control_socket, buf + head,
                                            DEVICE_MSG_SERIALIZED_MAX_SIZE - head);
             if (r <= 0)
             {
@@ -98,19 +100,20 @@ namespace irobot::android
                 break;
             }
 
-            ssize_t consumed = ProcessMessages(buf, r);
+            size_t total = head + r;
+            ssize_t consumed = ProcessMessages(buf, total);
             if (consumed == -1)
             {
                 // an error occurred
                 break;
             }
 
-            if (consumed)
+            if (consumed > 0 && (size_t)consumed < total)
             {
                 // shift the remaining data in the buffer
-                memmove(buf, &buf[consumed], r - consumed);
-                head = r - consumed;
+                memmove(buf, &buf[consumed], total - consumed);
             }
+            head = total - consumed;
         }
 
         return 0;

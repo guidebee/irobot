@@ -6,6 +6,7 @@
 #include "controller.hpp"
 
 #include <cassert>
+#include <cstring>
 
 #include "util/lock.hpp"
 #include "util/log.hpp"
@@ -50,14 +51,61 @@ namespace irobot
     bool Controller::PushMessage(
         const message::ControlMessage* msg)
     {
+        // ControlMessage's INJECT_TEXT/SET_CLIPBOARD variants own a heap
+        // string (freed by Destroy()). cbuf_push() below copies the struct
+        // by value into this->queue, but the caller (AgentController's
+        // reader thread, for agent-forwarded messages) destroys its own
+        // *msg right after this call returns -- a shallow copy would leave
+        // the queued copy holding an already-freed pointer, which becomes a
+        // use-after-free when this queue is later serialized, and a
+        // double-free when the queued copy is Destroy()'d in turn. Deep-copy
+        // the owned string here so the queued copy has its own independent
+        // allocation.
+        message::ControlMessage copy = *msg;
+        switch (copy.type)
+        {
+        case message::CONTROL_MSG_TYPE_INJECT_TEXT:
+            if (msg->inject_text.text)
+            {
+                size_t len = strlen(msg->inject_text.text);
+                copy.inject_text.text = (char*)SDL_malloc(len + 1);
+                if (!copy.inject_text.text)
+                {
+                    return false;
+                }
+                memcpy(copy.inject_text.text, msg->inject_text.text, len + 1);
+            }
+            break;
+        case message::CONTROL_MSG_TYPE_SET_CLIPBOARD:
+            if (msg->set_clipboard.text)
+            {
+                size_t len = strlen(msg->set_clipboard.text);
+                copy.set_clipboard.text = (char*)SDL_malloc(len + 1);
+                if (!copy.set_clipboard.text)
+                {
+                    return false;
+                }
+                memcpy(copy.set_clipboard.text, msg->set_clipboard.text, len + 1);
+            }
+            break;
+        default:
+            break;
+        }
+
         util::mutex_lock(this->mutex);
         bool was_empty = cbuf_is_empty(&this->queue);
-        bool res = cbuf_push(&this->queue, *msg);
+        bool res = cbuf_push(&this->queue, copy);
         if (was_empty)
         {
             util::cond_signal(this->thread_cond);
         }
         util::mutex_unlock(this->mutex);
+        if (!res)
+        {
+            // queue was full: the copy was never stored, so we still own
+            // (and must free) the allocation made above
+            copy.Destroy();
+        }
         return res;
     }
 
