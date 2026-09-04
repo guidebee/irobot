@@ -10,6 +10,25 @@ No root access required. Works on GNU/Linux, Windows, and macOS.
 
 ---
 
+## Repository Layout
+
+This is a monorepo: the desktop client and every companion tool it depends on live side by side here,
+each with its own README for the details.
+
+| Path                                              | Component                                                                                          |
+|----------------------------------------------------|-----------------------------------------------------------------------------------------------------|
+| [`src/`](src/)                                      | `irobot` desktop client (C++17) — documented in this README                                        |
+| [`irobot_server/`](irobot_server/README.md)         | Android server (Java, forked from scrcpy) — built to an APK/DEX and pushed to the device via ADB at connection time |
+| [`irobot_gym_ide/`](irobot_gym_ide/README.md)       | Gym IDE (PySide6) — action-map editor and Game Run node-graph editor built on the AI agent API      |
+| [`tools/`](tools/README.md)                         | `agent_client.py` — reference/test client and wire-protocol docs for the AI agent API               |
+| [`docs/`](docs/)                                    | Architecture diagrams and the Gym/Gymnasium implementation plan                                     |
+
+`irobot_server` in particular used to be maintained as a separate project; it now lives under
+[`irobot_server/`](irobot_server/README.md) with its own build script (`build_server.sh` / `build_server.cmd`),
+independent of the CMake build below — see [Building the Android Server](#1-building-the-android-server-irobot-server).
+
+---
+
 ## Features
 
 - **Screen mirroring** — real-time H.264 video stream rendered via SDL2
