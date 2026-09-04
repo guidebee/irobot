@@ -33,12 +33,13 @@ TEST_CASE (
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
     int size = msg.Serialize(buf);
-    REQUIRE(size == 10);
+    REQUIRE(size == 14);
 
     const unsigned char expected[] = {
             CONTROL_MSG_TYPE_INJECT_KEYCODE,
             0x01, // AKEY_EVENT_ACTION_UP
             0x00, 0x00, 0x00, 0x42, // AKEYCODE_ENTER
+            0x00, 0x00, 0x00, 0x00, // repeat
             0x00, 0x00, 0x00, 0x41, // AMETA_SHIFT_ON | AMETA_SHIFT_LEFT_ON
     };
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
@@ -93,11 +94,11 @@ TEST_CASE (
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
     int size = msg.Serialize(buf);
-    REQUIRE(size == 16);
+    REQUIRE(size == 18);
 
     const unsigned char expected[] = {
             CONTROL_MSG_TYPE_INJECT_TEXT,
-            0x00, 0x0d, // text length
+            0x00, 0x00, 0x00, 0x0d, // text length
             'h', 'e', 'l', 'l', 'o', ',', ' ', 'w', 'o', 'r', 'l', 'd', '!', // text
     };
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
@@ -118,13 +119,15 @@ TEST_CASE (
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
     int size = msg.Serialize(buf);
-    REQUIRE(size == 3 + CONTROL_MSG_TEXT_MAX_LENGTH);
+    REQUIRE(size == 5 + CONTROL_MSG_TEXT_MAX_LENGTH);
 
-    unsigned char expected[3 + CONTROL_MSG_TEXT_MAX_LENGTH];
+    unsigned char expected[5 + CONTROL_MSG_TEXT_MAX_LENGTH];
     expected[0] = CONTROL_MSG_TYPE_INJECT_TEXT;
-    expected[1] = 0x01;
-    expected[2] = 0x2c; // text length (16 bits)
-    memset(&expected[3], 'a', CONTROL_MSG_TEXT_MAX_LENGTH);
+    expected[1] = 0x00;
+    expected[2] = 0x00;
+    expected[3] = 0x01;
+    expected[4] = 0x2c; // text length (32 bits)
+    memset(&expected[5], 'a', CONTROL_MSG_TEXT_MAX_LENGTH);
 
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
@@ -159,7 +162,7 @@ TEST_CASE (
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
     int size = msg.Serialize(buf);
-    REQUIRE(size == 28);
+    REQUIRE(size == 32);
 
     const unsigned char expected[] = {
             CONTROL_MSG_TYPE_INJECT_TOUCH_EVENT,
@@ -168,6 +171,7 @@ TEST_CASE (
             0x00, 0x00, 0x00, 0x64, 0x00, 0x00, 0x00, 0xc8, // 100 200
             0x04, 0x38, 0x07, 0x80, // 1080 1920
             0xff, 0xff, // pressure
+            0x00, 0x00, 0x00, 0x00, // actionButton
             0x00, 0x00, 0x00, 0x01 // AMOTION_EVENT_BUTTON_PRIMARY
     };
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
@@ -291,8 +295,9 @@ TEST_CASE (
             CONTROL_MSG_TYPE_INJECT_SCROLL_EVENT,
             0x00, 0x00, 0x01, 0x04, 0x00, 0x00, 0x04, 0x02, // 260 1026
             0x04, 0x38, 0x07, 0x80, // 1080 1920
-            0x00, 0x00, 0x00, 0x01, // 1
-            0xFF, 0xFF, 0xFF, 0xFF, // -1
+            0x08, 0x00, // hscroll: 1 * 2048 fixed-point
+            0xF8, 0x00, // vscroll: -1 * 2048 fixed-point
+            0x00, 0x00, 0x00, 0x00, // buttons
     };
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
@@ -309,10 +314,11 @@ TEST_CASE (
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
     int size = msg.Serialize(buf);
-    REQUIRE(size == 1);
+    REQUIRE(size == 2);
 
     const unsigned char expected[] = {
             CONTROL_MSG_TYPE_BACK_OR_SCREEN_ON,
+            0x00, // AKEY_EVENT_ACTION_DOWN (default)
     };
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
@@ -369,10 +375,11 @@ TEST_CASE (
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
     int size = msg.Serialize(buf);
-    REQUIRE(size == 1);
+    REQUIRE(size == 2);
 
     const unsigned char expected[] = {
             CONTROL_MSG_TYPE_GET_CLIPBOARD,
+            0x00, // COPY_KEY_NONE (default)
     };
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
@@ -392,11 +399,13 @@ TEST_CASE (
 
     unsigned char buf[CONTROL_MSG_SERIALIZED_MAX_SIZE];
     int size = msg.Serialize(buf);
-    REQUIRE(size == 16);
+    REQUIRE(size == 27);
 
     const unsigned char expected[] = {
             CONTROL_MSG_TYPE_SET_CLIPBOARD,
-            0x00, 0x0d, // text length
+            0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // sequence (SEQUENCE_INVALID)
+            0x00, // paste = false
+            0x00, 0x00, 0x00, 0x0d, // text length
             'h', 'e', 'l', 'l', 'o', ',', ' ', 'w', 'o', 'r', 'l', 'd', '!', // text
     };
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
@@ -421,7 +430,7 @@ TEST_CASE (
 
     const unsigned char expected[] = {
             CONTROL_MSG_TYPE_SET_SCREEN_POWER_MODE,
-            0x02, // SCREEN_POWER_MODE_NORMAL
+            0x01, // on = true (mode != SCREEN_POWER_MODE_OFF)
     };
     REQUIRE(!memcmp(buf, expected, sizeof(expected)));
 }
@@ -454,13 +463,13 @@ TEST_CASE (
  {
     const unsigned char input[] = {
             DEVICE_MSG_TYPE_CLIPBOARD,
-            0x00, 0x03, // text length
+            0x00, 0x00, 0x00, 0x03, // text length
             0x41, 0x42, 0x43, // "ABC"
     };
 
     struct DeviceMessage msg{};
     ssize_t r = msg.Deserialize(input, sizeof(input));
-    REQUIRE(r == 6);
+    REQUIRE(r == 8);
 
     REQUIRE(msg.type == DEVICE_MSG_TYPE_CLIPBOARD);
     REQUIRE(msg.clipboard.text);
