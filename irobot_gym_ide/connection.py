@@ -38,6 +38,7 @@ class LiveConnection:
         self._stop = threading.Event()
         self._lock = threading.Lock()
         self._latest = None          # (width, height, pixels: bytes) grayscale opencv_mat frame
+        self._latest_thumbnail = None  # (width, height, pixels: bytes, phash: bytes) color screen_shot frame
         self._latest_resolution = None  # (width, height) from BLOB_MSG_TYPE_RESOLUTION, or None if not received yet
         self._held_pointers = set()  # pointer_ids currently DOWN, per this connection's own bookkeeping
 
@@ -82,6 +83,14 @@ class LiveConnection:
                 with self._lock:
                     self._latest_resolution = (width, height)
                 continue
+            if msg_type == ac.BLOB_MSG_TYPE_SCREEN_SHOT:
+                if not buffers:
+                    continue
+                width, height, pixels = buffers[0]
+                phash = buffers[1][2] if len(buffers) > 1 else b""
+                with self._lock:
+                    self._latest_thumbnail = (width, height, pixels, phash)
+                continue
             if msg_type != ac.BLOB_MSG_TYPE_OPENCV_MAT:
                 continue
             width, height, pixels = buffers[0]
@@ -100,6 +109,24 @@ class LiveConnection:
         width, height, pixels = snapshot
         frame = np.frombuffer(pixels, dtype=np.uint8).reshape((height, width))
         return width, height, frame
+
+    def latest_thumbnail(self):
+        """Returns (width, height, color ndarray shape (h,w,3), phash bytes)
+        from the AgentStream's BLOB_MSG_TYPE_SCREEN_SHOT messages, or None if
+        none has arrived yet (older irobot builds never send this). Mirrors
+        latest_frame()'s lazy numpy import and lock-protected snapshot."""
+        with self._lock:
+            snapshot = self._latest_thumbnail
+        if snapshot is None:
+            return None
+        width, height, pixels, phash = snapshot
+        if not pixels or not width or not height:
+            return None
+        import numpy as np
+        channels = len(pixels) // (width * height)
+        arr = np.frombuffer(pixels, dtype=np.uint8)
+        color = arr.reshape((height, width, channels)) if channels > 1 else arr.reshape((height, width))
+        return width, height, color, phash
 
     def latest_resolution(self):
         """Returns (width, height), the real device resolution as reported by

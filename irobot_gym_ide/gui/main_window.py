@@ -1,29 +1,32 @@
-"""Main IDE window: project fields + action list (left dock), live-frame
-canvas (center), event inspector for the selected action (right dock), and
-a log panel (bottom of center) showing connection status, skipped/no-op
-events from a live "Test" run, and validation warnings.
+"""Main IDE window.
 
-Click-to-test loop (see docs/irobot_gym_ide_design.md): select an action,
-click Connect, click on the live frame to append events to it, click Test
-to send the whole action to the real device and watch the canvas update
-with the result -- calibration happens against the real device, not a
-guessed screenshot, and you find out immediately whether a click landed on
-the right button.
+Layout: a left "Project" dock (connection settings, plus irobot's color
+AgentStream thumbnail shown right after Connect/status); an always-visible
+Live View (the interactive grayscale mirror) sitting above a "workflow"
+QTabWidget (Define / Sessions / Game Run / Rewards / Observations /
+Reset-Initial-State) in the central widget; tabified "Library" (every
+defined Action/HUD Region/HUD Combo/Template, browsable from any tab) and
+"Inspector" (detail editor for whatever's selected in Library) docks on the
+right; and a collapsible "Log" dock at the bottom. See
+docs/irobot_gym_ide_design.md for the broader rationale.
+
+Click-to-test loop: select an action, click Connect, click on the live frame
+to append events to it, click Test to send the whole action to the real
+device and watch the canvas update with the result -- calibration happens
+against the real device, not a guessed screenshot, and you find out
+immediately whether a click landed on the right button.
 """
 from __future__ import annotations
 
-import base64
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, Signal
-from PySide6.QtGui import QImage, QPixmap
 from PySide6.QtWidgets import (
     QMainWindow, QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QListWidget, QListWidgetItem, QLineEdit, QSpinBox, QDoubleSpinBox, QPushButton, QLabel,
-    QComboBox, QPlainTextEdit, QSplitter, QFileDialog, QMessageBox, QInputDialog,
-    QCheckBox, QTabWidget, QAbstractItemView,
+    QListWidgetItem, QLineEdit, QSpinBox, QPushButton, QLabel, QScrollArea,
+    QPlainTextEdit, QSplitter, QFileDialog, QMessageBox, QInputDialog, QTabWidget,
 )
 from PySide6.QtCore import Qt
 
@@ -38,8 +41,15 @@ from ..hud_classifier import classify_session
 from ..run_engine import GameRunExecutor
 from ..session_replay import SessionPlayer
 from .canvas import CanvasView
-from .inspector import ActionInspector
-from .run_editor import RunEditorWidget
+from .panels.define_panel import DefinePanel
+from .panels.game_run_panel import GameRunPanel
+from .panels.inspector_stack import InspectorStack
+from .panels.library_panel import LibraryPanel
+from .panels.observation_panel import ObservationPanel
+from .panels.reset_panel import ResetPanel
+from .panels.reward_panel import RewardPanel
+from .panels.sessions_panel import SessionsPanel
+from .thumbnail_view import ThumbnailView
 
 POLL_MS = 66  # ~15 fps canvas refresh; the video channel itself may deliver faster or slower
 
@@ -75,11 +85,10 @@ class MainWindow(QMainWindow):
         self._session_signals.logLine.connect(lambda text: self._log_line(text))
         self._selected_run: GameRun | None = None
         self._selected_template: ImageTemplate | None = None
-        self._loading_template_fields = False   # same guard purpose as _loading_fields, for the template props row
         self._selected_hud_region: HudRegion | None = None
-        self._loading_hud_region_fields = False   # same guard purpose as _loading_template_fields
         self._selected_combo: HudRegionCombo | None = None
-        self._loading_combo_fields = False   # same guard purpose as _loading_hud_region_fields
+        # per-field "loading" guards for Template/HudRegion/HudRegionCombo now
+        # live inside InspectorStack's own detail-inspector widgets
         self._capture_target = "template"   # "template" or "hud_region" -- which capture button is armed;
                                               # the canvas only has one capture mode, see _on_region_selected
         self._run_executor: GameRunExecutor | None = None
@@ -102,12 +111,40 @@ class MainWindow(QMainWindow):
         self._poll_timer.timeout.connect(self._poll_frame)
         self._poll_timer.start(POLL_MS)
 
+        self._central_split_initialized = False
+
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if not self._central_split_initialized:
+            # QSplitter.setSizes() during/right after showEvent still gets
+            # overridden by QMainWindow's own pending dock/central layout
+            # pass -- deferring to the next event-loop iteration (after that
+            # pass has finished) is what actually makes the 50/50 default
+            # (video is the main working area) stick.
+            self._central_split_initialized = True
+            QTimer.singleShot(0, self._apply_default_central_split)
+
+    def _apply_default_central_split(self) -> None:
+        half = self._central_splitter.height() // 2
+        self._central_splitter.setSizes([half, half])
+
+    @staticmethod
+    def _scrollable(widget: QWidget) -> QScrollArea:
+        scroll = QScrollArea()
+        scroll.setWidget(widget)
+        scroll.setWidgetResizable(True)
+        return scroll
+
     # -- UI construction --------------------------------------------------------
 
     def _build_ui(self) -> None:
         self._build_menu()
+        self._build_project_dock()
+        self._build_library_and_inspector_docks()
+        self._build_central_widget()
+        self._build_log_dock()
 
-        # left dock: project fields + action list
+    def _build_project_dock(self) -> None:
         left = QWidget()
         left_layout = QVBoxLayout(left)
 
@@ -146,203 +183,116 @@ class MainWindow(QMainWindow):
         connect_row.addWidget(self._status_label)
         left_layout.addLayout(connect_row)
 
-        left_layout.addWidget(QLabel("Actions"))
-        self._action_list = QListWidget()
-        self._action_list.currentItemChanged.connect(self._on_action_selected)
-        left_layout.addWidget(self._action_list)
-
-        action_btn_row = QHBoxLayout()
-        add_action_btn = QPushButton("Add Action")
-        remove_action_btn = QPushButton("Remove Action")
-        add_action_btn.clicked.connect(self._add_action)
-        remove_action_btn.clicked.connect(self._remove_action)
-        action_btn_row.addWidget(add_action_btn)
-        action_btn_row.addWidget(remove_action_btn)
-        left_layout.addLayout(action_btn_row)
-
-        left_layout.addWidget(QLabel("New event on canvas click:"))
-        click_row = QHBoxLayout()
-        self._new_kind_combo = QComboBox()
-        self._new_kind_combo.addItems([EventKind.TAP.value, EventKind.PRESS.value, EventKind.MOVE.value])
-        self._new_pointer_spin = QSpinBox(); self._new_pointer_spin.setRange(0, 9)
-        click_row.addWidget(self._new_kind_combo)
-        click_row.addWidget(self._new_pointer_spin)
-        left_layout.addLayout(click_row)
-
-        self._live_send_checkbox = QCheckBox("Send new events live as you click (recommended)")
-        self._live_send_checkbox.setChecked(True)
-        left_layout.addWidget(self._live_send_checkbox)
-
-        test_btn = QPushButton("Test Action (send live)")
-        test_btn.clicked.connect(self._test_action)
-        left_layout.addWidget(test_btn)
-        release_btn = QPushButton("Release All Held Pointers")
-        release_btn.clicked.connect(self._release_all)
-        left_layout.addWidget(release_btn)
-
-        left_layout.addWidget(QLabel("Record real touches directly on the device (bypasses the mirror):"))
-        self._record_device_btn = QPushButton("Record from Device")
-        self._record_device_btn.clicked.connect(self._toggle_device_recording)
-        left_layout.addWidget(self._record_device_btn)
-
-        left_layout.addWidget(QLabel(
-            "Gameplay Sessions (record a whole playthrough as raw events, for later\n"
-            "classification into actions -- see recordings/*.session.yaml):"))
-        self._record_session_btn = QPushButton("Record Gameplay Session")
-        self._record_session_btn.clicked.connect(self._toggle_session_recording)
-        left_layout.addWidget(self._record_session_btn)
-        self._session_list = QListWidget()
-        left_layout.addWidget(self._session_list)
-        session_btn_row = QHBoxLayout()
-        classify_session_btn = QPushButton("Classify Session")
-        classify_session_btn.clicked.connect(self._classify_session)
-        replay_raw_btn = QPushButton("Replay Raw")
-        replay_raw_btn.clicked.connect(self._replay_session_raw)
-        replay_classified_btn = QPushButton("Replay Classified")
-        replay_classified_btn.clicked.connect(self._replay_session_classified)
-        stop_replay_btn = QPushButton("Stop Replay")
-        stop_replay_btn.clicked.connect(self._stop_session_replay)
-        session_btn_row.addWidget(classify_session_btn)
-        session_btn_row.addWidget(replay_raw_btn)
-        session_btn_row.addWidget(replay_classified_btn)
-        session_btn_row.addWidget(stop_replay_btn)
-        left_layout.addLayout(session_btn_row)
-
-        left_layout.addWidget(QLabel("Game Runs"))
-        self._run_list = QListWidget()
-        self._run_list.currentItemChanged.connect(self._on_run_selected)
-        left_layout.addWidget(self._run_list)
-
-        run_btn_row = QHBoxLayout()
-        add_run_btn = QPushButton("Add Run")
-        remove_run_btn = QPushButton("Remove Run")
-        add_run_btn.clicked.connect(self._add_run)
-        remove_run_btn.clicked.connect(self._remove_run)
-        run_btn_row.addWidget(add_run_btn)
-        run_btn_row.addWidget(remove_run_btn)
-        left_layout.addLayout(run_btn_row)
-
-        left_layout.addWidget(QLabel("Image Templates (for Game Run Compare / Find Template nodes)"))
-        self._template_list = QListWidget()
-        self._template_list.currentItemChanged.connect(self._on_template_selected)
-        left_layout.addWidget(self._template_list)
-
-        self._template_preview = QLabel()
-        self._template_preview.setFixedHeight(60)
-        self._template_preview.setAlignment(Qt.AlignCenter)
-        self._template_preview.setStyleSheet("border: 1px solid #888;")
-        left_layout.addWidget(self._template_preview)
-
-        template_threshold_row = QHBoxLayout()
-        template_threshold_row.addWidget(QLabel("Match threshold"))
-        self._template_threshold_spin = QDoubleSpinBox()
-        self._template_threshold_spin.setRange(0.0, 1.0)
-        self._template_threshold_spin.setSingleStep(0.01)
-        self._template_threshold_spin.setDecimals(2)
-        self._template_threshold_spin.valueChanged.connect(self._on_template_threshold_changed)
-        template_threshold_row.addWidget(self._template_threshold_spin)
-        template_threshold_row.addStretch(1)
-        left_layout.addLayout(template_threshold_row)
-
-        template_btn_row = QHBoxLayout()
-        self._capture_region_btn = QPushButton("Capture Region")
-        self._capture_region_btn.setCheckable(True)
-        self._capture_region_btn.toggled.connect(self._toggle_capture_mode)
-        remove_template_btn = QPushButton("Remove Template")
-        remove_template_btn.clicked.connect(self._remove_template)
-        template_btn_row.addWidget(self._capture_region_btn)
-        template_btn_row.addWidget(remove_template_btn)
-        left_layout.addLayout(template_btn_row)
-
-        left_layout.addWidget(QLabel(
-            "HUD Regions (fixed on-screen buttons -- classifies a gameplay session's\n"
-            "gestures by where they landed; see hud_classifier.py):"))
-        self._hud_region_list = QListWidget()
-        self._hud_region_list.currentItemChanged.connect(self._on_hud_region_selected)
-        left_layout.addWidget(self._hud_region_list)
-
-        hud_region_action_row = QHBoxLayout()
-        hud_region_action_row.addWidget(QLabel("Action name"))
-        self._hud_region_action_edit = QLineEdit()
-        self._hud_region_action_edit.editingFinished.connect(self._on_hud_region_action_edited)
-        hud_region_action_row.addWidget(self._hud_region_action_edit)
-        left_layout.addLayout(hud_region_action_row)
-
-        hud_region_btn_row = QHBoxLayout()
-        self._capture_hud_region_btn = QPushButton("Capture HUD Region")
-        self._capture_hud_region_btn.setCheckable(True)
-        self._capture_hud_region_btn.toggled.connect(self._toggle_hud_capture_mode)
-        remove_hud_region_btn = QPushButton("Remove HUD Region")
-        remove_hud_region_btn.clicked.connect(self._remove_hud_region)
-        hud_region_btn_row.addWidget(self._capture_hud_region_btn)
-        hud_region_btn_row.addWidget(remove_hud_region_btn)
-        left_layout.addLayout(hud_region_btn_row)
-
-        left_layout.addWidget(QLabel(
-            "HUD Combos (2+ regions touched together -> one action, e.g.\n"
-            "right_button + jump_button -> right_jump):"))
-        self._combo_list = QListWidget()
-        self._combo_list.currentItemChanged.connect(self._on_combo_selected)
-        left_layout.addWidget(self._combo_list)
-
-        left_layout.addWidget(QLabel("Regions in combo (ctrl/shift-click to select 2+):"))
-        self._combo_regions_list = QListWidget()
-        self._combo_regions_list.setSelectionMode(QAbstractItemView.MultiSelection)
-        self._combo_regions_list.itemSelectionChanged.connect(self._on_combo_regions_changed)
-        left_layout.addWidget(self._combo_regions_list)
-
-        combo_action_row = QHBoxLayout()
-        combo_action_row.addWidget(QLabel("Action name"))
-        self._combo_action_edit = QLineEdit()
-        self._combo_action_edit.editingFinished.connect(self._on_combo_action_edited)
-        combo_action_row.addWidget(self._combo_action_edit)
-        left_layout.addLayout(combo_action_row)
-
-        combo_btn_row = QHBoxLayout()
-        add_combo_btn = QPushButton("Add Combo")
-        add_combo_btn.clicked.connect(self._add_hud_combo)
-        remove_combo_btn = QPushButton("Remove Combo")
-        remove_combo_btn.clicked.connect(self._remove_hud_combo)
-        combo_btn_row.addWidget(add_combo_btn)
-        combo_btn_row.addWidget(remove_combo_btn)
-        left_layout.addLayout(combo_btn_row)
+        self._thumbnail_view = ThumbnailView()
+        left_layout.addWidget(self._thumbnail_view)
+        left_layout.addStretch(1)
 
         left_dock = QDockWidget("Project", self)
         left_dock.setWidget(left)
         self.addDockWidget(Qt.LeftDockWidgetArea, left_dock)
 
-        # right dock: inspector
-        self._inspector = ActionInspector()
-        self._inspector.actionChanged.connect(self._on_action_edited)
-        right_dock = QDockWidget("Action events", self)
-        right_dock.setWidget(self._inspector)
-        self.addDockWidget(Qt.RightDockWidgetArea, right_dock)
+    def _build_library_and_inspector_docks(self) -> None:
+        # "Library": every defined Action/HUD Region/HUD Combo/Image Template,
+        # browsable regardless of which workflow tab is active (Game Run's
+        # Compare/Find Template nodes and future Reward/Observation/Reset
+        # stages all need to reference these).
+        self._library = LibraryPanel()
+        self._library.selectionChanged.connect(self._on_library_selection_changed)
+        self._library.addRequested.connect(self._on_library_add)
+        self._library.removeRequested.connect(self._on_library_remove)
+        library_dock = QDockWidget("Library", self)
+        library_dock.setWidget(self._library)
+        self.addDockWidget(Qt.RightDockWidgetArea, library_dock)
 
-        # center: tabbed -- live mirror/canvas+log, and the game-run node graph editor
+        # "Inspector": a stacked widget showing whichever detail editor
+        # matches the current Library selection.
+        self._inspector_stack = InspectorStack()
+        self._inspector = self._inspector_stack.action_inspector  # kept as a short alias; many call sites below
+        self._inspector.actionChanged.connect(self._on_action_edited)
+        self._inspector_stack.hud_region_inspector.regionEdited.connect(self._on_hud_region_rect_edited)
+        inspector_dock = QDockWidget("Inspector", self)
+        inspector_dock.setWidget(self._inspector_stack)
+        self.addDockWidget(Qt.RightDockWidgetArea, inspector_dock)
+
+        self.tabifyDockWidget(library_dock, inspector_dock)
+        library_dock.raise_()
+
+    def _build_central_widget(self) -> None:
+        # Live View: the interactive grayscale mirror, always visible
+        # regardless of the active workflow tab below it. (The color
+        # AgentStream thumbnail lives in the Project dock, next to Connect.)
         self._canvas = CanvasView()
         self._canvas.pointClicked.connect(self._on_canvas_clicked)
         self._canvas.regionSelected.connect(self._on_region_selected)
-        self._log = QPlainTextEdit()
-        self._log.setReadOnly(True)
-        self._log.setMaximumBlockCount(500)
 
-        splitter = QSplitter(Qt.Vertical)
-        splitter.addWidget(self._canvas)
-        splitter.addWidget(self._log)
-        splitter.setStretchFactor(0, 4)
-        splitter.setStretchFactor(1, 1)
+        # Workflow tabs: today's Define/Sessions/Game Run stages, plus
+        # placeholder tabs for the future Reward/Observation/Reset stages --
+        # adding a stage later means adding a tab here, not restacking a dock.
+        self._define_panel = DefinePanel()
+        self._define_panel.test_action_btn.clicked.connect(self._test_action)
+        self._define_panel.release_btn.clicked.connect(self._release_all)
+        self._define_panel.record_device_btn.clicked.connect(self._toggle_device_recording)
+        self._define_panel.capture_region_btn.toggled.connect(self._toggle_capture_mode)
+        self._define_panel.capture_hud_region_btn.toggled.connect(self._toggle_hud_capture_mode)
+        self._define_panel.add_combo_btn.clicked.connect(self._add_hud_combo)
+        self._define_panel.remove_combo_btn.clicked.connect(self._remove_hud_combo)
+        # short aliases -- kept so the rest of this class's methods (_on_canvas_clicked,
+        # _toggle_capture_mode, _toggle_device_recording, etc.) don't need renaming
+        self._new_kind_combo = self._define_panel.new_kind_combo
+        self._new_pointer_spin = self._define_panel.new_pointer_spin
+        self._live_send_checkbox = self._define_panel.live_send_checkbox
+        self._record_device_btn = self._define_panel.record_device_btn
+        self._capture_region_btn = self._define_panel.capture_region_btn
+        self._capture_hud_region_btn = self._define_panel.capture_hud_region_btn
 
-        self._run_editor = RunEditorWidget(
+        self._sessions_panel = SessionsPanel()
+        self._sessions_panel.record_session_btn.clicked.connect(self._toggle_session_recording)
+        self._sessions_panel.classify_session_btn.clicked.connect(self._classify_session)
+        self._sessions_panel.replay_raw_btn.clicked.connect(self._replay_session_raw)
+        self._sessions_panel.replay_classified_btn.clicked.connect(self._replay_session_classified)
+        self._sessions_panel.stop_replay_btn.clicked.connect(self._stop_session_replay)
+        self._record_session_btn = self._sessions_panel.record_session_btn
+        self._session_list = self._sessions_panel.session_list
+
+        self._game_run_panel = GameRunPanel(
             get_action_names=lambda: list(self.project.actions.keys()),
             get_template_names=lambda: list(self.project.templates.keys()))
+        self._game_run_panel.add_run_btn.clicked.connect(self._add_run)
+        self._game_run_panel.remove_run_btn.clicked.connect(self._remove_run)
+        self._game_run_panel.run_list.currentItemChanged.connect(self._on_run_selected)
+        self._run_list = self._game_run_panel.run_list
+        self._run_editor = self._game_run_panel.run_editor
         self._run_editor.graphChanged.connect(self._on_run_graph_changed)
         self._run_editor.runRequested.connect(self._run_game_run)
         self._run_editor.stopRequested.connect(self._stop_game_run)
 
+        # Each page is wrapped in a scroll area so a tall page's stacked
+        # controls (e.g. Define's) can't force the whole QTabWidget's
+        # minimum height above what the splitter needs to give the video
+        # canvas its default half of the window -- content that doesn't fit
+        # simply scrolls instead of pushing the video pane down.
         tabs = QTabWidget()
-        tabs.addTab(splitter, "Mirror / Actions")
-        tabs.addTab(self._run_editor, "Game Run")
-        self.setCentralWidget(tabs)
+        tabs.addTab(self._scrollable(self._define_panel), "Define")
+        tabs.addTab(self._scrollable(self._sessions_panel), "Sessions")
+        tabs.addTab(self._game_run_panel, "Game Run")   # its own node canvas already scrolls/pans
+        tabs.addTab(self._scrollable(RewardPanel()), "Rewards")
+        tabs.addTab(self._scrollable(ObservationPanel()), "Observations")
+        tabs.addTab(self._scrollable(ResetPanel()), "Reset / Initial State")
+
+        self._central_splitter = QSplitter(Qt.Vertical)
+        self._central_splitter.addWidget(self._canvas)
+        self._central_splitter.addWidget(tabs)
+        self._central_splitter.setStretchFactor(0, 1)   # video is the main working area -- default to half the window
+        self._central_splitter.setStretchFactor(1, 1)
+        self.setCentralWidget(self._central_splitter)
+
+    def _build_log_dock(self) -> None:
+        self._log = QPlainTextEdit()
+        self._log.setReadOnly(True)
+        self._log.setMaximumBlockCount(500)
+        log_dock = QDockWidget("Log", self)
+        log_dock.setWidget(self._log)
+        self.addDockWidget(Qt.BottomDockWidgetArea, log_dock)
 
     def _build_menu(self) -> None:
         menu = self.menuBar().addMenu("&File")
@@ -449,9 +399,7 @@ class MainWindow(QMainWindow):
     # -- actions --------------------------------------------------------
 
     def _refresh_action_list(self) -> None:
-        self._action_list.clear()
-        for name in self.project.actions:
-            self._action_list.addItem(QListWidgetItem(name))
+        self._library.refresh_actions(list(self.project.actions.keys()))
 
     def _add_action(self) -> None:
         name, ok = QInputDialog.getText(self, "Add Action", "Action name:")
@@ -466,22 +414,47 @@ class MainWindow(QMainWindow):
         self._on_run_graph_changed()
 
     def _remove_action(self) -> None:
-        item = self._action_list.currentItem()
-        if item is None:
+        if self._selected_action is None:
             return
-        self.project.remove_action(item.text())
+        self.project.remove_action(self._selected_action.name)
         self._refresh_action_list()
-        self._inspector.set_action(None)
+        self._inspector_stack.show_action(None)
         self._selected_action = None
         self._on_run_graph_changed()
 
-    def _on_action_selected(self, current: QListWidgetItem, _previous) -> None:
-        if current is None:
-            self._selected_action = None
-            self._inspector.set_action(None)
-            return
-        self._selected_action = self.project.actions.get(current.text())
-        self._inspector.set_action(self._selected_action)
+    # -- Library dock: one selection/add/remove handler for every category --
+
+    def _on_library_selection_changed(self, category: str, name: str) -> None:
+        self._selected_action = None
+        self._selected_template = None
+        self._selected_hud_region = None
+        self._selected_combo = None
+        if category == "action":
+            self._selected_action = self.project.actions.get(name)
+            self._inspector_stack.show_action(self._selected_action)
+        elif category == "template":
+            self._selected_template = self.project.templates.get(name)
+            self._inspector_stack.show_template(self._selected_template)
+        elif category == "hud_region":
+            self._selected_hud_region = self.project.hud_regions.get(name)
+            self._inspector_stack.show_hud_region(self._selected_hud_region)
+        elif category == "hud_combo":
+            self._selected_combo = self.project.hud_region_combos.get(name)
+            self._inspector_stack.show_hud_combo(self._selected_combo)
+        else:
+            self._inspector_stack.show_nothing()
+
+    def _on_library_add(self, category: str) -> None:
+        if category == "action":
+            self._add_action()
+
+    def _on_library_remove(self, category: str, _name: str) -> None:
+        if category == "action":
+            self._remove_action()
+        elif category == "template":
+            self._remove_template()
+        elif category == "hud_region":
+            self._remove_hud_region()
 
     def _on_action_edited(self) -> None:
         self._warn_pointer_conflicts()
@@ -560,45 +533,15 @@ class MainWindow(QMainWindow):
     # -- compare templates --------------------------------------------------------
 
     def _refresh_template_list(self) -> None:
-        self._template_list.clear()
-        for name in self.project.templates:
-            self._template_list.addItem(QListWidgetItem(name))
-
-    def _on_template_selected(self, current: QListWidgetItem, _previous) -> None:
-        if current is None:
-            self._selected_template = None
-        else:
-            self._selected_template = self.project.templates.get(current.text())
-        self._update_template_props()
-
-    def _update_template_props(self) -> None:
-        template = self._selected_template
-        self._loading_template_fields = True
-        try:
-            self._template_threshold_spin.setValue(template.threshold if template else 0.9)
-        finally:
-            self._loading_template_fields = False
-        if template is not None and template.pixels_b64 and template.image_w and template.image_h:
-            raw = base64.b64decode(template.pixels_b64)
-            image = QImage(raw, template.image_w, template.image_h, template.image_w, QImage.Format_Grayscale8)
-            self._template_preview.setPixmap(
-                QPixmap.fromImage(image).scaledToHeight(60, Qt.SmoothTransformation))
-        else:
-            self._template_preview.clear()
-
-    def _on_template_threshold_changed(self, value: float) -> None:
-        if self._loading_template_fields or self._selected_template is None:
-            return
-        self._selected_template.threshold = value
+        self._library.refresh_templates(self.project.templates)
 
     def _remove_template(self) -> None:
-        item = self._template_list.currentItem()
-        if item is None:
+        if self._selected_template is None:
             return
-        self.project.remove_template(item.text())
+        self.project.remove_template(self._selected_template.name)
         self._selected_template = None
         self._refresh_template_list()
-        self._update_template_props()
+        self._inspector_stack.show_template(None)
         self._on_run_graph_changed()
 
     def _toggle_capture_mode(self, enabled: bool) -> None:
@@ -651,36 +594,27 @@ class MainWindow(QMainWindow):
     # -- HUD regions --------------------------------------------------------
 
     def _refresh_hud_region_list(self) -> None:
-        self._hud_region_list.clear()
-        for name in self.project.hud_regions:
-            self._hud_region_list.addItem(QListWidgetItem(name))
+        self._library.refresh_hud_regions(list(self.project.hud_regions.keys()))
         self._refresh_combo_region_choices()
 
-    def _on_hud_region_selected(self, current: QListWidgetItem, _previous) -> None:
-        if current is None:
-            self._selected_hud_region = None
-        else:
-            self._selected_hud_region = self.project.hud_regions.get(current.text())
-        self._loading_hud_region_fields = True
-        try:
-            self._hud_region_action_edit.setText(
-                self._selected_hud_region.action_name if self._selected_hud_region else "")
-        finally:
-            self._loading_hud_region_fields = False
-
-    def _on_hud_region_action_edited(self) -> None:
-        if self._loading_hud_region_fields or self._selected_hud_region is None:
+    def _on_hud_region_rect_edited(self) -> None:
+        """HudRegionInspector.regionEdited -- refreshes the canvas overlay
+        immediately when connected, rather than waiting for the next poll tick."""
+        if self.connection is None:
             return
-        self._selected_hud_region.action_name = self._hud_region_action_edit.text()
+        frame = self.connection.latest_frame()
+        if frame is None:
+            return
+        width, height, _ndarray = frame
+        self._canvas.set_hud_regions(self._hud_region_markers(width, height))
 
     def _remove_hud_region(self) -> None:
-        item = self._hud_region_list.currentItem()
-        if item is None:
+        if self._selected_hud_region is None:
             return
-        self.project.remove_hud_region(item.text())
+        self.project.remove_hud_region(self._selected_hud_region.name)
         self._selected_hud_region = None
         self._refresh_hud_region_list()
-        self._hud_region_action_edit.clear()
+        self._inspector_stack.show_hud_region(None)
 
     def _toggle_hud_capture_mode(self, enabled: bool) -> None:
         if enabled:
@@ -723,54 +657,10 @@ class MainWindow(QMainWindow):
     # -- HUD combos --------------------------------------------------------
 
     def _refresh_combo_list(self) -> None:
-        self._combo_list.clear()
-        for name in self.project.hud_region_combos:
-            self._combo_list.addItem(QListWidgetItem(name))
+        self._library.refresh_hud_combos(list(self.project.hud_region_combos.keys()))
 
     def _refresh_combo_region_choices(self) -> None:
-        self._combo_regions_list.clear()
-        for name in self.project.hud_regions:
-            self._combo_regions_list.addItem(QListWidgetItem(name))
-        self._sync_combo_region_selection()
-
-    def _sync_combo_region_selection(self) -> None:
-        """Ticks the multi-select region list to match self._selected_combo's
-        current region_names -- called whenever the combo selection or the
-        set of available HUD regions changes, so the two stay consistent."""
-        self._loading_combo_fields = True
-        try:
-            selected_names = set(self._selected_combo.region_names) if self._selected_combo else set()
-            for i in range(self._combo_regions_list.count()):
-                item = self._combo_regions_list.item(i)
-                item.setSelected(item.text() in selected_names)
-        finally:
-            self._loading_combo_fields = False
-
-    def _on_combo_selected(self, current: QListWidgetItem, _previous) -> None:
-        if current is None:
-            self._selected_combo = None
-        else:
-            self._selected_combo = self.project.hud_region_combos.get(current.text())
-        self._loading_combo_fields = True
-        try:
-            self._combo_action_edit.setText(self._selected_combo.action_name if self._selected_combo else "")
-        finally:
-            self._loading_combo_fields = False
-        self._sync_combo_region_selection()
-
-    def _on_combo_regions_changed(self) -> None:
-        if self._loading_combo_fields or self._selected_combo is None:
-            return
-        self._selected_combo.region_names = [
-            self._combo_regions_list.item(i).text()
-            for i in range(self._combo_regions_list.count())
-            if self._combo_regions_list.item(i).isSelected()
-        ]
-
-    def _on_combo_action_edited(self) -> None:
-        if self._loading_combo_fields or self._selected_combo is None:
-            return
-        self._selected_combo.action_name = self._combo_action_edit.text()
+        self._inspector_stack.set_region_choices(list(self.project.hud_regions.keys()))
 
     def _add_hud_combo(self) -> None:
         name, ok = QInputDialog.getText(self, "Add HUD Combo", "Combo name:")
@@ -784,14 +674,12 @@ class MainWindow(QMainWindow):
         self._log_line(f"Added HUD combo {name!r} -- select 2+ regions and set its Action name.")
 
     def _remove_hud_combo(self) -> None:
-        item = self._combo_list.currentItem()
-        if item is None:
+        if self._selected_combo is None:
             return
-        self.project.remove_hud_region_combo(item.text())
+        self.project.remove_hud_region_combo(self._selected_combo.name)
         self._selected_combo = None
         self._refresh_combo_list()
-        self._combo_action_edit.clear()
-        self._sync_combo_region_selection()
+        self._inspector_stack.show_hud_combo(None)
 
     def _warn_pointer_conflicts(self) -> None:
         conflicts = conflicting_pointer_actions(self.project.actions)
@@ -842,6 +730,9 @@ class MainWindow(QMainWindow):
         self._canvas.update_frame(width, height, ndarray)
         self._canvas.set_markers(self._markers_for_selected_action(width, height))
         self._canvas.set_hud_regions(self._hud_region_markers(width, height))
+        thumbnail = self.connection.latest_thumbnail()
+        if thumbnail is not None:
+            self._thumbnail_view.update_thumbnail(*thumbnail)
 
     def _reconcile_detected_resolution(self) -> None:
         """Compares irobot's self-reported real resolution (BLOB_MSG_TYPE_RESOLUTION,
