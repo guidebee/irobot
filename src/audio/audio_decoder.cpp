@@ -95,6 +95,7 @@ namespace irobot::audio
         if (ret < 0)
         {
             LOGE("Could not configure audio resampler");
+            swr_free(&this->swr_ctx);
             return false;
         }
 #else
