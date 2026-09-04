@@ -27,6 +27,9 @@ _POINTER_COLORS = [
     QColor("#f39c12"), QColor("#9b59b6"), QColor("#1abc9c"),
 ]
 
+_HUD_REGION_COLOR = QColor("#00bcd4")
+_HUD_REGION_SELECTED_COLOR = QColor("#ff5722")
+
 
 def pointer_color(pointer_id: int) -> QColor:
     return _POINTER_COLORS[pointer_id % len(_POINTER_COLORS)]
@@ -45,6 +48,7 @@ class CanvasView(QGraphicsView):
         self.setScene(self._scene)
         self._pixmap_item = None
         self._markers = []
+        self._hud_region_items = []
         self._frame_size = (0, 0)
         self._capture_mode = False
         self._rect_origin = None
@@ -94,6 +98,29 @@ class CanvasView(QGraphicsView):
             text.setPos(x + radius, y - radius)
             self._scene.addItem(text)
             self._markers.append(text)
+
+    def set_hud_regions(self, regions) -> None:
+        """`regions` is [(x0, y0, x1, y1, label, selected), ...] in
+        frame-space (caller scales down from reference resolution first,
+        same as set_markers) -- draws each HudRegion's rectangle over the
+        live mirror so it's visible right after capture, with the
+        currently-selected one (if any) highlighted in a different color."""
+        for item in self._hud_region_items:
+            self._scene.removeItem(item)
+        self._hud_region_items = []
+        for x0, y0, x1, y1, label, selected in regions:
+            color = _HUD_REGION_SELECTED_COLOR if selected else _HUD_REGION_COLOR
+            rect = QGraphicsRectItem(QRectF(x0, y0, x1 - x0, y1 - y0))
+            rect.setPen(QPen(color, 2 if selected else 1))
+            rect.setBrush(Qt.NoBrush)
+            rect.setZValue(2)
+            self._scene.addItem(rect)
+            self._hud_region_items.append(rect)
+            text = QGraphicsSimpleTextItem(label)
+            text.setBrush(QBrush(color))
+            text.setPos(x0, max(0, y0 - 14))
+            self._scene.addItem(text)
+            self._hud_region_items.append(text)
 
     def resizeEvent(self, event) -> None:
         super().resizeEvent(event)

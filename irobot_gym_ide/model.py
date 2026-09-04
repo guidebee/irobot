@@ -403,6 +403,38 @@ class HudRegion:
 
 
 @dataclass
+class HudRegionCombo:
+    """Names the Action that two or more HudRegions touched *concurrently*
+    represent -- e.g. holding "right_button" while tapping "jump_button"
+    means "right_jump", not two independent inputs. `region_names` is the
+    exact set of HudRegion names (by HudRegion.name) that must all be
+    touched at overlapping times for hud_classifier.classify_session to
+    treat it as this combo rather than emitting each region's own action
+    separately; order doesn't matter and is not preserved (see
+    hud_classifier.py's set-based matching).
+
+    Deliberately opt-in and explicit, not auto-detected: two regions
+    overlapping in a recorded session is common and often *not* meaningful
+    (e.g. a drag that incidentally crosses a second region on its way
+    somewhere else), so classify_session only merges concurrent regions into
+    one combo segment when their exact set matches a HudRegionCombo an
+    author defined -- otherwise it falls back to classifying each region's
+    gesture separately, same as if no combo existed at all."""
+    name: str
+    region_names: list = field(default_factory=list)
+    action_name: str = ""
+
+    def to_dict(self) -> dict:
+        return {"name": self.name, "region_names": list(self.region_names), "action_name": self.action_name}
+
+    @staticmethod
+    def from_dict(d: dict) -> "HudRegionCombo":
+        return HudRegionCombo(
+            name=d["name"], region_names=list(d.get("region_names", [])), action_name=d.get("action_name", ""),
+        )
+
+
+@dataclass
 class SessionSegment:
     """One classified span within a GameplaySession's raw `events` list --
     [start_index, end_index) -- labeled as the name of an Action it
@@ -709,6 +741,7 @@ class Project:
     runs: dict = field(default_factory=dict)        # dict[str, GameRun]
     templates: dict = field(default_factory=dict)    # dict[str, ImageTemplate]
     hud_regions: dict = field(default_factory=dict)   # dict[str, HudRegion]
+    hud_region_combos: dict = field(default_factory=dict)   # dict[str, HudRegionCombo]
 
     def add_action(self, action: Action) -> None:
         self.actions[action.name] = action
@@ -734,6 +767,12 @@ class Project:
     def remove_hud_region(self, name: str) -> None:
         self.hud_regions.pop(name, None)
 
+    def add_hud_region_combo(self, combo: HudRegionCombo) -> None:
+        self.hud_region_combos[combo.name] = combo
+
+    def remove_hud_region_combo(self, name: str) -> None:
+        self.hud_region_combos.pop(name, None)
+
     def to_dict(self) -> dict:
         return {
             "schema_version": 1,
@@ -748,6 +787,7 @@ class Project:
             "runs": [r.to_dict() for r in self.runs.values()],
             "templates": [t.to_dict() for t in self.templates.values()],
             "hud_regions": [r.to_dict() for r in self.hud_regions.values()],
+            "hud_region_combos": [c.to_dict() for c in self.hud_region_combos.values()],
         }
 
     @staticmethod
@@ -771,6 +811,8 @@ class Project:
             p.add_template(ImageTemplate.from_dict(t))
         for hr in d.get("hud_regions", []):
             p.add_hud_region(HudRegion.from_dict(hr))
+        for c in d.get("hud_region_combos", []):
+            p.add_hud_region_combo(HudRegionCombo.from_dict(c))
         return p
 
     def copy(self) -> "Project":

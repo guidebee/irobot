@@ -143,6 +143,22 @@ or to two meanings sharing one region (a tap vs. a long-press on the same button
 hand-editing a session's `segments:` list, or a future, smarter classification step. See
 `GAME_RUN_AI_ASSIST_DESIGN.md` §3 for the human-review precedent such a step should follow.
 
+Two regions touched at overlapping times (e.g. holding `right_button` while tapping `jump_button`)
+normally classify as two separate, overlapping segments -- `GameplaySession.validate` flags the
+overlap, and it's real: the raw session genuinely has two concurrent touches. When that
+combination is actually meaningful as its own move, define a **HUD Combo** below the HUD Regions
+list: **Add Combo**, name it, ctrl/shift-click 2+ regions in the "Regions in combo" list to select
+exactly the set that must be touched together, and give it an **Action name** (e.g.
+`right_button` + `jump_button` -> `right_jump`). Classify Session then folds every cluster of
+concurrent gestures whose exact region set matches a combo into one segment spanning the whole
+overlap, naming the combo's action instead of the individual regions' -- including a long hold with
+several taps nested inside it (holding right while mashing jump collapses to one `right_jump`
+segment covering the whole span, not one per tap). A cluster whose region set doesn't exactly match
+any defined combo (a third region also overlapping, or no combo defined at all) still falls back to
+classifying each region separately, logged as such, so nothing is silently merged that wasn't
+explicitly configured (see `hud_classifier.py`'s `classify_session` and `model.py`'s
+`HudRegionCombo`).
+
 ## Testing
 
 Pure-Python model tests, no Qt/socket/device required:

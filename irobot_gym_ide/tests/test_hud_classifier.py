@@ -2,11 +2,15 @@
 import unittest
 
 from ..hud_classifier import classify_session
-from ..model import EventKind, GameplaySession, HudRegion, PrimitiveEvent
+from ..model import EventKind, GameplaySession, HudRegion, HudRegionCombo, PrimitiveEvent
 
 
 def _regions(*regions) -> dict:
     return {r.name: r for r in regions}
+
+
+def _combos(*combos) -> dict:
+    return {c.name: c for c in combos}
 
 
 class TapClassificationTest(unittest.TestCase):
@@ -64,6 +68,86 @@ class OverlappingRegionsTest(unittest.TestCase):
         segments = classify_session(session, regions)
         self.assertEqual(len(segments), 1)
         self.assertEqual(segments[0].action_name, "special_move")
+
+
+class ComboClassificationTest(unittest.TestCase):
+    def _right_and_jump_regions(self):
+        return _regions(
+            HudRegion(name="right_button", x=0, y=0, width=10, height=10, action_name="move_right"),
+            HudRegion(name="jump_button", x=100, y=0, width=10, height=10, action_name="jump"),
+        )
+
+    def test_overlapping_regions_fold_into_one_combo_segment_when_defined(self):
+        events = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5, pointer_id=0),      # right_button starts
+            PrimitiveEvent(kind=EventKind.PRESS, x=105, y=5, pointer_id=1),    # jump_button starts, overlapping
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=1),              # jump_button ends
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=0),              # right_button ends
+        ]
+        session = GameplaySession(name="s", events=events)
+        regions = self._right_and_jump_regions()
+        combos = _combos(HudRegionCombo(name="right_jump", region_names=["right_button", "jump_button"],
+                                         action_name="right_jump"))
+        segments = classify_session(session, regions, combos)
+        self.assertEqual(len(segments), 1)
+        seg = segments[0]
+        self.assertEqual((seg.start_index, seg.end_index, seg.action_name, seg.label), (0, 4, "right_jump", "right_jump"))
+
+    def test_overlap_without_a_matching_combo_falls_back_to_separate_segments(self):
+        events = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5, pointer_id=0),
+            PrimitiveEvent(kind=EventKind.PRESS, x=105, y=5, pointer_id=1),
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=1),
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=0),
+        ]
+        session = GameplaySession(name="s", events=events)
+        regions = self._right_and_jump_regions()
+        logs = []
+        segments = classify_session(session, regions, {}, on_log=logs.append)
+        self.assertEqual(len(segments), 2)
+        self.assertEqual({(s.start_index, s.end_index, s.action_name) for s in segments},
+                          {(0, 4, "move_right"), (1, 3, "jump")})
+        self.assertTrue(any("no matching HudRegionCombo" in line for line in logs))
+
+    def test_three_way_overlap_does_not_partially_match_a_two_region_combo(self):
+        third = HudRegion(name="shield_button", x=200, y=0, width=10, height=10, action_name="shield")
+        events = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5, pointer_id=0),      # right_button
+            PrimitiveEvent(kind=EventKind.PRESS, x=105, y=5, pointer_id=1),    # jump_button
+            PrimitiveEvent(kind=EventKind.PRESS, x=205, y=5, pointer_id=2),    # shield_button, all overlapping
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=2),
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=1),
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=0),
+        ]
+        session = GameplaySession(name="s", events=events)
+        regions = self._right_and_jump_regions()
+        regions["shield_button"] = third
+        combos = _combos(HudRegionCombo(name="right_jump", region_names=["right_button", "jump_button"],
+                                         action_name="right_jump"))
+        segments = classify_session(session, regions, combos)
+        # the combo's region set {right_button, jump_button} != the cluster's {right_button, jump_button,
+        # shield_button}, so no combo applies -- all three classified separately, not partially merged.
+        self.assertEqual(len(segments), 3)
+        self.assertEqual({s.action_name for s in segments}, {"move_right", "jump", "shield"})
+
+    def test_repeated_taps_nested_in_a_hold_all_fold_into_one_combo_span(self):
+        # holding right_button the whole time while tapping jump_button three times inside that hold --
+        # the real "run and mash jump" pattern that originally produced spurious overlap warnings.
+        events = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5, pointer_id=0),   # 0: right_button starts
+            PrimitiveEvent(kind=EventKind.TAP, x=105, y=5),                 # 1: jump tap 1
+            PrimitiveEvent(kind=EventKind.TAP, x=105, y=5),                 # 2: jump tap 2
+            PrimitiveEvent(kind=EventKind.TAP, x=105, y=5),                 # 3: jump tap 3
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=0),           # 4: right_button ends
+        ]
+        session = GameplaySession(name="s", events=events)
+        regions = self._right_and_jump_regions()
+        combos = _combos(HudRegionCombo(name="right_jump", region_names=["right_button", "jump_button"],
+                                         action_name="right_jump"))
+        segments = classify_session(session, regions, combos)
+        self.assertEqual(len(segments), 1)
+        seg = segments[0]
+        self.assertEqual((seg.start_index, seg.end_index, seg.action_name), (0, 5, "right_jump"))
 
 
 class MultipleGesturesTest(unittest.TestCase):

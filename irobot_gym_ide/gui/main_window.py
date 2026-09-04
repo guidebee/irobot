@@ -23,13 +23,13 @@ from PySide6.QtWidgets import (
     QMainWindow, QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
     QListWidget, QListWidgetItem, QLineEdit, QSpinBox, QDoubleSpinBox, QPushButton, QLabel,
     QComboBox, QPlainTextEdit, QSplitter, QFileDialog, QMessageBox, QInputDialog,
-    QCheckBox, QTabWidget,
+    QCheckBox, QTabWidget, QAbstractItemView,
 )
 from PySide6.QtCore import Qt
 
 from .. import io as project_io
 from ..model import (
-    Project, Action, EventKind, GameplaySession, GameRun, HudRegion, ImageTemplate, PrimitiveEvent,
+    Project, Action, EventKind, GameplaySession, GameRun, HudRegion, HudRegionCombo, ImageTemplate, PrimitiveEvent,
     conflicting_pointer_actions, orphan_releases,
 )
 from ..connection import LiveConnection
@@ -78,6 +78,8 @@ class MainWindow(QMainWindow):
         self._loading_template_fields = False   # same guard purpose as _loading_fields, for the template props row
         self._selected_hud_region: HudRegion | None = None
         self._loading_hud_region_fields = False   # same guard purpose as _loading_template_fields
+        self._selected_combo: HudRegionCombo | None = None
+        self._loading_combo_fields = False   # same guard purpose as _loading_hud_region_fields
         self._capture_target = "template"   # "template" or "hud_region" -- which capture button is armed;
                                               # the canvas only has one capture mode, see _on_region_selected
         self._run_executor: GameRunExecutor | None = None
@@ -276,6 +278,35 @@ class MainWindow(QMainWindow):
         hud_region_btn_row.addWidget(remove_hud_region_btn)
         left_layout.addLayout(hud_region_btn_row)
 
+        left_layout.addWidget(QLabel(
+            "HUD Combos (2+ regions touched together -> one action, e.g.\n"
+            "right_button + jump_button -> right_jump):"))
+        self._combo_list = QListWidget()
+        self._combo_list.currentItemChanged.connect(self._on_combo_selected)
+        left_layout.addWidget(self._combo_list)
+
+        left_layout.addWidget(QLabel("Regions in combo (ctrl/shift-click to select 2+):"))
+        self._combo_regions_list = QListWidget()
+        self._combo_regions_list.setSelectionMode(QAbstractItemView.MultiSelection)
+        self._combo_regions_list.itemSelectionChanged.connect(self._on_combo_regions_changed)
+        left_layout.addWidget(self._combo_regions_list)
+
+        combo_action_row = QHBoxLayout()
+        combo_action_row.addWidget(QLabel("Action name"))
+        self._combo_action_edit = QLineEdit()
+        self._combo_action_edit.editingFinished.connect(self._on_combo_action_edited)
+        combo_action_row.addWidget(self._combo_action_edit)
+        left_layout.addLayout(combo_action_row)
+
+        combo_btn_row = QHBoxLayout()
+        add_combo_btn = QPushButton("Add Combo")
+        add_combo_btn.clicked.connect(self._add_hud_combo)
+        remove_combo_btn = QPushButton("Remove Combo")
+        remove_combo_btn.clicked.connect(self._remove_hud_combo)
+        combo_btn_row.addWidget(add_combo_btn)
+        combo_btn_row.addWidget(remove_combo_btn)
+        left_layout.addLayout(combo_btn_row)
+
         left_dock = QDockWidget("Project", self)
         left_dock.setWidget(left)
         self.addDockWidget(Qt.LeftDockWidgetArea, left_dock)
@@ -362,11 +393,13 @@ class MainWindow(QMainWindow):
         self._selected_run = None
         self._selected_template = None
         self._selected_hud_region = None
+        self._selected_combo = None
         self._load_project_into_fields()
         self._refresh_action_list()
         self._refresh_run_list()
         self._refresh_template_list()
         self._refresh_hud_region_list()
+        self._refresh_combo_list()
         self._refresh_session_list()
         self._inspector.set_action(None)
         self._run_editor.set_run(None)
@@ -384,11 +417,13 @@ class MainWindow(QMainWindow):
         self._selected_run = None
         self._selected_template = None
         self._selected_hud_region = None
+        self._selected_combo = None
         self._load_project_into_fields()
         self._refresh_action_list()
         self._refresh_run_list()
         self._refresh_template_list()
         self._refresh_hud_region_list()
+        self._refresh_combo_list()
         self._refresh_session_list()
         self._inspector.set_action(None)
         self._run_editor.set_run(None)
@@ -619,6 +654,7 @@ class MainWindow(QMainWindow):
         self._hud_region_list.clear()
         for name in self.project.hud_regions:
             self._hud_region_list.addItem(QListWidgetItem(name))
+        self._refresh_combo_region_choices()
 
     def _on_hud_region_selected(self, current: QListWidgetItem, _previous) -> None:
         if current is None:
@@ -684,6 +720,79 @@ class MainWindow(QMainWindow):
         self._log_line(f"Captured HUD region {name!r}: ({rx0},{ry0}) {rw}x{rh} (reference space) -- "
                         f"set its Action name, then use Classify Session.")
 
+    # -- HUD combos --------------------------------------------------------
+
+    def _refresh_combo_list(self) -> None:
+        self._combo_list.clear()
+        for name in self.project.hud_region_combos:
+            self._combo_list.addItem(QListWidgetItem(name))
+
+    def _refresh_combo_region_choices(self) -> None:
+        self._combo_regions_list.clear()
+        for name in self.project.hud_regions:
+            self._combo_regions_list.addItem(QListWidgetItem(name))
+        self._sync_combo_region_selection()
+
+    def _sync_combo_region_selection(self) -> None:
+        """Ticks the multi-select region list to match self._selected_combo's
+        current region_names -- called whenever the combo selection or the
+        set of available HUD regions changes, so the two stay consistent."""
+        self._loading_combo_fields = True
+        try:
+            selected_names = set(self._selected_combo.region_names) if self._selected_combo else set()
+            for i in range(self._combo_regions_list.count()):
+                item = self._combo_regions_list.item(i)
+                item.setSelected(item.text() in selected_names)
+        finally:
+            self._loading_combo_fields = False
+
+    def _on_combo_selected(self, current: QListWidgetItem, _previous) -> None:
+        if current is None:
+            self._selected_combo = None
+        else:
+            self._selected_combo = self.project.hud_region_combos.get(current.text())
+        self._loading_combo_fields = True
+        try:
+            self._combo_action_edit.setText(self._selected_combo.action_name if self._selected_combo else "")
+        finally:
+            self._loading_combo_fields = False
+        self._sync_combo_region_selection()
+
+    def _on_combo_regions_changed(self) -> None:
+        if self._loading_combo_fields or self._selected_combo is None:
+            return
+        self._selected_combo.region_names = [
+            self._combo_regions_list.item(i).text()
+            for i in range(self._combo_regions_list.count())
+            if self._combo_regions_list.item(i).isSelected()
+        ]
+
+    def _on_combo_action_edited(self) -> None:
+        if self._loading_combo_fields or self._selected_combo is None:
+            return
+        self._selected_combo.action_name = self._combo_action_edit.text()
+
+    def _add_hud_combo(self) -> None:
+        name, ok = QInputDialog.getText(self, "Add HUD Combo", "Combo name:")
+        if not ok or not name:
+            return
+        if name in self.project.hud_region_combos:
+            QMessageBox.warning(self, "Add HUD Combo", f"Combo {name!r} already exists.")
+            return
+        self.project.add_hud_region_combo(HudRegionCombo(name=name))
+        self._refresh_combo_list()
+        self._log_line(f"Added HUD combo {name!r} -- select 2+ regions and set its Action name.")
+
+    def _remove_hud_combo(self) -> None:
+        item = self._combo_list.currentItem()
+        if item is None:
+            return
+        self.project.remove_hud_region_combo(item.text())
+        self._selected_combo = None
+        self._refresh_combo_list()
+        self._combo_action_edit.clear()
+        self._sync_combo_region_selection()
+
     def _warn_pointer_conflicts(self) -> None:
         conflicts = conflicting_pointer_actions(self.project.actions)
         for pointer_id, names in conflicts:
@@ -732,6 +841,7 @@ class MainWindow(QMainWindow):
         width, height, ndarray = frame
         self._canvas.update_frame(width, height, ndarray)
         self._canvas.set_markers(self._markers_for_selected_action(width, height))
+        self._canvas.set_hud_regions(self._hud_region_markers(width, height))
 
     def _reconcile_detected_resolution(self) -> None:
         """Compares irobot's self-reported real resolution (BLOB_MSG_TYPE_RESOLUTION,
@@ -802,6 +912,15 @@ class MainWindow(QMainWindow):
             fx, fy = self._reference_to_frame(event.x, event.y, frame_w, frame_h)
             markers.append((fx, fy, event.pointer_id, f"{i}:{event.kind.value}"))
         return markers
+
+    def _hud_region_markers(self, frame_w: int, frame_h: int):
+        regions = []
+        for region in self.project.hud_regions.values():
+            x0, y0 = self._reference_to_frame(region.x, region.y, frame_w, frame_h)
+            x1, y1 = self._reference_to_frame(region.x + region.width, region.y + region.height, frame_w, frame_h)
+            label = f"{region.name} -> {region.action_name}" if region.action_name else region.name
+            regions.append((x0, y0, x1, y1, label, region is self._selected_hud_region))
+        return regions
 
     def _reference_to_frame(self, x: int, y: int, frame_w: int, frame_h: int):
         ref_w, ref_h = self.project.reference_width, self.project.reference_height
@@ -1160,7 +1279,8 @@ class MainWindow(QMainWindow):
                 self._log_line("Classify cancelled.")
                 return
 
-        session.segments = classify_session(session, self.project.hud_regions, on_log=self._log_line)
+        session.segments = classify_session(
+            session, self.project.hud_regions, self.project.hud_region_combos, on_log=self._log_line)
         for warning in session.validate(self.project.actions):
             self._log_line(f"  warning: {warning}")
         project_io.save_session(session, self.project_path)
