@@ -12,7 +12,7 @@ roadmap.
 
 No root access required. Works on GNU/Linux, Windows, and macOS.
 
-![irobot_agent](https://github.com/guidebee/irobot/blob/master/docs/irobot_agent.png)
+![irobot_gym_ide](https://github.com/guidebee/irobot/blob/master/docs/irobot_gym_ide.png)
 
 ---
 
@@ -161,7 +161,7 @@ turning raw device input into a reusable, testable action vocabulary — no trai
    or a whole playthrough as a gameplay session, and classify it against HUD regions into named actions
    automatically.
 
-![irobot_gym_ide](https://github.com/guidebee/irobot/blob/master/docs/irobot_gym_ide.png)
+![irobot_agent](https://github.com/guidebee/irobot/blob/master/docs/irobot_agent.png)
 
 ```bash
 pip install -r irobot_gym_ide/requirements.txt   # PySide6, PyYAML, numpy
