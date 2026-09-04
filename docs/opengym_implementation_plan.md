@@ -203,7 +203,12 @@ files in this plan — everything else is additive.
 - Frame staleness: because the video channel is push-only (§3.2), `connection.py`'s reader thread must
   track "is this the newest frame since the last `step()`'s action was sent" — expose an
   `info["frame_age_steps"]` or similar so training code can detect a stalled stream instead of
-  silently training on repeated stale frames.
+  silently training on repeated stale frames. Beyond just reporting it: AndroidEnv's
+  `RateLimitWrapper` (`android_env/wrappers/rate_limit_wrapper.py`) has a documented
+  `AFTER_WITH_REPEAT` mode that actively mitigates this instead of only measuring it — step, discard
+  that timestep, sleep, then issue a no-op `REPEAT` step purely to pull the freshest frame available
+  right before returning. Worth the same trick here as an opt-in `step()` behavior once staleness is
+  actually being tracked, rather than only surfacing it in `info`.
 - **Motion info (velocity/direction) and object/vector-shape extraction are explicitly out of scope
   for the env itself.** Considered and deliberately dropped: converting raster frames to vector
   shapes (contour extraction + cross-frame object tracking for per-shape speed/direction) only
@@ -287,8 +292,16 @@ set — directly modeled on AndroidEnv's primitive (§7.2), always targeting `po
 `TOUCH` then `LIFT` on the same step, or `TOUCH` then `LIFT` on consecutive steps; a swipe/drag is
 `TOUCH` then several `MOVE`s toward the target then `LIFT` — composed over multiple `step()` calls,
 no separate "swipe" action needed. Plus a small fixed keycode set (BACK, HOME, ENTER) as extra
-discrete actions. Cheapest to get an SB3 `PPO`/`DQN` baseline running, smallest action space, matches
-both AndroidEnv's precedent and most mobile-game RL write-ups' starting point.
+discrete actions — these are Android system keys dispatched through `irobot-server`'s normal
+`Controller`/`InputManager` path (`INJECT_KEYCODE`, works today regardless of any attached hardware
+keyboard). Worth one verification before assuming this generalizes to a wider keycode set later:
+AndroidEnv's own `ActionType.KEYDOWN`/`KEYUP`/`KEYPRESS` docstring (`action_type.py`, local clone)
+warns those "[are] only meaningful if connected to a *physical* keyboard, *not* virtual keyboard" —
+that's a real gotcha for whatever key-injection mechanism *they* use, and may or may not apply to
+`irobot-server`'s different code path, but it's cheap to confirm BACK/HOME/ENTER-style system keys
+stay reliable before this tier's keycode set is ever widened beyond them. Cheapest to get an SB3
+`PPO`/`DQN` baseline running, smallest action space, matches both AndroidEnv's precedent and most
+mobile-game RL write-ups' starting point.
 
 **Tier 0.1 — continuous single pointer.** `Dict({"action_type": Discrete(3), "position": Box(2)})`
 (still `pointer_id = 0` only) — same primitive-composition idea as Tier 0, continuous coordinates
@@ -515,7 +528,16 @@ count reaches 0" is a cheap, first-class terminal condition an integrator alread
    currently-unused device→agent direction (bigger lift; stretch goal, not v1). **Only works for
    games whose UI is native Android views** — most game-engine titles (Unity/Cocos2d/Unreal) render
    everything into one opaque `GLSurfaceView`/`SurfaceView`, in which case this tier reports
-   `Unavailable` and the pipeline falls through to vision.
+   `Unavailable` and the pipeline falls through to vision. **The stretch-goal design above is
+   independently validated by AndroidEnv's actual implementation, not just a plausible guess**:
+   `android_env/wrappers/a11y_grpc_wrapper.py` (local clone) does exactly this shape — a dedicated
+   `AccessibilityForwarder` companion APK streams the full accessibility node forest + events off-device
+   over gRPC into the wrapper, folded into `task_extras`. Same idea as the `irobot-server` hook above
+   (a companion service on-device pushing structured view-tree data back to the client), just over a
+   different transport (gRPC vs. this project's existing control-channel direction) — worth reading
+   that wrapper directly if/when this tier gets built, since it's a solved reference implementation of
+   the exact "keep it off the step-rate critical path, reconnect on failure" problem this tier would
+   otherwise have to solve from scratch.
 3. **Digit-template matching** (`DigitTemplateScoreSignal`, vision, primary default when 1–2 are
    unavailable) — crop a configured ROI, binarize (Otsu threshold), segment into per-digit blobs via
    `cv2.findContours`, match each blob against ~10 pre-captured glyph templates (one-time,
@@ -655,6 +677,49 @@ real game needs them.
   that's a one-line C++ CLI-parsing fix, not a design change, and belongs in Phase 0 if discovered
   early enough to bundle.
 
+### 9.1 Session health and self-healing relaunch
+
+**A gap the rest of this plan doesn't cover**: everything above handles the *app* misbehaving
+(wrong screen, stuck frame, no score signal — §8, §13's watchdog item) but nothing here handles
+the *pipe* itself breaking — a dropped adb connection, a wedged control/video socket, a hung
+`irobot` process, a device that stops responding to touch mid-session. For a long unattended
+training run or Game Run auto-play session this is a real failure mode with no current answer.
+
+Checked directly against DeepMind's AndroidEnv (local clone), not assumed: its `Coordinator`
+(`android_env/components/coordinator.py`) is built entirely around this problem and is worth
+copying the shape of, not just the idea:
+
+- **Health is tracked, not assumed.** `_simulator_healthy` is a plain bool. `step()` never raises
+  on a transport failure — if sending the action or fetching the next observation fails, it sets
+  the flag false and returns a degraded timestep immediately (`dm_env.truncation(reward=0.0,
+  observation=None)`, `coordinator.py:236-260`), deferring any actual recovery to the next
+  `reset()`. Translated to `IrobotEnv`: a failed `touch_message()` send or a `step_timeout` with no
+  fresh frame should mark `_connection_healthy = False` and return `truncated=True, reward=0.0`
+  from that `step()` call — never propagate a socket exception up into the training loop.
+- **`reset()` is where relaunch actually happens**, bounded and retried
+  (`_launch_simulator(max_retries=3)`, `coordinator.py:122-172`): if unhealthy (or a periodic timer
+  has elapsed, next bullet), it re-establishes the connection with a small bounded retry count
+  before finally raising a hard error. For `IrobotEnv` this maps to: reconnect the control/video
+  sockets first (cheapest fix); if that fails, restart the `irobot` subprocess itself (via
+  `launcher.py`, §10); then re-run the adapter's `reset_episode()`. Three tries, then raise —
+  matches AndroidEnv's `errors.TooManyRestartsError` pattern rather than retrying forever.
+- **Periodic full relaunch as hygiene, independent of episode boundaries.**
+  `CoordinatorConfig.periodic_restart_time_min` (`config_classes.py`) forces a full relaunch every N
+  minutes even with no detected failure, specifically because a simulator "is not in a stale state
+  even if the environment has been running for a significant amount of time" (its own docstring).
+  Worth a matching `IrobotEnv(periodic_restart_min: float = 0.0)` constructor param (disabled by
+  default) — guards against slow drift over a multi-hour unattended run (notification backlog,
+  memory pressure, degraded app performance) that no single episode boundary would catch.
+- **Per-cause telemetry, not just a health bool.** AndroidEnv's `Coordinator.stats()` exposes
+  separate counters per failure origin (`relaunch_count_execute_action`,
+  `relaunch_count_fetch_observation`, `relaunch_count_setup_steps`, `relaunch_count_periodic`, ...).
+  Cheap to add and genuinely useful: it's what lets an integrator tell "my agent's policy is bad"
+  from "my connection is flaky" after a long run, instead of guessing from a flat reward curve.
+
+This is additive to §9's `reset()`/`step()` mechanics above, not a replacement — it's the layer
+that decides *whether* to run them versus recover first, and belongs in `env.py` alongside them,
+not bolted on separately.
+
 ## 10. Parallel rollouts
 
 Document, don't over-engineer: a `VecEnv` is just N `IrobotEnv`s, each pointed at one `irobot`
@@ -697,14 +762,19 @@ emulator instances are the realistic scaling bottleneck (CPU/RAM), not the socke
    2+ back-to-back control-socket writes in one `step()`.
 5. `adapters/base.py` (`ScoreSignal`/`TerminalSignal`/`GameAdapter`, §8.2) +
    `PHashStuckTerminalSignal`, wire into `reset()`/`step()`.
-6. Manual validation against one real, simple game: **first** `adb logcat | grep -i score` while
+6. §9.1's health/relaunch layer (connection-failure → `truncated` degradation, bounded-retry
+   `reset()`, per-cause counters) — land this right after step 5, before any real-device validation
+   below, so a flaky connection during that validation surfaces as a counted, recovered relaunch
+   instead of a hung test run or an opaque crash. Periodic-restart hygiene can wait; the
+   failure-detection/recovery path shouldn't.
+7. Manual validation against one real, simple game: **first** `adb logcat | grep -i score` while
    playing it by hand (§8.3.1/§8.7) — if a usable log line exists, wiring `LogcatScoreSignal` is
    cheaper than everything below and worth 10 minutes before writing any vision code. Otherwise fall
    back to `TemplateMatchTerminalSignal` + `RegionChangedScoreSignal`/`HealthBarFillRatioSignal`
    (§8.7), then `DigitTemplateScoreSignal` + `calibrate_digits.py` once tap-only baselines work
    end-to-end.
-7. `launcher.py` + 2-instance `SubprocVecEnv` validation.
-8. `examples/train_ppo.py` as the "does this actually train" smoke test.
+8. `launcher.py` + 2-instance `SubprocVecEnv` validation.
+9. `examples/train_ppo.py` as the "does this actually train" smoke test.
 
 Steps 1–2 are the only ones that touch the C++ codebase; everything else is additive Python. This
 was deliberately ordered so the highest-risk/most-invasive change (protocol framing) happens first
@@ -722,7 +792,12 @@ developed to the same depth as §4–§12 — treat this as a prioritized backlo
   phash-stability) is slow — seconds per episode. On an emulator backend (not a physical device), VM
   snapshot/restore gives near-instant resets and is the standard throughput trick for this kind of
   training loop; worth an emulator-specific `reset_episode()` path once §1.1's latency spike confirms
-  the project is worth scaling up.
+  the project is worth scaling up. **Not just a plausible idea — a proven precedent exists**:
+  AndroidEnv's `emulator_simulator.py` (local clone) implements this via the emulator's own gRPC
+  `SnapshotService` (`save_state`/`load_state` exposed as declarative adb-request-shaped calls,
+  `snapshot_service.proto`), not a bespoke VM-management layer — worth wiring up the same way (an
+  `AdbRequest`-style `save_state`/`load_state` call an adapter's `reset_episode()` can invoke) rather
+  than reinventing the snapshot protocol.
 - **Separate "training" vs. "human-mirroring" capture settings.** Lower `--max-fps`/`--bit-rate`/
   `--max-size` (flags already exist) for training runs — RL doesn't need human-viewing quality, and
   every millisecond shaved off encode/network/decode compounds across millions of steps (§1.1.3).
@@ -735,10 +810,33 @@ developed to the same depth as §4–§12 — treat this as a prioritized backlo
 - **Ads, interstitials, and OS dialogs will happen** on real F2P games. None of §8.4's `TerminalSignal`
   tiers currently handle "unexpected screen that's neither gameplay nor a known game-over" — worth a
   generic watchdog (frame matches no known state for N steps → press BACK, don't just truncate).
+  AndroidEnv's equivalent (`expected_app_screen`, checked via `components/dumpsys_thread.py` in the
+  local clone) is a good template for *how* to build this cheaply: a non-vision `adb shell dumpsys
+  activity`/current-activity string compare, run on a **background thread, off the `step()` critical
+  path**, polled only every N steps via a non-blocking `Future` — its own docstring is explicit that
+  this check is "too expensive to be in the critical path of `step()`." Any irobot version of this
+  watchdog should copy that async/off-critical-path shape, not add a synchronous dumpsys call inline
+  in `step()`. Complementary to this: `dumpsys activity activities | grep mResumedActivity` catches
+  "agent got kicked to home screen / an ad opened Chrome" without spending a vision call at all —
+  worth running first, with the vision-based "frame matches no known state" check as the fallback for
+  in-app unexpected screens dumpsys can't see (a modal rendered inside the game's own `GLSurfaceView`).
 - **Guardrail the action space away from real-world side effects.** This drives a real device, possibly
   a real account — an untrained agent tapping randomly can hit an ad's outbound link or an in-app-
   purchase button. Restrict the touch grid (§7) to the actual play area per-game as a documented
   safety default, not an afterthought.
+- **Turn off device chrome before any run.** A visible status bar (notification icons, low-battery
+  banner) or navigation bar adds unnecessary guardrail surface — it can occlude a template ROI or
+  catch an accidental tap from a naive touch grid, exactly the risk the bullet above is trying to
+  shrink. AndroidEnv treats this as a first-class part of setup, not an afterthought:
+  `DeviceSettingsConfig` (`config_classes.py`) defaults `show_status_bar`/`show_navigation_bar` to
+  `False`. One `adb shell settings put`/`wm` call in `reset_episode()`/setup, no C++ change — worth
+  doing from the start rather than adding after the first accidental-tap incident. The same config
+  also flips `show_touches`/`show_pointer_location` on for debugging visibility, worth keeping as an
+  opt-in flag for human-supervised runs.
+- **Session/connection health, not just app-level health.** See §9.1 — a dropped socket or wedged
+  `irobot` process is a distinct failure mode from "wrong screen" or "stuck frame," with its own
+  design now (bounded-retry relaunch, graceful `truncated` degradation, periodic hygiene relaunch,
+  per-cause telemetry), modeled directly on AndroidEnv's `Coordinator`.
 
 **Reuse what already exists**
 
@@ -760,3 +858,80 @@ developed to the same depth as §4–§12 — treat this as a prioritized backlo
 - Since action/observation/reward are already game-agnostic via config, a multi-game curriculum
   wrapper training one generalist policy is a natural, interesting follow-on research direction once
   single-game training works.
+
+## 14. Comparison with AndroidEnv
+
+This plan cites DeepMind's AndroidEnv ([arXiv:2105.13231](https://arxiv.org/abs/2105.13231),
+[repo](https://github.com/google-deepmind/android_env)) throughout §7–§9 and §13 as the closest
+existing system to this one — same problem shape: arbitrary Android apps/games, a universal
+touchscreen action interface, pixel observations, an RL-style `step()`/`reset()` loop. Rather than
+leave that comparison scattered across a dozen citations, this section pulls it into one place: what's
+directly adopted, what's deliberately different and why, and what's still genuinely open. Checked
+against a local clone of the AndroidEnv source (not just its docs), so the claims below are grounded in
+actual code, cited by file where it matters.
+
+### 14.1 Side-by-side
+
+| Dimension | AndroidEnv | This plan | Verdict |
+| --- | --- | --- | --- |
+| Target hardware | Emulator (AVD) only, plus a `fake` simulator for tests — no real-device backend exists in the codebase | Real physical device (scrcpy protocol) **and** emulator | Deliberate divergence — irobot's core value is testing against real hardware, which AndroidEnv structurally can't do |
+| Action primitive | Single active pointer: `{TOUCH, LIFT, REPEAT}` × continuous `(x,y)`; multi-touch explicitly unsupported (`environment.md`: "does not support multitouch actions at the moment") | Same single-pointer primitive as Tier 0 default (§7.3), **plus** genuine concurrent multi-touch as an opt-in Tier 1/1.5/2 | Adopted as the default, extended beyond it — justified in §7.1 by a verified fact AndroidEnv's authors didn't have: `irobot_server`'s wire protocol already does real simultaneous multi-touch, not simulated taps |
+| Observation | `pixels` + `timedelta` + `orientation`, uniform `dm_env` spec | Grayscale/color `Box`, optional `frame_stack`/`include_flow`, `info["frame_age_steps"]` staleness tracking (§6) | Same raster-first philosophy; staleness-tracking is a first-class concern here because irobot's video channel is a push-only TCP stream, not a host-side screenshot RPC the caller can request synchronously |
+| Reward/episode signal ordering | `Task` protobuf: logcat-regex first, accessibility second — vision is not the primary mechanism in the reference design | Tiered `ScoreSignal`/`TerminalSignal` (§8.3–8.4): same ordering *as documented*, but §8.1/§8.3 now flag that vision will be tier 1 in practice for most real integrations (§14.2 below) | Ordering adopted; the plan goes further than AndroidEnv's docs by being explicit about when that ordering doesn't hold |
+| Task definition | Declarative `Task()` protobuf / `.textproto` — versionable, engine-agnostic, checked into source control as data | Python `GameAdapter` class (§8.2) + YAML `ActionMap`/`project.yaml` — not one unified declarative artifact | Open gap, not yet closed — see §14.3 |
+| Episode-exit watchdog | `expected_app_screen`, checked via `dumpsys activity` on a background thread off the `step()` critical path (`dumpsys_thread.py`) | Backlog item (§13) now specifies the same async/off-critical-path `dumpsys`-based check, plus a vision fallback for in-app modals `dumpsys` can't see | Directly adopted, extended |
+| Fast episode reset | Emulator's own gRPC `SnapshotService` (`save_state`/`load_state`) | Backlog item (§13), same mechanism, emulator-only in both cases | Directly adopted where applicable; no equivalent possible on a real device |
+| Session/connection resilience | `Coordinator`: health-tracked, bounded-retry relaunch, graceful `truncated` degradation instead of raising, optional periodic full relaunch, per-cause failure counters | §9.1, modeled directly on `Coordinator` | Directly adopted |
+| Accessibility signal | Dedicated `AccessibilityForwarder` companion APK streaming the full a11y node forest over gRPC into `task_extras` | Stretch-goal (§8.3): an accessibility hook added to `irobot-server`, streamed over the control channel's unused device→agent direction | Independently converged on the same shape (companion service pushing structured view-tree data back to the client), different transport |
+| Reward math | Internal delta computation for `score` (`current - last`); `reward` events forwarded directly; a `RewardEvent` pattern→fixed-value map | §8.5: delta-based, clipped/scaled composer, explicitly citing the same DQN precedent | Same "delta, not absolute" philosophy — independently justified from DQN in both cases, not copied from one to the other |
+| Multi-counter HUDs | Not supported — one `score`/`reward` channel per task; the older `extras_spec` mechanism is now deprecated in the proto itself | §8.2.1: a named `signals: dict[str, ScoreSignal]` per adapter (coins/keys/lives/level independently tracked, one drives reward, the rest are observability) | This plan is richer here — a real gap in AndroidEnv's design that a modern mobile-game HUD (multiple simultaneous counters) exposes |
+| Parallel rollouts | Multiple AVDs, no built-in cluster scheduler | Multiple `irobot` subprocesses via `launcher.py` (§10), no built-in cluster scheduler | Same scope, same limitation, on both sides — neither project solves this beyond "spawn N processes" |
+| Composability model | A canonical env wrapped by a stack of composable `dm_env`/Gym wrappers (`discrete_action_wrapper`, `image_rescale_wrapper`, `tap_action_wrapper`, `swipe_action_wrapper`, ...) | Config-driven: tiers/`ActionMap`/`GameAdapter` selected at construction time, not layered wrappers (though `frame_stack`/`include_flow` in §6 are explicitly wrapper-shaped) | Different philosophy, not a gap — worth revisiting only if a specific optional feature (e.g. a generic `last_action`-style memory aid) turns out to compose more naturally as a wrapper than a config flag |
+| Keyboard input | `KEYDOWN`/`KEYUP`/`KEYPRESS` require a **physical** keyboard attached to the device — explicitly documented as not working through the virtual keyboard | `INJECT_KEYCODE` through `irobot-server`'s `Controller`/`InputManager` path; BACK/HOME/ENTER are Android system keys, not text-entry keys | Likely not the same limitation (different underlying mechanism), but unverified — flagged in §7.3 rather than asserted either way |
+
+### 14.2 Where this plan deliberately diverges, and why
+
+- **Real-device support is the headline difference**, not an incidental one. Every AndroidEnv
+  mechanism that depends on emulator-only capabilities (gRPC `SnapshotService` snapshots, the
+  `AccessibilityForwarder`'s reliance on emulator networking quirks the wrapper itself works around)
+  is, in this plan, an emulator-only *option* layered on top of a design that has to work without any
+  of them on a real phone. This is why §13's snapshot-reset and accessibility items are backlog/stretch
+  rather than v1 defaults, while the vision-tier `ScoreSignal`/`TerminalSignal` stack (§8.3–8.4) —
+  which needs nothing but pixels — is the v1 core.
+- **Vision is the realistic default here, not the documented last resort.** AndroidEnv's
+  logcat-first/accessibility-second/vision-last ordering is sound advice, but it's calibrated against
+  DeepMind's own curated task set — open-source or source-patchable apps where they could add a
+  `Log.i(...)` call to emit a clean reward signal (`tasks_guide.md`'s own worked example does exactly
+  this to the 2048 app's source). irobot's actual target — arbitrary closed-source commercial mobile
+  games — usually can't be patched that way, and most game-engine titles (Unity/Cocos2d/Unreal) render
+  into one opaque `SurfaceView` that accessibility can't see into either. So while §8.3/§8.4 keep
+  AndroidEnv's tier *ordering* (correctly — always try the cheap signal first), an integrator should
+  expect to land on tier 3+ (digit-template/health-bar/icon-state vision) for most real games, not
+  tier 1. Worth adding to the backlog: documenting APK decompile/smali-patch-and-resign as an explicit
+  extra tier for open-source-friendly or mod-tolerant games, sitting between "hope logcat already has
+  it" and "give up and use vision" — AndroidEnv's actual trick for guaranteeing a signal, not
+  currently written down anywhere in this plan.
+- **Multi-touch is extended, not just matched.** AndroidEnv's authors made a deliberate, stated choice
+  to keep multi-touch out of the primitive action space, accepting that pinch/two-finger gestures are
+  simply out of scope for the platform-level agent they were building. This plan can afford to do
+  better specifically because §7.1 verified `irobot_server`'s wire protocol already implements real
+  concurrent `MotionEvent` construction — the capability exists whether or not the Gym layer exposes
+  it, so Tier 1/1.5/2 are close to free to add as an opt-in, not a from-scratch feature.
+
+### 14.3 What's still an open gap after this comparison
+
+- **No declarative, versionable task-definition artifact.** AndroidEnv's `Task()` `.textproto` bundles
+  setup/reset/success-conditions/expected-screen/reward-config into one file that's diffable, shareable,
+  and decoupled from Python code. This plan's `GameAdapter` (a Python class) plus `ActionMap` (YAML) is
+  functionally similar but split across two mechanisms and one of them isn't data — worth considering
+  whether `GameAdapter`'s config (which `ScoreSignal`/`TerminalSignal` tier, which ROIs, which
+  `reset_episode()` steps) should collapse into one YAML artifact alongside `ActionMap`, closer to a
+  single `Task`-shaped file per game. Not designed here — noted as a candidate for a future revision of
+  §8.2 if maintaining two adapter files per game in practice turns out to be friction, not just
+  aesthetics.
+- **The vision-primitive duplication flagged separately from this comparison** (`ImageTemplate` in
+  `irobot_gym_ide/model.py` vs. the planned `DigitTemplateScoreSignal`/`TemplateMatchTerminalSignal` in
+  `tools/irobot_gym/adapters/`) has no AndroidEnv analogue to compare against — it's an irobot-internal
+  reuse gap between this plan and the Game Run editor's existing code, not something AndroidEnv's
+  single-codebase design ever had to face. Still worth fixing before either side ships (see prior
+  design-review discussion), just not a "what AndroidEnv does differently" item.

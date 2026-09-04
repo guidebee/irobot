@@ -439,7 +439,8 @@ caused by the old header format.
 
 See [`docs/opengym_implementation_plan.md`](docs/opengym_implementation_plan.md) for the detailed, phased
 implementation plan for the Gym/Gymnasium `Env` described below (protocol facts verified against source, package
-layout, build order).
+layout, build order, and a design-by-design comparison against the closest prior art,
+[DeepMind's AndroidEnv](https://github.com/google-deepmind/android_env)).
 
 iRobot's AI agent API was originally built with this goal in mind, and the pieces exist today (video + phash streaming,
 touch/keycode injection, event recording) but only as raw sockets plus a manual [reference client](tools/README.md) —
@@ -476,3 +477,8 @@ This is exploratory direction, not a committed timeline.
 
 - [scrcpy](https://github.com/Genymobile/scrcpy) — the original C project this is based on
 - [AutoAdb](https://github.com/rom1v/autoadb) — auto-start irobot when a device connects (`autoadb irobot -s '{}'`)
+- [AndroidEnv](https://github.com/google-deepmind/android_env) — DeepMind's RL platform for Android; closest prior art
+  to the planned Gym/Gymnasium `Env` above (same problem shape: arbitrary apps/games, a universal touchscreen action
+  interface, pixel observations). Its `Task` protobuf, action-space, and reward/episode-boundary design directly shaped
+  this project's plan — see [`docs/opengym_implementation_plan.md`](docs/opengym_implementation_plan.md#14-comparison-with-androidenv)
+  for a full point-by-point comparison, including where and why this plan deliberately diverges from it.
