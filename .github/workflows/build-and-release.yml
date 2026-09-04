@@ -82,6 +82,10 @@ jobs:
   build-windows:
     runs-on: windows-latest
 
+    env:
+      VCPKG_ROOT: ${{ github.workspace }}\vcpkg
+      VCPKG_TARGET_TRIPLET: x64-mingw-dynamic
+
     steps:
     - uses: actions/checkout@v4
 
@@ -98,11 +102,32 @@ jobs:
           mingw-w64-x86_64-nlohmann-json
           mingw-w64-x86_64-opencv
           mingw-w64-x86_64-catch
-          mingw-w64-x86_64-ffmpeg
+
+    - name: Bootstrap vcpkg
+      shell: cmd
+      run: |
+        git clone --depth 1 https://github.com/microsoft/vcpkg.git "%VCPKG_ROOT%"
+        call "%VCPKG_ROOT%\bootstrap-vcpkg.bat" -disableMetrics
+
+    - name: Cache vcpkg binary cache
+      uses: actions/cache@v4
+      with:
+        path: ~\AppData\Local\vcpkg\archives
+        key: vcpkg-ffmpeg-x64-mingw-dynamic-${{ hashFiles('.github/workflows/build-and-release.yml') }}
+        restore-keys: |
+          vcpkg-ffmpeg-x64-mingw-dynamic-
+
+    - name: Install FFmpeg via vcpkg
+      shell: msys2 {0}
+      run: "$VCPKG_ROOT/vcpkg install ffmpeg:x64-mingw-dynamic"
 
     - name: Configure CMake
       shell: msys2 {0}
-      run: cmake -B build -G Ninja -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} -DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic
+      run: |
+        cmake -B build -G Ninja \
+          -DCMAKE_BUILD_TYPE=${{env.BUILD_TYPE}} \
+          -DCMAKE_TOOLCHAIN_FILE="$VCPKG_ROOT/scripts/buildsystems/vcpkg.cmake" \
+          -DVCPKG_TARGET_TRIPLET=x64-mingw-dynamic
 
     - name: Build
       shell: msys2 {0}
@@ -115,8 +140,12 @@ jobs:
         cp build/apps/irobot.exe package/irobot-windows-x64/
         cp -r server package/irobot-windows-x64/
 
-        # Bundle required MinGW/MSYS2 DLLs (SDL2, OpenCV, FFmpeg, runtime, and
-        # their transitive dependencies) so the package runs without MSYS2 installed.
+        # FFmpeg DLLs come from vcpkg's applocal-deps step, which copies them
+        # directly next to the built exe (not into /mingw64/bin).
+        cp build/apps/*.dll package/irobot-windows-x64/ 2>/dev/null || true
+
+        # Bundle required MinGW/MSYS2 DLLs (SDL2, OpenCV, runtime, and their
+        # transitive dependencies) so the package runs without MSYS2 installed.
         ldd build/apps/irobot.exe | grep -i '/mingw64/bin/' | awk '{print $3}' | while read -r dll; do
           [ -z "$dll" ] && continue
           cp -n "$dll" package/irobot-windows-x64/

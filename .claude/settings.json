@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/tmp/build-clang23/tests/all_tests)",
+      "Bash(rm -rf /tmp/build-gcc23 /tmp/build-clang23 /tmp/cfg17.log /tmp/build17.log; git diff -- CMakeLists.txt)"
+    ],
+    "additionalDirectories": [
+      "/tmp/build-gcc23"
+    ]
+  }
+}
