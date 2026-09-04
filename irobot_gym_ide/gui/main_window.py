@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import base64
 import threading
+from datetime import datetime, timezone
 from pathlib import Path
 
 from PySide6.QtCore import QObject, QTimer, Signal
@@ -28,12 +29,14 @@ from PySide6.QtCore import Qt
 
 from .. import io as project_io
 from ..model import (
-    Project, Action, EventKind, GameRun, ImageTemplate, PrimitiveEvent,
+    Project, Action, EventKind, GameplaySession, GameRun, HudRegion, ImageTemplate, PrimitiveEvent,
     conflicting_pointer_actions, orphan_releases,
 )
 from ..connection import LiveConnection
 from ..device_recorder import DeviceEventRecorder, merge_gestures_into_events, segment_into_gestures
+from ..hud_classifier import classify_session
 from ..run_engine import GameRunExecutor
+from ..session_replay import SessionPlayer
 from .canvas import CanvasView
 from .inspector import ActionInspector
 from .run_editor import RunEditorWidget
@@ -64,9 +67,19 @@ class MainWindow(QMainWindow):
         self._device_recorder: DeviceEventRecorder | None = None
         self._device_recording_axis_ranges = None
         self._device_recording_rotation = 0
+        self._session_recorder: DeviceEventRecorder | None = None
+        self._session_recording_axis_ranges = None
+        self._session_recording_rotation = 0
+        self._session_player: SessionPlayer | None = None
+        self._session_signals = _RunSignals()
+        self._session_signals.logLine.connect(lambda text: self._log_line(text))
         self._selected_run: GameRun | None = None
         self._selected_template: ImageTemplate | None = None
         self._loading_template_fields = False   # same guard purpose as _loading_fields, for the template props row
+        self._selected_hud_region: HudRegion | None = None
+        self._loading_hud_region_fields = False   # same guard purpose as _loading_template_fields
+        self._capture_target = "template"   # "template" or "hud_region" -- which capture button is armed;
+                                              # the canvas only has one capture mode, see _on_region_selected
         self._run_executor: GameRunExecutor | None = None
         self._run_signals = _RunSignals()
         self._run_signals.logLine.connect(lambda text: self._run_editor.log_line(text))
@@ -170,6 +183,29 @@ class MainWindow(QMainWindow):
         self._record_device_btn.clicked.connect(self._toggle_device_recording)
         left_layout.addWidget(self._record_device_btn)
 
+        left_layout.addWidget(QLabel(
+            "Gameplay Sessions (record a whole playthrough as raw events, for later\n"
+            "classification into actions -- see recordings/*.session.yaml):"))
+        self._record_session_btn = QPushButton("Record Gameplay Session")
+        self._record_session_btn.clicked.connect(self._toggle_session_recording)
+        left_layout.addWidget(self._record_session_btn)
+        self._session_list = QListWidget()
+        left_layout.addWidget(self._session_list)
+        session_btn_row = QHBoxLayout()
+        classify_session_btn = QPushButton("Classify Session")
+        classify_session_btn.clicked.connect(self._classify_session)
+        replay_raw_btn = QPushButton("Replay Raw")
+        replay_raw_btn.clicked.connect(self._replay_session_raw)
+        replay_classified_btn = QPushButton("Replay Classified")
+        replay_classified_btn.clicked.connect(self._replay_session_classified)
+        stop_replay_btn = QPushButton("Stop Replay")
+        stop_replay_btn.clicked.connect(self._stop_session_replay)
+        session_btn_row.addWidget(classify_session_btn)
+        session_btn_row.addWidget(replay_raw_btn)
+        session_btn_row.addWidget(replay_classified_btn)
+        session_btn_row.addWidget(stop_replay_btn)
+        left_layout.addLayout(session_btn_row)
+
         left_layout.addWidget(QLabel("Game Runs"))
         self._run_list = QListWidget()
         self._run_list.currentItemChanged.connect(self._on_run_selected)
@@ -215,6 +251,30 @@ class MainWindow(QMainWindow):
         template_btn_row.addWidget(self._capture_region_btn)
         template_btn_row.addWidget(remove_template_btn)
         left_layout.addLayout(template_btn_row)
+
+        left_layout.addWidget(QLabel(
+            "HUD Regions (fixed on-screen buttons -- classifies a gameplay session's\n"
+            "gestures by where they landed; see hud_classifier.py):"))
+        self._hud_region_list = QListWidget()
+        self._hud_region_list.currentItemChanged.connect(self._on_hud_region_selected)
+        left_layout.addWidget(self._hud_region_list)
+
+        hud_region_action_row = QHBoxLayout()
+        hud_region_action_row.addWidget(QLabel("Action name"))
+        self._hud_region_action_edit = QLineEdit()
+        self._hud_region_action_edit.editingFinished.connect(self._on_hud_region_action_edited)
+        hud_region_action_row.addWidget(self._hud_region_action_edit)
+        left_layout.addLayout(hud_region_action_row)
+
+        hud_region_btn_row = QHBoxLayout()
+        self._capture_hud_region_btn = QPushButton("Capture HUD Region")
+        self._capture_hud_region_btn.setCheckable(True)
+        self._capture_hud_region_btn.toggled.connect(self._toggle_hud_capture_mode)
+        remove_hud_region_btn = QPushButton("Remove HUD Region")
+        remove_hud_region_btn.clicked.connect(self._remove_hud_region)
+        hud_region_btn_row.addWidget(self._capture_hud_region_btn)
+        hud_region_btn_row.addWidget(remove_hud_region_btn)
+        left_layout.addLayout(hud_region_btn_row)
 
         left_dock = QDockWidget("Project", self)
         left_dock.setWidget(left)
@@ -301,10 +361,13 @@ class MainWindow(QMainWindow):
         self._selected_action = None
         self._selected_run = None
         self._selected_template = None
+        self._selected_hud_region = None
         self._load_project_into_fields()
         self._refresh_action_list()
         self._refresh_run_list()
         self._refresh_template_list()
+        self._refresh_hud_region_list()
+        self._refresh_session_list()
         self._inspector.set_action(None)
         self._run_editor.set_run(None)
 
@@ -320,10 +383,13 @@ class MainWindow(QMainWindow):
         self.project_path = Path(path)
         self._selected_run = None
         self._selected_template = None
+        self._selected_hud_region = None
         self._load_project_into_fields()
         self._refresh_action_list()
         self._refresh_run_list()
         self._refresh_template_list()
+        self._refresh_hud_region_list()
+        self._refresh_session_list()
         self._inspector.set_action(None)
         self._run_editor.set_run(None)
         self._log_line(f"Opened {path}")
@@ -342,6 +408,7 @@ class MainWindow(QMainWindow):
             return
         self.project_path = Path(path)
         project_io.save_project(self.project, self.project_path)
+        self._refresh_session_list()
         self._log_line(f"Saved {self.project_path}")
 
     # -- actions --------------------------------------------------------
@@ -500,11 +567,21 @@ class MainWindow(QMainWindow):
         self._on_run_graph_changed()
 
     def _toggle_capture_mode(self, enabled: bool) -> None:
+        if enabled:
+            self._capture_target = "template"
+            self._capture_hud_region_btn.setChecked(False)   # mutually exclusive -- canvas has one capture mode
         self._canvas.set_capture_mode(enabled)
         self._capture_region_btn.setText("Click-drag on the frame to select..." if enabled else "Capture Region")
 
     def _on_region_selected(self, x0: int, y0: int, x1: int, y1: int) -> None:
-        self._capture_region_btn.setChecked(False)   # one-shot: drop back into normal click mode after a capture
+        if self._capture_target == "hud_region":
+            self._capture_hud_region_btn.setChecked(False)   # one-shot, same as template capture below
+            self._capture_hud_region(x0, y0, x1, y1)
+        else:
+            self._capture_region_btn.setChecked(False)
+            self._capture_template_region(x0, y0, x1, y1)
+
+    def _capture_template_region(self, x0: int, y0: int, x1: int, y1: int) -> None:
         if self.connection is None:
             self._log_line("Capture ignored: connect first so a live frame is available.")
             return
@@ -535,6 +612,77 @@ class MainWindow(QMainWindow):
         self._on_run_graph_changed()
         self._log_line(f"Captured template {name!r}: region ({rx0},{ry0}) {rw}x{rh} (reference space), "
                         f"{template.image_w}x{template.image_h}px.")
+
+    # -- HUD regions --------------------------------------------------------
+
+    def _refresh_hud_region_list(self) -> None:
+        self._hud_region_list.clear()
+        for name in self.project.hud_regions:
+            self._hud_region_list.addItem(QListWidgetItem(name))
+
+    def _on_hud_region_selected(self, current: QListWidgetItem, _previous) -> None:
+        if current is None:
+            self._selected_hud_region = None
+        else:
+            self._selected_hud_region = self.project.hud_regions.get(current.text())
+        self._loading_hud_region_fields = True
+        try:
+            self._hud_region_action_edit.setText(
+                self._selected_hud_region.action_name if self._selected_hud_region else "")
+        finally:
+            self._loading_hud_region_fields = False
+
+    def _on_hud_region_action_edited(self) -> None:
+        if self._loading_hud_region_fields or self._selected_hud_region is None:
+            return
+        self._selected_hud_region.action_name = self._hud_region_action_edit.text()
+
+    def _remove_hud_region(self) -> None:
+        item = self._hud_region_list.currentItem()
+        if item is None:
+            return
+        self.project.remove_hud_region(item.text())
+        self._selected_hud_region = None
+        self._refresh_hud_region_list()
+        self._hud_region_action_edit.clear()
+
+    def _toggle_hud_capture_mode(self, enabled: bool) -> None:
+        if enabled:
+            self._capture_target = "hud_region"
+            self._capture_region_btn.setChecked(False)   # mutually exclusive -- canvas has one capture mode
+        self._canvas.set_capture_mode(enabled)
+        self._capture_hud_region_btn.setText(
+            "Click-drag on the frame to select..." if enabled else "Capture HUD Region")
+
+    def _capture_hud_region(self, x0: int, y0: int, x1: int, y1: int) -> None:
+        if self.connection is None:
+            self._log_line("Capture ignored: connect first so a live frame is available.")
+            return
+        frame = self.connection.latest_frame()
+        if frame is None:
+            self._log_line("Capture ignored: no frame received yet.")
+            return
+        frame_w, frame_h, _frame_arr = frame
+        ref = self._require_reference_resolution()
+        if ref is None:
+            return  # already logged why
+        rx0, ry0 = self._frame_to_reference(x0, y0, frame_w, frame_h)
+        rx1, ry1 = self._frame_to_reference(x1, y1, frame_w, frame_h)
+        rw, rh = max(1, rx1 - rx0), max(1, ry1 - ry0)
+
+        name, ok = QInputDialog.getText(self, "Capture HUD Region", "Region name:")
+        if not ok or not name:
+            self._log_line("Capture discarded (no name given).")
+            return
+        if name in self.project.hud_regions:
+            QMessageBox.warning(self, "Capture HUD Region", f"HUD region {name!r} already exists.")
+            return
+
+        region = HudRegion(name=name, x=rx0, y=ry0, width=rw, height=rh)
+        self.project.add_hud_region(region)
+        self._refresh_hud_region_list()
+        self._log_line(f"Captured HUD region {name!r}: ({rx0},{ry0}) {rw}x{rh} (reference space) -- "
+                        f"set its Action name, then use Classify Session.")
 
     def _warn_pointer_conflicts(self) -> None:
         conflicts = conflicting_pointer_actions(self.project.actions)
@@ -850,9 +998,181 @@ class MainWindow(QMainWindow):
         return (f"Drag from raw ({first.x}, {first.y}) to raw ({last.x}, {last.y}), "
                 f"{len(gesture)} samples over {duration_ms}ms")
 
+    # -- gameplay sessions --------------------------------------------------------
+
+    def _refresh_session_list(self) -> None:
+        self._session_list.clear()
+        if self.project_path is None:
+            return
+        for path in project_io.list_sessions(self.project_path):
+            item = QListWidgetItem(path.stem.removesuffix(".session"))
+            item.setData(Qt.UserRole, str(path))
+            self._session_list.addItem(item)
+
+    def _toggle_session_recording(self) -> None:
+        if self._session_recorder is not None:
+            self._finish_session_recording()
+            return
+        if self.project_path is None:
+            self._log_line("Record Gameplay Session BLOCKED: save the project first -- sessions are "
+                            "saved next to project.yaml, in a recordings/ subfolder.")
+            return
+
+        ref = self._require_reference_resolution()
+        if ref is None:
+            return  # already logged why
+
+        self._sync_project_fields()
+        recorder = DeviceEventRecorder(serial=self.project.serial or None)
+        axis_ranges = recorder.probe_axis_ranges()
+        if axis_ranges is None:
+            self._log_line(
+                "Record Gameplay Session BLOCKED: could not determine the touchscreen's raw coordinate "
+                "range (`adb shell getevent -pl` found no device with \"touch\" in its name, or adb "
+                "isn't reachable). Check the device is connected (`adb devices`) and the project's "
+                "Device serial field is correct if more than one device is attached.")
+            return
+        rotation = recorder.probe_rotation()
+        if rotation is None:
+            self._log_line(
+                "Record Gameplay Session BLOCKED: could not determine the display's current rotation "
+                "(`adb shell dumpsys input` had no \"Viewport INTERNAL\" orientation line). Retry, or "
+                "check the device is still connected.")
+            return
+        self._session_recording_axis_ranges = axis_ranges
+        self._session_recording_rotation = rotation
+        self._session_recorder = recorder
+        recorder.start()
+        self._record_session_btn.setText("Stop Recording Session")
+        self._log_line(
+            f"Recording a gameplay session (touch panel range {axis_ranges[0]}x{axis_ranges[1]}, "
+            f"display rotation {rotation}) -- play through the game on the physical screen, then "
+            f"click 'Stop Recording Session'. Every touch is kept as its own raw event, not merged "
+            f"into one action.")
+
+    def _finish_session_recording(self) -> None:
+        recorder = self._session_recorder
+        axis_ranges = self._session_recording_axis_ranges
+        rotation = self._session_recording_rotation
+        self._session_recorder = None
+        self._record_session_btn.setText("Record Gameplay Session")
+
+        touches = recorder.stop()
+        self._log_line(f"Stopped session recording: captured {len(touches)} raw touch transition(s).")
+        gestures = segment_into_gestures(touches)
+        if not gestures:
+            self._log_line("No gestures captured -- nothing to save.")
+            return
+
+        ref = self._require_reference_resolution()
+        if ref is None:
+            self._log_line("Session discarded: reference resolution became unset before it could be scaled.")
+            return
+        ref_w, ref_h = ref
+        raw_x_max, raw_y_max = axis_ranges
+
+        events = merge_gestures_into_events(gestures, raw_x_max, raw_y_max, ref_w, ref_h, rotation=rotation)
+        if not events:
+            self._log_line("Session discarded: no usable events (all gestures were empty/positionless).")
+            return
+
+        name, ok = QInputDialog.getText(
+            self, "Name Gameplay Session",
+            f"{len(gestures)} touch(es) recorded -> {len(events)} raw events.\n\n"
+            f"Name this session (Cancel to discard the whole recording):")
+        if not ok or not name:
+            self._log_line("Session discarded (no name given).")
+            return
+
+        session = GameplaySession(
+            name=name, created_at=datetime.now(timezone.utc).isoformat(),
+            source="device", reference_width=ref_w, reference_height=ref_h, events=events,
+            notes=f"recorded from {len(gestures)} real device touch(es)")
+        path = project_io.save_session(session, self.project_path)
+        self._refresh_session_list()
+        self._log_line(f"Saved gameplay session {name!r} to {path} ({len(events)} raw events, no "
+                        f"classification yet -- see recordings/*.session.yaml's `segments` field).")
+
+    def _selected_session_path(self) -> Path | None:
+        item = self._session_list.currentItem()
+        if item is None:
+            self._log_line("No session selected.")
+            return None
+        return Path(item.data(Qt.UserRole))
+
+    def _run_session_replay(self, mode: str) -> None:
+        path = self._selected_session_path()
+        if path is None:
+            return
+        if self.connection is None or not self.connection.connected:
+            self._log_line("Replay ignored: not connected.")
+            return
+        ref = self._require_reference_resolution()
+        if ref is None:
+            return
+        try:
+            session = project_io.load_session(path)
+        except Exception as e:  # noqa: BLE001 -- surfaced to the user, not swallowed
+            self._log_line(f"Replay failed: could not load {path}: {e}")
+            return
+        ref_w, ref_h = ref
+        self._session_player = SessionPlayer(self.connection, ref_w, ref_h, on_log=self._session_signals.logLine.emit)
+
+        def worker() -> None:
+            if mode == "raw":
+                self._session_player.replay_raw(session)
+            else:
+                self._session_player.replay_classified(session, self.project.actions)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _replay_session_raw(self) -> None:
+        self._run_session_replay("raw")
+
+    def _replay_session_classified(self) -> None:
+        self._run_session_replay("classified")
+
+    def _stop_session_replay(self) -> None:
+        if self._session_player is not None:
+            self._session_player.stop()
+            self._log_line("Replay stop requested.")
+
+    def _classify_session(self) -> None:
+        path = self._selected_session_path()
+        if path is None:
+            return
+        if not self.project.hud_regions:
+            self._log_line("Classify ignored: no HUD regions defined -- capture at least one first.")
+            return
+        try:
+            session = project_io.load_session(path)
+        except Exception as e:  # noqa: BLE001 -- surfaced to the user, not swallowed
+            self._log_line(f"Classify failed: could not load {path}: {e}")
+            return
+
+        if session.segments:
+            reply = QMessageBox.question(
+                self, "Classify Session",
+                f"{session.name!r} already has {len(session.segments)} segment(s). Overwrite them with a "
+                f"fresh classification against the current HUD regions?",
+                QMessageBox.Yes | QMessageBox.No)
+            if reply != QMessageBox.Yes:
+                self._log_line("Classify cancelled.")
+                return
+
+        session.segments = classify_session(session, self.project.hud_regions, on_log=self._log_line)
+        for warning in session.validate(self.project.actions):
+            self._log_line(f"  warning: {warning}")
+        project_io.save_session(session, self.project_path)
+        self._log_line(f"Saved classification to {path}.")
+
     def closeEvent(self, event) -> None:
         if self._device_recorder is not None:
             self._device_recorder.stop()
+        if self._session_recorder is not None:
+            self._session_recorder.stop()
+        if self._session_player is not None:
+            self._session_player.stop()
         if self._run_executor is not None:
             self._run_executor.stop()
         if self.connection is not None:

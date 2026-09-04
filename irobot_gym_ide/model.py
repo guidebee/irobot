@@ -352,6 +352,166 @@ class ImageTemplate:
         )
 
 
+@dataclass
+class HudRegion:
+    """A fixed-position rectangle over a game's HUD -- a joystick, a jump
+    button, an attack button -- named and paired with the Action a gesture
+    landing inside it represents. Unlike ImageTemplate (which compares
+    pixels to test whether something currently *looks* a certain way), a
+    HudRegion is purely spatial: it classifies WHERE a gesture started, not
+    what the screen looks like, so it needs no captured pixels and no live
+    frame.
+
+    `x`/`y`/`width`/`height` are in the project's reference resolution --
+    same convention ImageTemplate and PrimitiveEvent.x/y already use -- which
+    is also exactly the coordinate space a recorded gesture's own (x, y) is
+    already stored in (see device_recorder.gesture_to_events). So, unlike
+    ImageTemplate's ImageTemplate._scale_rect dance, classifying a gesture
+    against a HudRegion needs no frame-size scaling at all: a straight point-
+    in-rectangle test against the region's own reference-resolution
+    coordinates already lines up.
+
+    See hud_classifier.py for how a project's HudRegions turn a
+    GameplaySession's raw gesture stream into SessionSegments."""
+    name: str
+    x: int = 0
+    y: int = 0
+    width: int = 0
+    height: int = 0
+    action_name: str = ""
+
+    @property
+    def area(self) -> int:
+        return max(0, self.width) * max(0, self.height)
+
+    def contains(self, x: int, y: int) -> bool:
+        return self.x <= x < self.x + self.width and self.y <= y < self.y + self.height
+
+    def to_dict(self) -> dict:
+        return {
+            "name": self.name, "x": self.x, "y": self.y, "width": self.width, "height": self.height,
+            "action_name": self.action_name,
+        }
+
+    @staticmethod
+    def from_dict(d: dict) -> "HudRegion":
+        return HudRegion(
+            name=d["name"], x=d.get("x", 0), y=d.get("y", 0),
+            width=d.get("width", 0), height=d.get("height", 0),
+            action_name=d.get("action_name", ""),
+        )
+
+
+@dataclass
+class SessionSegment:
+    """One classified span within a GameplaySession's raw `events` list --
+    [start_index, end_index) -- labeled as the name of an Action it
+    represents (an existing project action, or one a classifier is
+    proposing be added). Never produced by recording itself; this is the
+    hook contract a later segmentation step (human, heuristic, or AI -- see
+    GAME_RUN_AI_ASSIST_DESIGN.md §3 for the human-review precedent this
+    should follow) writes into a saved session for the "Replay Classified"
+    path to consume."""
+    start_index: int
+    end_index: int
+    action_name: str
+    label: str = ""
+    confidence: float = 1.0
+
+    def to_dict(self) -> dict:
+        d = {"start_index": self.start_index, "end_index": self.end_index, "action_name": self.action_name}
+        if self.label:
+            d["label"] = self.label
+        if self.confidence != 1.0:
+            d["confidence"] = self.confidence
+        return d
+
+    @staticmethod
+    def from_dict(d: dict) -> "SessionSegment":
+        return SessionSegment(
+            start_index=d["start_index"], end_index=d["end_index"], action_name=d["action_name"],
+            label=d.get("label", ""), confidence=d.get("confidence", 1.0),
+        )
+
+
+@dataclass
+class GameplaySession:
+    """A recorded gameplay session: a flat, chronological raw PrimitiveEvent
+    stream captured over an entire playthrough (many gestures, not collapsed
+    into one Action the way "Record from Device" does today -- see
+    device_recorder.merge_gestures_into_events, which is exactly what builds
+    this `events` list). Saved separately from project.yaml (see io.py) since
+    it can be large and isn't part of the ActionMap-shaped authoring schema
+    env.py will load.
+
+    `segments` starts empty -- a session is "raw only" until something fills
+    it in (see SessionSegment). Replay has two independent modes over the
+    same saved file: "Replay Raw" just sends `events` in order (identical to
+    running an Action built from them); "Replay Classified" walks `segments`
+    in order, running each one's named Action with the real recorded gap
+    timing between them (see session_replay.py's SessionPlayer for both)."""
+    name: str
+    created_at: str = ""
+    source: str = "device"
+    reference_width: int = 0
+    reference_height: int = 0
+    events: list = field(default_factory=list)     # list[PrimitiveEvent]
+    segments: list = field(default_factory=list)     # list[SessionSegment]
+    notes: str = ""
+
+    def to_dict(self) -> dict:
+        return {
+            "schema_version": 1,
+            "name": self.name,
+            "created_at": self.created_at,
+            "source": self.source,
+            "reference_resolution": {"width": self.reference_width, "height": self.reference_height},
+            "events": [e.to_dict() for e in self.events],
+            "segments": [s.to_dict() for s in self.segments],
+            "notes": self.notes,
+        }
+
+    @staticmethod
+    def from_dict(d: dict) -> "GameplaySession":
+        res = d.get("reference_resolution", {})
+        return GameplaySession(
+            name=d["name"],
+            created_at=d.get("created_at", ""),
+            source=d.get("source", "device"),
+            reference_width=res.get("width", 0),
+            reference_height=res.get("height", 0),
+            events=[PrimitiveEvent.from_dict(e) for e in d.get("events", [])],
+            segments=[SessionSegment.from_dict(s) for s in d.get("segments", [])],
+            notes=d.get("notes", ""),
+        )
+
+    def validate(self, project_actions: dict) -> list:
+        """Static authoring-time checks over `segments`, same "return
+        human-readable warnings, never raise" convention as Action.validate/
+        GameRun.validate. Segments are expected in ascending, non-overlapping
+        order (each one's action fires in sequence during Replay Classified);
+        a segment referencing an action_name absent from `project_actions` is
+        flagged but not fatal -- Replay Classified itself just logs and skips
+        it, same no-surprises spirit as run_engine.py's node handlers."""
+        warnings = []
+        n = len(self.events)
+        prev_end = 0
+        ordered = sorted(self.segments, key=lambda s: s.start_index)
+        for seg in ordered:
+            if seg.start_index < 0 or seg.end_index > n or seg.end_index <= seg.start_index:
+                warnings.append(
+                    f"segment {seg.label or seg.action_name!r}: invalid range "
+                    f"[{seg.start_index}, {seg.end_index}) for {n} event(s)")
+            elif seg.start_index < prev_end:
+                warnings.append(
+                    f"segment {seg.label or seg.action_name!r}: overlaps the previous segment "
+                    f"(starts at {seg.start_index}, previous ends at {prev_end})")
+            if seg.action_name not in project_actions:
+                warnings.append(f"segment {seg.label or seg.action_name!r}: unknown action {seg.action_name!r}")
+            prev_end = max(prev_end, seg.end_index)
+        return warnings
+
+
 class RunNodeKind(str, Enum):
     ACTION = "action"   # runs one already-defined Action (by name) against the device
     DELAY = "delay"      # waits `frames` frames, no wire message -- same unit as PrimitiveEvent.WAIT
@@ -548,6 +708,7 @@ class Project:
     actions: dict = field(default_factory=dict)   # dict[str, Action]
     runs: dict = field(default_factory=dict)        # dict[str, GameRun]
     templates: dict = field(default_factory=dict)    # dict[str, ImageTemplate]
+    hud_regions: dict = field(default_factory=dict)   # dict[str, HudRegion]
 
     def add_action(self, action: Action) -> None:
         self.actions[action.name] = action
@@ -567,6 +728,12 @@ class Project:
     def remove_template(self, name: str) -> None:
         self.templates.pop(name, None)
 
+    def add_hud_region(self, region: HudRegion) -> None:
+        self.hud_regions[region.name] = region
+
+    def remove_hud_region(self, name: str) -> None:
+        self.hud_regions.pop(name, None)
+
     def to_dict(self) -> dict:
         return {
             "schema_version": 1,
@@ -580,6 +747,7 @@ class Project:
             "actions": [a.to_dict() for a in self.actions.values()],
             "runs": [r.to_dict() for r in self.runs.values()],
             "templates": [t.to_dict() for t in self.templates.values()],
+            "hud_regions": [r.to_dict() for r in self.hud_regions.values()],
         }
 
     @staticmethod
@@ -601,6 +769,8 @@ class Project:
             p.add_run(GameRun.from_dict(r))
         for t in d.get("templates", []):
             p.add_template(ImageTemplate.from_dict(t))
+        for hr in d.get("hud_regions", []):
+            p.add_hud_region(HudRegion.from_dict(hr))
         return p
 
     def copy(self) -> "Project":

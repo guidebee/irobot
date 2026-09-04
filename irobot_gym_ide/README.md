@@ -95,6 +95,54 @@ and `RunNodeKind.COMPARE`, and `run_engine.py`'s `_run_compare` for exactly how 
 works (nearest-neighbor-resized mean absolute grayscale difference — approximate, not
 pixel-perfect, by design).
 
+## Gameplay sessions
+
+The left panel's **Gameplay Sessions** section records a whole playthrough as one
+**raw, chronological event stream** -- unlike "Record from Device" above, it does not collapse the
+recording into a single named `Action`. Click **Record Gameplay Session** (same `adb shell getevent`
+capture as "Record from Device", so it needs the project saved first and the device reachable over
+adb), play through the game for as long as you like, click **Stop Recording Session**, and name it.
+The session is saved to `recordings/<name>.session.yaml`, next to `project.yaml` (see `model.py`'s
+`GameplaySession`/`SessionSegment` and `io.py`'s `save_session`/`load_session`/`list_sessions`) --
+kept out of `project.yaml` itself since a raw session's event list can be large and isn't part of
+the `ActionMap`-shaped authoring schema `env.py` will load.
+
+A saved session starts **unclassified**: its `segments` list is empty, and **Replay Raw** just
+resends every recorded event verbatim (identical to running an `Action` built from them). Each
+segment is an index range into the session's `events` plus the `action_name` it represents (see
+`GameplaySession.validate`, which checks a segment's range and that its `action_name` exists in the
+project, the same "return warnings, never raise" convention `Action.validate`/`GameRun.validate`
+use). Once `segments` is non-empty, **Replay Classified** becomes usable: it runs each segment's
+named `Action` in order, sleeping between them for the real gap (in frames) recorded between that
+segment and the previous one, so pacing still reflects how the session actually played out (see
+`session_replay.py`'s `SessionPlayer`). Both replay buttons re-read the selected session from disk
+on click, so an externally edited/classified file is picked up with no app restart.
+
+### Classifying a session with HUD Regions
+
+The left panel's **HUD Regions** section (below Image Templates) is the built-in way to fill in
+`segments` for a game with fixed on-screen controls (a joystick, a jump button, an attack button):
+click **Capture HUD Region**, click-drag a rectangle over the control on the live mirror (same
+click-drag-release tool "Capture Region" above uses for templates -- the two capture modes are
+mutually exclusive, since the canvas only has one at a time), name it, then select it in the list
+and type the **Action name** it represents (an existing project action, or a new name you'll add
+later -- `GameplaySession.validate` flags a not-yet-existing one, but non-fatally, same as an
+unknown action reference anywhere else in this tool). Unlike an Image Template, a HUD region needs
+no captured pixels -- it's a pure spatial rectangle in the project's reference resolution, so
+classifying a gesture against it is just "which region contains the point where the gesture
+started" (see `model.py`'s `HudRegion` and `hud_classifier.py`). If two regions overlap on purpose
+(a broad area behind a small, more specific hotspot), the smaller one wins.
+
+With at least one HUD region defined, select a session in the **Gameplay Sessions** list and click
+**Classify Session**: it runs every recorded gesture against your regions, writes the resulting
+`segments` back to that session's file (asking first if it already has segments, so a re-classify
+doesn't silently clobber earlier work), and logs how many gestures matched. This is a purely
+spatial, deterministic classifier -- no ML/AI involved -- well suited to fixed HUD controls but not
+to gestures whose target isn't a fixed screen position (e.g. "tap wherever the enemy currently is")
+or to two meanings sharing one region (a tap vs. a long-press on the same button); those still need
+hand-editing a session's `segments:` list, or a future, smarter classification step. See
+`GAME_RUN_AI_ASSIST_DESIGN.md` §3 for the human-review precedent such a step should follow.
+
 ## Testing
 
 Pure-Python model tests, no Qt/socket/device required:
@@ -108,15 +156,18 @@ python -m unittest discover -s irobot_gym_ide/tests -t .   # from the repo root
 ```
 irobot_gym_ide/
 ├── app.py               # entry point: python -m irobot_gym_ide.app
-├── model.py              # headless data model (EventKind, PrimitiveEvent, Action, GameRun, ...)
+├── model.py              # headless data model (EventKind, PrimitiveEvent, Action, GameRun,
+│                             GameplaySession, SessionSegment, HudRegion, ...)
 ├── connection.py          # live connection to a running irobot process's agent ports
 ├── run_engine.py           # executes a GameRun graph (fork/join/repeat) against a LiveConnection
-├── device_recorder.py        # adb shell getevent -> named actions
-├── io.py                      # project.yaml load/save
-├── _agent_client.py            # bundled copy of tools/agent_client.py's wire helpers
-├── gui/                         # PySide6 widgets (canvas, inspector, run_editor, main window)
-├── examples/                     # sample project.yaml files
-└── tests/                         # pure-Python model tests
+├── session_replay.py        # replays a GameplaySession (raw events, or its classified segments)
+├── hud_classifier.py         # classifies a session's gestures against HudRegions -> SessionSegments
+├── device_recorder.py          # adb shell getevent -> named actions / raw gameplay sessions
+├── io.py                        # project.yaml + gameplay session (recordings/*.session.yaml) load/save
+├── _agent_client.py             # bundled copy of tools/agent_client.py's wire helpers
+├── gui/                          # PySide6 widgets (canvas, inspector, run_editor, main window)
+├── examples/                      # sample project.yaml files
+└── tests/                          # pure-Python model tests
 ```
 
 ## Roadmap

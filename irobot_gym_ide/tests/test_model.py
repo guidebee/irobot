@@ -5,7 +5,7 @@ import base64
 import unittest
 
 from ..model import (
-    Action, EventKind, GameRun, ImageTemplate, PrimitiveEvent, Project, RunEdge, RunNode, RunNodeKind,
+    Action, EventKind, GameRun, HudRegion, ImageTemplate, PrimitiveEvent, Project, RunEdge, RunNode, RunNodeKind,
     conflicting_pointer_actions, orphan_releases,
 )
 
@@ -262,6 +262,32 @@ class ImageTemplateRoundTripTest(unittest.TestCase):
         restored = Project.from_dict(project.to_dict())
         self.assertIn("hp_full", restored.templates)
         self.assertEqual(restored.templates["hp_full"].width, 3)
+
+
+class HudRegionTest(unittest.TestCase):
+    def test_round_trip_preserves_fields(self):
+        region = HudRegion(name="jump_button", x=900, y=1800, width=150, height=150, action_name="jump")
+        restored = HudRegion.from_dict(region.to_dict())
+        self.assertEqual(restored.name, "jump_button")
+        self.assertEqual((restored.x, restored.y, restored.width, restored.height), (900, 1800, 150, 150))
+        self.assertEqual(restored.action_name, "jump")
+
+    def test_project_hud_regions_survive_to_dict_from_dict(self):
+        project = Project(name="game")
+        project.add_hud_region(HudRegion(name="jump_button", x=1, y=2, width=3, height=4, action_name="jump"))
+        restored = Project.from_dict(project.to_dict())
+        self.assertIn("jump_button", restored.hud_regions)
+        self.assertEqual(restored.hud_regions["jump_button"].action_name, "jump")
+
+    def test_contains_is_half_open_on_far_edges(self):
+        region = HudRegion(name="r", x=0, y=0, width=10, height=10)
+        self.assertTrue(region.contains(0, 0))
+        self.assertTrue(region.contains(9, 9))
+        self.assertFalse(region.contains(10, 10))
+        self.assertFalse(region.contains(-1, 5))
+
+    def test_area(self):
+        self.assertEqual(HudRegion(name="r", width=10, height=20).area, 200)
 
 
 @unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
