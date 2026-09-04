@@ -1,6 +1,6 @@
 # iRobot for Android
 
-A C++17 desktop client for mirroring, controlling, and automating Android devices — built as a C++ rewrite
+A C++23 desktop client for mirroring, controlling, and automating Android devices — built as a C++ rewrite
 of [scrcpy](https://github.com/Genymobile/scrcpy) with CMake, extended with an **AI agent system** that allows external
 programs (including machine learning models) to observe and control Android games and apps in real time.
 
@@ -17,7 +17,7 @@ each with its own README for the details.
 
 | Path                                              | Component                                                                                          |
 |----------------------------------------------------|-----------------------------------------------------------------------------------------------------|
-| [`src/`](src/)                                      | `irobot` desktop client (C++17) — documented in this README                                        |
+| [`src/`](src/)                                      | `irobot` desktop client (C++23) — documented in this README                                        |
 | [`irobot_server/`](irobot_server/README.md)         | Android server (Java, forked from scrcpy) — built to an APK/DEX and pushed to the device via ADB at connection time |
 | [`irobot_gym_ide/`](irobot_gym_ide/README.md)       | Gym IDE (PySide6) — action-map editor and Game Run node-graph editor built on the AI agent API      |
 | [`tools/`](tools/README.md)                         | `agent_client.py` — reference/test client and wire-protocol docs for the AI agent API               |
@@ -123,7 +123,7 @@ cp build_manual/irobot-server ../build/apps/server/irobot-server
 
 - **CMake** ≥ 3.15
 - **Ninja** (recommended; bundled with CLion on Windows)
-- **MinGW-w64** GCC ≥ 10 on Windows (bundled with CLion works)
+- **MinGW-w64** GCC ≥ 13 on Windows (bundled with CLion works) — required for C++23 support
 - **vcpkg** with `VCPKG_ROOT` set (for SDL2, nlohmann-json)
 - **OpenCV** — on Windows, install via MSYS2:
 
