@@ -11,6 +11,7 @@ extern "C" {
 #endif
 
 #include <libavcodec/avcodec.h>
+#include <libavutil/version.h>
 #include <libswresample/swresample.h>
 
 #if defined (__cplusplus)
