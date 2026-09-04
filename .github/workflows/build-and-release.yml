@@ -54,9 +54,23 @@ jobs:
 
     - name: Package artifact
       run: |
-        mkdir -p package/irobot-linux-x64
+        sudo apt-get install -y patchelf
+        mkdir -p package/irobot-linux-x64/lib
         cp build/apps/irobot package/irobot-linux-x64/
         cp -r server package/irobot-linux-x64/
+
+        # Bundle non-system shared libraries (e.g. OpenCV, SDL2, FFmpeg) so the
+        # package runs on machines that don't have these dev packages installed.
+        ldd build/apps/irobot | awk '{print $3}' | while read -r lib; do
+          [ -z "$lib" ] && continue
+          case "$(basename "$lib")" in
+            linux-vdso.so*|ld-linux-*.so*|libc.so.*|libm.so.*|libpthread.so.*|libdl.so.*|librt.so.*|libresolv.so.*|libutil.so.*)
+              continue ;;
+          esac
+          cp -n "$lib" package/irobot-linux-x64/lib/ 2>/dev/null || true
+        done
+        patchelf --set-rpath '$ORIGIN/lib' package/irobot-linux-x64/irobot
+
         tar -C package -czf irobot-linux-x64.tar.gz irobot-linux-x64
 
     - name: Upload artifact
@@ -83,7 +97,7 @@ jobs:
           mingw-w64-x86_64-SDL2
           mingw-w64-x86_64-nlohmann-json
           mingw-w64-x86_64-opencv
-          mingw-w64-x86_64-catch2
+          mingw-w64-x86_64-catch
           mingw-w64-x86_64-ffmpeg
 
     - name: Configure CMake
@@ -100,7 +114,15 @@ jobs:
         mkdir -p package/irobot-windows-x64
         cp build/apps/irobot.exe package/irobot-windows-x64/
         cp -r server package/irobot-windows-x64/
-        cd package && 7z a -tzip ../irobot-windows-x64.zip irobot-windows-x64
+
+        # Bundle required MinGW/MSYS2 DLLs (SDL2, OpenCV, FFmpeg, runtime, and
+        # their transitive dependencies) so the package runs without MSYS2 installed.
+        ldd build/apps/irobot.exe | grep -i '/mingw64/bin/' | awk '{print $3}' | while read -r dll; do
+          [ -z "$dll" ] && continue
+          cp -n "$dll" package/irobot-windows-x64/
+        done
+
+        cd package && cmake -E tar cf ../irobot-windows-x64.zip --format=zip irobot-windows-x64
 
     - name: Upload artifact
       uses: actions/upload-artifact@v4
