@@ -19,7 +19,29 @@ set(CMAKE_CXX_FLAGS "-D__STDC_CONSTANT_MACROS")
 find_package(SDL2 CONFIG REQUIRED)
 find_package(nlohmann_json CONFIG REQUIRED)
 find_package(OpenCV CONFIG REQUIRED)
-add_subdirectory(libs)
+
+# FFmpeg: provided by vcpkg on Windows (`vcpkg install ffmpeg:x64-mingw-dynamic`),
+# system pkg-config dev packages on Linux/macOS (e.g. `apt install libavcodec-dev
+# libavformat-dev libavutil-dev libavdevice-dev libswscale-dev libavfilter-dev
+# libswresample-dev`).
+add_library(FFmpeg INTERFACE)
+if (WIN32)
+    find_package(FFMPEG REQUIRED)
+    target_include_directories(FFmpeg INTERFACE ${FFMPEG_INCLUDE_DIRS})
+    target_link_libraries(FFmpeg INTERFACE ${FFMPEG_LIBRARIES})
+else ()
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(FFMPEG_PC REQUIRED IMPORTED_TARGET
+            libavcodec
+            libavformat
+            libavutil
+            libavdevice
+            libswscale
+            libavfilter
+            libswresample
+    )
+    target_link_libraries(FFmpeg INTERFACE PkgConfig::FFMPEG_PC)
+endif ()
 
 # -------------------------------------------------------------
 include_directories(${CMAKE_HOME_DIRECTORY}/src ${PROJECT_BINARY_DIR}/src)
@@ -125,15 +147,10 @@ function(APP name)
     if (WIN32)
         target_link_libraries(${APP_TARGET} PRIVATE wsock32 ws2_32)
 
-        # Copy MinGW runtime and FFmpeg DLLs next to the executable
-        set(FFMPEG_BIN_DIR "${CMAKE_HOME_DIRECTORY}/libs/FFmpeg/ffmpeg_x64-windows/bin")
-        foreach (DLL avcodec-58 avformat-58 avutil-56 swscale-5 swresample-3 avdevice-58 avfilter-7)
-            add_custom_command(TARGET ${APP_TARGET} POST_BUILD
-                    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-                    "${FFMPEG_BIN_DIR}/${DLL}.dll"
-                    "$<TARGET_FILE_DIR:${APP_TARGET}>")
-        endforeach ()
+        # FFmpeg DLLs (and other vcpkg dynamic deps) are copied next to the
+        # executable automatically by vcpkg's applocal deps post-build step.
 
+        # Copy MinGW runtime next to the executable
         get_filename_component(MINGW_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
         foreach (DLL libgcc_s_seh-1 libstdc++-6 libwinpthread-1)
             if (EXISTS "${MINGW_BIN_DIR}/${DLL}.dll")

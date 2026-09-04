@@ -40,7 +40,15 @@
       "Bash(export JAVA_HOME=\"/c/Program Files/Android/openjdk/jdk-21.0.8\")",
       "Bash(java -version)",
       "Bash(cygpath -w __TRACKED_VAR__/platforms/android-__TRACKED_VAR__.0)",
-      "Bash(python3 -c ' *)"
+      "Bash(python3 -c ' *)",
+      "Bash(/tmp/build-gcc23/tests/all_tests)",
+      "Bash(/tmp/build-gcc17/tests/all_tests)",
+      "Bash(rm -rf /tmp/build-gcc17)",
+      "Bash(rm -rf /tmp/build-clang23)",
+      "Bash(CC=clang CXX=clang++ cmake -B /tmp/build-clang23 -DCMAKE_BUILD_TYPE=Release)"
+    ],
+    "additionalDirectories": [
+      "/tmp/build-gcc17"
     ]
   }
 }

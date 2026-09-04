@@ -124,7 +124,7 @@ cp build_manual/irobot-server ../build/apps/server/irobot-server
 - **CMake** ≥ 3.15
 - **Ninja** (recommended; bundled with CLion on Windows)
 - **MinGW-w64** GCC ≥ 13 on Windows (bundled with CLion works) — required for C++23 support
-- **vcpkg** with `VCPKG_ROOT` set (for SDL2, nlohmann-json)
+- **vcpkg** with `VCPKG_ROOT` set (for SDL2, nlohmann-json, FFmpeg)
 - **OpenCV** — on Windows, install via MSYS2:
 
 ```bash
@@ -133,7 +133,14 @@ pacman -S mingw-w64-x86_64-opencv
 
 Add `C:\msys64\mingw64\bin` to `PATH`.
 
-FFmpeg libs for Windows are bundled under `libs/FFmpeg/ffmpeg_x64-windows` — no separate installation needed.
+On Windows, install FFmpeg through vcpkg (once, into your shared `VCPKG_ROOT`):
+
+```bash
+$VCPKG_ROOT/vcpkg install ffmpeg:x64-mingw-dynamic
+```
+
+On Linux/macOS, install the FFmpeg dev packages via your system package manager instead
+(e.g. `apt install libavcodec-dev libavformat-dev libavutil-dev libavdevice-dev libswscale-dev libavfilter-dev libswresample-dev`).
 
 #### Configure and build
 
@@ -386,8 +393,6 @@ src/
 └── util/               # circular buffers, queues, locks, logging
 server/
 └── irobot-server       # compiled Android APK deployed to device
-libs/
-└── FFmpeg/             # bundled FFmpeg for Windows x64
 irobot_server/          # Android server source + build script (see irobot_server/README.md)
 ├── app/src/main/java/  # Android server Java source (scrcpy-based)
 └── build_server.sh     # Gradle-free build script
