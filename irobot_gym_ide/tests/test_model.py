@@ -6,7 +6,8 @@ import unittest
 
 from ..model import (
     Action, EventKind, GameRun, HudRegion, HudRegionCombo, ImageTemplate, PrimitiveEvent, Project, RunEdge, RunNode,
-    RunNodeKind, conflicting_pointer_actions, events_look_alike, find_matching_action, orphan_releases,
+    RunNodeKind, SessionSegment, classified_pointer_conflicts, conflicting_pointer_actions, events_look_alike,
+    find_matching_action, orphan_releases, scale_point,
 )
 
 try:
@@ -14,6 +15,23 @@ try:
     HAVE_NUMPY = True
 except ImportError:
     HAVE_NUMPY = False
+
+
+class ScalePointTest(unittest.TestCase):
+    def test_scales_proportionally_into_target_resolution(self):
+        # halfway across/down a 1000x2000 reference should land halfway across/down 500x1000
+        self.assertEqual(scale_point(500, 1000, 1000, 2000, 500, 1000), (250, 500))
+
+    def test_identity_when_target_equals_reference(self):
+        self.assertEqual(scale_point(123, 456, 1080, 2400, 1080, 2400), (123, 456))
+
+    def test_falls_back_to_identity_when_reference_size_is_zero(self):
+        self.assertEqual(scale_point(123, 456, 0, 0, 1440, 3200), (123, 456))
+
+    def test_scales_independently_per_axis(self):
+        # a target with a different aspect ratio than the reference -- each axis scales
+        # by its own ratio, no attempt to preserve aspect ratio or letterbox.
+        self.assertEqual(scale_point(100, 100, 100, 100, 300, 50), (300, 50))
 
 
 class PrimitiveEventRoundTripTest(unittest.TestCase):
@@ -90,6 +108,62 @@ class ConflictingPointerActionsTest(unittest.TestCase):
         self.assertEqual(conflicting_pointer_actions(actions), [])
 
 
+class ClassifiedPointerConflictsTest(unittest.TestCase):
+    def test_flags_a_tap_action_sharing_a_pointer_with_a_still_open_hold(self):
+        # right_start holds pointer 0; jump (authored on the same default pointer_id 0)
+        # fires while it's still held -- jump's own RELEASE would end the hold early.
+        actions = {
+            "right_start": Action(name="right_start", events=[PrimitiveEvent(kind=EventKind.PRESS, x=1, y=1)]),
+            "right_stop": Action(name="right_stop", events=[PrimitiveEvent(kind=EventKind.RELEASE)]),
+            "jump": Action(name="jump", events=[
+                PrimitiveEvent(kind=EventKind.PRESS, x=9, y=9),
+                PrimitiveEvent(kind=EventKind.RELEASE),
+            ]),
+        }
+        segments = [
+            SessionSegment(start_index=0, end_index=1, action_name="right_start"),
+            SessionSegment(start_index=1, end_index=2, action_name="jump"),
+            SessionSegment(start_index=2, end_index=3, action_name="right_stop"),
+        ]
+        warnings = classified_pointer_conflicts(segments, actions)
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("right_start", warnings[0])
+        self.assertIn("pointer 0", warnings[0])
+
+    def test_different_pointer_ids_are_not_flagged(self):
+        actions = {
+            "right_start": Action(name="right_start", events=[PrimitiveEvent(kind=EventKind.PRESS, x=1, y=1)]),
+            "right_stop": Action(name="right_stop", events=[PrimitiveEvent(kind=EventKind.RELEASE)]),
+            "jump": Action(name="jump", events=[
+                PrimitiveEvent(kind=EventKind.PRESS, x=9, y=9, pointer_id=1),
+                PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=1),
+            ]),
+        }
+        segments = [
+            SessionSegment(start_index=0, end_index=1, action_name="right_start"),
+            SessionSegment(start_index=1, end_index=2, action_name="jump"),
+            SessionSegment(start_index=2, end_index=3, action_name="right_stop"),
+        ]
+        self.assertEqual(classified_pointer_conflicts(segments, actions), [])
+
+    def test_sequential_non_overlapping_use_of_the_same_pointer_is_not_flagged(self):
+        actions = {
+            "right_start": Action(name="right_start", events=[PrimitiveEvent(kind=EventKind.PRESS, x=1, y=1)]),
+            "right_stop": Action(name="right_stop", events=[PrimitiveEvent(kind=EventKind.RELEASE)]),
+        }
+        segments = [
+            SessionSegment(start_index=0, end_index=1, action_name="right_start"),
+            SessionSegment(start_index=1, end_index=2, action_name="right_stop"),
+            SessionSegment(start_index=2, end_index=3, action_name="right_start"),
+            SessionSegment(start_index=3, end_index=4, action_name="right_stop"),
+        ]
+        self.assertEqual(classified_pointer_conflicts(segments, actions), [])
+
+    def test_unknown_action_name_is_skipped_not_raised(self):
+        segments = [SessionSegment(start_index=0, end_index=1, action_name="missing")]
+        self.assertEqual(classified_pointer_conflicts(segments, {}), [])
+
+
 class OrphanReleasesTest(unittest.TestCase):
     def test_split_start_stop_pair_is_not_orphaned(self):
         actions = {
@@ -162,6 +236,107 @@ class FindMatchingActionTest(unittest.TestCase):
         result = find_matching_action([PrimitiveEvent(kind=EventKind.TAP, x=5, y=5)], actions)
         self.assertIsNone(result)
 
+    def test_picks_the_nearest_of_several_within_tolerance_candidates(self):
+        actions = {
+            "far": Action(name="far", events=[PrimitiveEvent(kind=EventKind.TAP, x=115, y=100)]),
+            "near": Action(name="near", events=[PrimitiveEvent(kind=EventKind.TAP, x=103, y=101)]),
+        }
+        result = find_matching_action([PrimitiveEvent(kind=EventKind.TAP, x=100, y=100)], actions,
+                                       position_tolerance_px=30)
+        self.assertEqual(result, "near")
+
+    def test_on_ambiguous_called_with_every_qualifying_candidate_nearest_first(self):
+        actions = {
+            "far": Action(name="far", events=[PrimitiveEvent(kind=EventKind.TAP, x=115, y=100)]),
+            "near": Action(name="near", events=[PrimitiveEvent(kind=EventKind.TAP, x=103, y=101)]),
+        }
+        seen = []
+        find_matching_action([PrimitiveEvent(kind=EventKind.TAP, x=100, y=100)], actions,
+                              position_tolerance_px=30, on_ambiguous=seen.append)
+        self.assertEqual(seen, [["near", "far"]])
+
+    def test_on_ambiguous_not_called_when_only_one_candidate_qualifies(self):
+        actions = {"jump": Action(name="jump", events=[PrimitiveEvent(kind=EventKind.TAP, x=900, y=800)])}
+        seen = []
+        find_matching_action([PrimitiveEvent(kind=EventKind.TAP, x=905, y=795)], actions,
+                              on_ambiguous=seen.append)
+        self.assertEqual(seen, [])
+
+
+class ProjectRenameActionTest(unittest.TestCase):
+    def test_rename_updates_the_actions_dict_and_the_actions_own_name(self):
+        project = Project(name="game")
+        project.add_action(Action(name="jump"))
+        project.rename_action("jump", "jump_v2")
+        self.assertNotIn("jump", project.actions)
+        self.assertIn("jump_v2", project.actions)
+        self.assertEqual(project.actions["jump_v2"].name, "jump_v2")
+
+    def test_rename_cascades_to_hud_region_action_name_and_release_action_name(self):
+        project = Project(name="game")
+        project.add_action(Action(name="right_start"))
+        project.add_action(Action(name="right_stop"))
+        project.add_hud_region(HudRegion(name="right_button", action_name="right_start",
+                                          release_action_name="right_stop"))
+        updated = project.rename_action("right_start", "right_start_v2")
+        self.assertEqual(project.hud_regions["right_button"].action_name, "right_start_v2")
+        self.assertEqual(project.hud_regions["right_button"].release_action_name, "right_stop")
+        self.assertEqual(updated, 1)
+
+    def test_rename_cascades_to_hud_region_combo_action_name(self):
+        project = Project(name="game")
+        project.add_action(Action(name="right_jump"))
+        project.add_hud_region_combo(HudRegionCombo(name="rj", region_names=["a", "b"], action_name="right_jump"))
+        project.rename_action("right_jump", "run_and_jump")
+        self.assertEqual(project.hud_region_combos["rj"].action_name, "run_and_jump")
+
+    def test_rename_cascades_to_run_node_action_name(self):
+        project = Project(name="game")
+        project.add_action(Action(name="jump"))
+        run = GameRun(name="main")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.ACTION, action_name="jump"))
+        run.add_node(RunNode(id="d", kind=RunNodeKind.DELAY, frames=5))
+        project.add_run(run)
+        project.rename_action("jump", "jump_v2")
+        self.assertEqual(project.runs["main"].nodes["a"].action_name, "jump_v2")
+        self.assertEqual(project.runs["main"].nodes["d"].frames, 5)
+
+    def test_rename_to_same_name_is_a_no_op(self):
+        project = Project(name="game")
+        project.add_action(Action(name="jump"))
+        self.assertEqual(project.rename_action("jump", "jump"), 0)
+
+    def test_rename_missing_action_raises_key_error(self):
+        project = Project(name="game")
+        with self.assertRaises(KeyError):
+            project.rename_action("missing", "new")
+
+    def test_rename_to_an_existing_different_action_raises_value_error(self):
+        project = Project(name="game")
+        project.add_action(Action(name="jump"))
+        project.add_action(Action(name="attack"))
+        with self.assertRaises(ValueError):
+            project.rename_action("jump", "attack")
+
+
+class ProjectRenameHudRegionTest(unittest.TestCase):
+    def test_rename_updates_the_hud_regions_dict_and_the_regions_own_name(self):
+        project = Project(name="game")
+        project.add_hud_region(HudRegion(name="right_button"))
+        project.rename_hud_region("right_button", "right_button_v2")
+        self.assertNotIn("right_button", project.hud_regions)
+        self.assertEqual(project.hud_regions["right_button_v2"].name, "right_button_v2")
+
+    def test_rename_cascades_to_combo_region_names(self):
+        project = Project(name="game")
+        project.add_hud_region(HudRegion(name="right_button"))
+        project.add_hud_region(HudRegion(name="jump_button"))
+        project.add_hud_region_combo(HudRegionCombo(name="rj", region_names=["right_button", "jump_button"],
+                                                      action_name="right_jump"))
+        updated = project.rename_hud_region("right_button", "run_button")
+        self.assertEqual(set(project.hud_region_combos["rj"].region_names), {"run_button", "jump_button"})
+        self.assertEqual(updated, 1)
+
 
 class ProjectRoundTripTest(unittest.TestCase):
     def test_actions_survive_to_dict_from_dict(self):
@@ -174,6 +349,24 @@ class ProjectRoundTripTest(unittest.TestCase):
         self.assertEqual(restored.reference_width, 1080)
         self.assertIn("jump", restored.actions)
         self.assertEqual(restored.actions["jump"].events[0].x, 900)
+
+    def test_action_match_tolerance_px_survives_to_dict_from_dict(self):
+        project = Project(name="game", action_match_tolerance_px=45)
+        restored = Project.from_dict(project.to_dict())
+        self.assertEqual(restored.action_match_tolerance_px, 45)
+
+    def test_action_match_tolerance_px_defaults_to_30_when_absent(self):
+        restored = Project.from_dict({"name": "game"})
+        self.assertEqual(restored.action_match_tolerance_px, 30)
+
+    def test_time_scale_survives_to_dict_from_dict(self):
+        project = Project(name="game", time_scale=1.5)
+        restored = Project.from_dict(project.to_dict())
+        self.assertEqual(restored.time_scale, 1.5)
+
+    def test_time_scale_defaults_to_1_when_absent(self):
+        restored = Project.from_dict({"name": "game"})
+        self.assertEqual(restored.time_scale, 1.0)
 
     def test_runs_survive_to_dict_from_dict(self):
         project = Project(name="game")

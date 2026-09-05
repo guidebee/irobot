@@ -25,7 +25,7 @@ from pathlib import Path
 from PySide6.QtCore import QObject, QSettings, QTimer, Signal
 from PySide6.QtWidgets import (
     QMainWindow, QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
-    QListWidgetItem, QLineEdit, QSpinBox, QPushButton, QLabel, QScrollArea,
+    QListWidgetItem, QLineEdit, QSpinBox, QDoubleSpinBox, QPushButton, QLabel, QScrollArea,
     QPlainTextEdit, QSplitter, QFileDialog, QMessageBox, QInputDialog, QTabWidget,
 )
 from PySide6.QtCore import Qt
@@ -33,11 +33,14 @@ from PySide6.QtCore import Qt
 from .. import io as project_io
 from ..model import (
     Project, Action, EventKind, GameplaySession, GameRun, HudRegion, HudRegionCombo, ImageTemplate, PrimitiveEvent,
-    conflicting_pointer_actions, orphan_releases,
+    classified_pointer_conflicts, conflicting_pointer_actions, orphan_releases,
 )
 from ..connection import LiveConnection
 from ..device_recorder import DeviceEventRecorder, merge_gestures_into_events, segment_into_gestures
-from ..hud_classifier import classify_session, propose_actions
+from ..hud_classifier import (
+    build_game_run, classify_session, compare_replay_durations, diff_classifications, propose_actions,
+    propose_combos,
+)
 from ..run_engine import GameRunExecutor
 from ..session_replay import SessionPlayer
 from .canvas import CanvasView
@@ -160,6 +163,16 @@ class MainWindow(QMainWindow):
         self._port_spin = QSpinBox(); self._port_spin.setRange(1, 65535); self._port_spin.setValue(self.project.port)
         self._ref_w_spin = QSpinBox(); self._ref_w_spin.setRange(0, 10000); self._ref_w_spin.setValue(self.project.reference_width)
         self._ref_h_spin = QSpinBox(); self._ref_h_spin.setRange(0, 10000); self._ref_h_spin.setValue(self.project.reference_height)
+        self._time_scale_spin = QDoubleSpinBox()
+        self._time_scale_spin.setRange(0.1, 10.0)
+        self._time_scale_spin.setSingleStep(0.05)
+        self._time_scale_spin.setDecimals(2)
+        self._time_scale_spin.setValue(self.project.time_scale)
+        self._time_scale_spin.setToolTip(
+            "Multiplies every recorded/authored WAIT and Delay's real duration. Position already "
+            "adapts automatically to a different device's detected resolution -- this is the one "
+            "factor a recipient of a shared project tunes by hand for a device with a different "
+            "game/animation speed. 1.00 reproduces the original author's pacing exactly.")
         form.addRow("Name", self._name_edit)
         form.addRow("Description", self._description_edit)
         form.addRow("Package", self._package_edit)
@@ -168,10 +181,12 @@ class MainWindow(QMainWindow):
         form.addRow("Port", self._port_spin)
         form.addRow("Reference width", self._ref_w_spin)
         form.addRow("Reference height", self._ref_h_spin)
+        form.addRow("Time scale", self._time_scale_spin)
         for w in (self._name_edit, self._description_edit, self._package_edit, self._serial_edit, self._host_edit):
             w.editingFinished.connect(self._sync_project_fields)
         for w in (self._port_spin, self._ref_w_spin, self._ref_h_spin):
             w.valueChanged.connect(self._sync_project_fields)
+        self._time_scale_spin.valueChanged.connect(self._sync_project_fields)
         left_layout.addLayout(form)
 
         self._detected_resolution_label = QLabel("Detected resolution: (connect to check)")
@@ -205,6 +220,7 @@ class MainWindow(QMainWindow):
         self._library.selectionChanged.connect(self._on_library_selection_changed)
         self._library.addRequested.connect(self._on_library_add)
         self._library.removeRequested.connect(self._on_library_remove)
+        self._library.renameRequested.connect(self._on_library_rename)
         library_dock = QDockWidget("Library", self)
         library_dock.setWidget(self._library)
         self.addDockWidget(Qt.RightDockWidgetArea, library_dock)
@@ -256,6 +272,7 @@ class MainWindow(QMainWindow):
         self._sessions_panel.replay_raw_btn.clicked.connect(self._replay_session_raw)
         self._sessions_panel.replay_classified_btn.clicked.connect(self._replay_session_classified)
         self._sessions_panel.stop_replay_btn.clicked.connect(self._stop_session_replay)
+        self._sessions_panel.match_tolerance_spin.valueChanged.connect(self._on_match_tolerance_changed)
         self._record_session_btn = self._sessions_panel.record_session_btn
         self._session_list = self._sessions_panel.session_list
 
@@ -326,6 +343,9 @@ class MainWindow(QMainWindow):
         self.project.port = self._port_spin.value()
         self.project.reference_width = self._ref_w_spin.value()
         self.project.reference_height = self._ref_h_spin.value()
+        self.project.time_scale = self._time_scale_spin.value()
+        if self.connection is not None:
+            self.connection.time_scale = self.project.time_scale
         self.setWindowTitle(f"irobot Gym IDE - {self.project.name}")
 
     def _load_project_into_fields(self) -> None:
@@ -339,8 +359,12 @@ class MainWindow(QMainWindow):
             self._port_spin.setValue(self.project.port)
             self._ref_w_spin.setValue(self.project.reference_width)
             self._ref_h_spin.setValue(self.project.reference_height)
+            self._time_scale_spin.setValue(self.project.time_scale)
+            self._sessions_panel.match_tolerance_spin.setValue(self.project.action_match_tolerance_px)
         finally:
             self._loading_fields = False
+        if self.connection is not None:
+            self.connection.time_scale = self.project.time_scale
         self.setWindowTitle(f"irobot Gym IDE - {self.project.name}")
 
     # -- project file menu actions --------------------------------------------------------
@@ -525,6 +549,44 @@ class MainWindow(QMainWindow):
             self._remove_template()
         elif category == "hud_region":
             self._remove_hud_region()
+
+    def _on_library_rename(self, category: str, name: str) -> None:
+        if category == "action":
+            self._rename_action(name)
+        elif category == "hud_region":
+            self._rename_hud_region(name)
+
+    def _rename_action(self, old_name: str) -> None:
+        new_name, ok = QInputDialog.getText(self, "Rename Action", "New name:", text=old_name)
+        if not ok or not new_name or new_name == old_name:
+            return
+        try:
+            updated = self.project.rename_action(old_name, new_name)
+        except ValueError as e:
+            QMessageBox.warning(self, "Rename Action", str(e))
+            return
+        self._refresh_action_list()
+        self._refresh_hud_region_list()
+        self._refresh_combo_list()
+        self._on_run_graph_changed()
+        self._library.selectionChanged.emit("action", new_name)
+        self._log_line(
+            f"Renamed action {old_name!r} to {new_name!r} ({updated} reference(s) updated across "
+            f"HUD regions/combos/runs).")
+
+    def _rename_hud_region(self, old_name: str) -> None:
+        new_name, ok = QInputDialog.getText(self, "Rename HUD Region", "New name:", text=old_name)
+        if not ok or not new_name or new_name == old_name:
+            return
+        try:
+            updated = self.project.rename_hud_region(old_name, new_name)
+        except ValueError as e:
+            QMessageBox.warning(self, "Rename HUD Region", str(e))
+            return
+        self._refresh_hud_region_list()
+        self._refresh_combo_list()
+        self._library.selectionChanged.emit("hud_region", new_name)
+        self._log_line(f"Renamed HUD region {old_name!r} to {new_name!r} ({updated} combo reference(s) updated).")
 
     def _on_action_edited(self) -> None:
         self._warn_pointer_conflicts()
@@ -776,6 +838,7 @@ class MainWindow(QMainWindow):
             return
         self._sync_project_fields()
         self.connection = LiveConnection(self.project.host, self.project.port)
+        self.connection.time_scale = self.project.time_scale
         try:
             self.connection.connect()
         except OSError as e:
@@ -833,10 +896,13 @@ class MainWindow(QMainWindow):
         elif (ref_w, ref_h) != (dw, dh):
             if not self._resolution_notice_shown:
                 self._log_line(
-                    f"MISMATCH: project Reference width/height is {ref_w}x{ref_h}, but the device reports "
-                    f"{dw}x{dh}. Every touch event sent with the wrong value is silently dropped by the "
-                    f"device -- click 'Apply Detected Resolution' to fix it (existing event coordinates "
-                    f"stay numerically the same, so re-check placements against the canvas after applying).")
+                    f"Note: project Reference width/height is {ref_w}x{ref_h}, but this device reports "
+                    f"{dw}x{dh} -- e.g. a project shared from a different device. LiveConnection now "
+                    f"rescales every touch event's position automatically to match (see "
+                    f"ACTION_CLASSIFICATION_DESIGN.md G11), so this is informational, not an error; only "
+                    f"click 'Apply Detected Resolution' if you actually want to re-calibrate this "
+                    f"project's own Reference width/height to this device permanently (that rewrites the "
+                    f"stored value, not the coordinates -- re-check placements against the canvas after).")
                 self._resolution_notice_shown = True
         elif not self._resolution_notice_shown:
             self._log_line(f"Reference resolution {ref_w}x{ref_h} confirmed to match the device.")
@@ -1080,6 +1146,11 @@ class MainWindow(QMainWindow):
 
     # -- gameplay sessions --------------------------------------------------------
 
+    def _on_match_tolerance_changed(self, value: int) -> None:
+        if self._loading_fields:
+            return
+        self.project.action_match_tolerance_px = value
+
     def _refresh_session_list(self) -> None:
         self._session_list.clear()
         if self.project_path is None:
@@ -1230,47 +1301,123 @@ class MainWindow(QMainWindow):
             self._log_line(f"Classify failed: could not load {path}: {e}")
             return
 
+        tolerance = self.project.action_match_tolerance_px
+        new_segments = classify_session(
+            session, self.project.hud_regions, self.project.hud_region_combos,
+            project_actions=self.project.actions, position_tolerance_px=tolerance, on_log=self._log_line)
+
         if session.segments:
+            diff = diff_classifications(session.segments, new_segments)
             reply = QMessageBox.question(
                 self, "Classify Session",
-                f"{session.name!r} already has {len(session.segments)} segment(s). Overwrite them with a "
-                f"fresh classification against the current HUD regions?",
+                f"{session.name!r} already has {len(session.segments)} segment(s). A fresh classification "
+                f"against the current HUD regions/actions would give:\n\n"
+                f"  {diff['unchanged']} unchanged\n"
+                f"  {diff['changed']} changed to a different action\n"
+                f"  {diff['added']} newly classified (previously unknown/uncovered)\n"
+                f"  {diff['removed']} no longer classified\n\n"
+                f"Overwrite the existing segments with this?",
                 QMessageBox.Yes | QMessageBox.No)
             if reply != QMessageBox.Yes:
                 self._log_line("Classify cancelled.")
                 return
 
-        session.segments = classify_session(
-            session, self.project.hud_regions, self.project.hud_region_combos,
-            project_actions=self.project.actions, on_log=self._log_line)
+        session.segments = new_segments
         for warning in session.validate(self.project.actions):
+            self._log_line(f"  warning: {warning}")
+        for warning in classified_pointer_conflicts(session.segments, self.project.actions):
             self._log_line(f"  warning: {warning}")
         project_io.save_session(session, self.project_path)
         self._log_line(f"Saved classification to {path}.")
 
-        proposals = propose_actions(session, self.project.actions, on_log=self._log_line)
-        if not proposals:
-            return
-        names = sorted(proposals)
-        dup_names = sorted(n for n, a in proposals.items() if "possible duplicate" in a.description)
-        dup_note = f"\n\n({len(dup_names)} flagged as a possible duplicate of an existing action: " \
-                   f"{', '.join(dup_names)})" if dup_names else ""
-        reply = QMessageBox.question(
-            self, "Add Proposed Actions",
-            f"Classification proposes {len(proposals)} new action definition(s):\n\n{', '.join(names)}"
-            f"{dup_note}\n\nAdd them to the project? You can rename, edit, or delete any of them afterward "
-            f"in the Inspector.",
-            QMessageBox.Yes | QMessageBox.No)
+        duration = compare_replay_durations(session, self.project.actions)
+        if duration["mismatches"]:
+            self._log_line(
+                f"Timing check: Replay Raw would take ~{duration['raw_frames']} scripted frame(s); "
+                f"Replay Classified would take ~{duration['classified_frames']} (using each segment's "
+                f"named action's own timing, not the raw recording). {len(duration['mismatches'])} "
+                f"segment(s) diverge from what was actually recorded:")
+            for label, action_name, recorded, action_frames in duration["mismatches"]:
+                self._log_line(
+                    f"  {label!r} ({action_name!r}): recorded {recorded} frame(s), the action itself "
+                    f"only waits {action_frames} frame(s) -- if this action is meant to reproduce a "
+                    f"sustained hold/mash rather than a quick move, consider not folding it into a "
+                    f"HUD Combo (see ACTION_CLASSIFICATION_DESIGN.md G10).")
+
+        proposals = propose_actions(session, self.project.actions, position_tolerance_px=tolerance,
+                                     on_log=self._log_line)
+        if proposals:
+            names = sorted(proposals)
+            dup_names = sorted(n for n, a in proposals.items() if "possible duplicate" in a.description)
+            dup_note = f"\n\n({len(dup_names)} flagged as a possible duplicate of an existing action: " \
+                       f"{', '.join(dup_names)})" if dup_names else ""
+            reply = QMessageBox.question(
+                self, "Add Proposed Actions",
+                f"Classification proposes {len(proposals)} new action definition(s):\n\n{', '.join(names)}"
+                f"{dup_note}\n\nAdd them to the project? You can rename, edit, or delete any of them afterward "
+                f"in the Inspector.",
+                QMessageBox.Yes | QMessageBox.No)
+            if reply != QMessageBox.Yes:
+                self._log_line("Proposed actions discarded (not added to the project).")
+            else:
+                for action in proposals.values():
+                    self.project.add_action(action)
+                self._refresh_action_list()
+                self._warn_pointer_conflicts()
+                self._log_line(
+                    f"Added {len(proposals)} proposed action(s) to the project ({', '.join(names)}) -- "
+                    f"review/rename/edit them in the Inspector, then Save Project to keep them.")
+
+        combo_proposals = propose_combos(session, self.project.hud_regions, self.project.hud_region_combos,
+                                          on_log=self._log_line)
+        if combo_proposals:
+            combo_names = sorted(combo_proposals)
+            reply = QMessageBox.question(
+                self, "Add Proposed HUD Combos",
+                f"This session also has {len(combo_proposals)} recurring concurrent-region combination(s) "
+                f"with no matching HUD Combo defined:\n\n{', '.join(combo_names)}\n\n"
+                f"Add them as new HUD Combos? A future classification pass will then propose the backing "
+                f"action(s) for each, same as any other not-yet-real action name.",
+                QMessageBox.Yes | QMessageBox.No)
+            if reply == QMessageBox.Yes:
+                for combo in combo_proposals.values():
+                    self.project.add_hud_region_combo(combo)
+                self._refresh_combo_list()
+                self._log_line(
+                    f"Added {len(combo_proposals)} proposed HUD combo(s) to the project ({', '.join(combo_names)}) "
+                    f"-- re-classify to fold their gestures in, then Save Project to keep them.")
+            else:
+                self._log_line("Proposed HUD combos discarded (not added to the project).")
+
+        if session.segments:
+            self._offer_build_game_run(session)
+
+    def _offer_build_game_run(self, session: GameplaySession) -> None:
+        """Offers to turn `session`'s just-computed classification into a real, editable
+        GameRun graph -- the durable counterpart to "Replay Classified" (see
+        hud_classifier.build_game_run's docstring). Overwrites a same-named existing run only
+        on confirmation, same "ask before clobbering" convention _classify_session's own
+        segment-overwrite prompt already uses."""
+        run_name = f"{session.name}_run"
+        existing = run_name in self.project.runs
+        prompt = (
+            f"A Game Run named {run_name!r} already exists. Replace it with a fresh graph built from "
+            f"this session's current classification?"
+            if existing else
+            f"Build a Game Run graph {run_name!r} from this session's {len(session.segments)} classified "
+            f"segment(s) -- one Action node per segment, chained with Delay nodes reproducing the real "
+            f"recorded gaps -- so it's reusable/editable from the Game Run tab like any hand-authored run?"
+        )
+        reply = QMessageBox.question(self, "Create Game Run", prompt, QMessageBox.Yes | QMessageBox.No)
         if reply != QMessageBox.Yes:
-            self._log_line("Proposed actions discarded (not added to the project).")
+            self._log_line("Game Run not created/updated from this classification.")
             return
-        for action in proposals.values():
-            self.project.add_action(action)
-        self._refresh_action_list()
-        self._warn_pointer_conflicts()
+        run = build_game_run(session, run_name, self.project.actions)
+        self.project.add_run(run)
+        self._refresh_run_list()
         self._log_line(
-            f"Added {len(proposals)} proposed action(s) to the project ({', '.join(names)}) -- "
-            f"review/rename/edit them in the Inspector, then Save Project to keep them.")
+            f"{'Replaced' if existing else 'Created'} Game Run {run_name!r} from session {session.name!r}'s "
+            f"classification ({len(run.nodes)} node(s)) -- Save Project to keep it.")
 
     def closeEvent(self, event) -> None:
         if self._device_recorder is not None:

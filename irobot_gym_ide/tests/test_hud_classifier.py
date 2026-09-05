@@ -1,8 +1,13 @@
 """classify_session tests -- pure model, no Qt/socket/device."""
 import unittest
 
-from ..hud_classifier import classify_session, propose_actions
-from ..model import Action, EventKind, GameplaySession, HudRegion, HudRegionCombo, PrimitiveEvent
+from ..hud_classifier import (
+    build_game_run, classify_session, compare_replay_durations, diff_classifications, propose_actions,
+    propose_combos,
+)
+from ..model import (
+    Action, EventKind, GameplaySession, HudRegion, HudRegionCombo, PrimitiveEvent, RunNodeKind, SessionSegment,
+)
 
 
 def _regions(*regions) -> dict:
@@ -296,6 +301,262 @@ class ProposeActionsTest(unittest.TestCase):
         existing = {"attack": Action(name="attack", events=[PrimitiveEvent(kind=EventKind.TAP, x=900, y=900)])}
         proposals = propose_actions(session, project_actions=existing)
         self.assertNotIn("possible duplicate", proposals["jump"].description)
+
+    def test_unknown_proposal_description_and_log_include_coordinates(self):
+        session = GameplaySession(name="s", events=[PrimitiveEvent(kind=EventKind.TAP, x=42, y=99)])
+        session.segments = classify_session(session, {})
+        logs = []
+        proposals = propose_actions(session, project_actions={}, on_log=logs.append)
+        self.assertIn("(42, 99)", proposals["unknown_1"].description)
+        self.assertTrue(any("(42, 99)" in line for line in logs))
+
+    def test_classified_proposal_description_includes_coordinates(self):
+        session = GameplaySession(name="s", events=[PrimitiveEvent(kind=EventKind.TAP, x=7, y=8)])
+        regions = _regions(HudRegion(name="jump_button", x=0, y=0, width=10, height=10, action_name="jump"))
+        session.segments = classify_session(session, regions)
+        proposals = propose_actions(session, project_actions={})
+        self.assertIn("(7, 8)", proposals["jump"].description)
+
+
+class PatternMatchAmbiguityTest(unittest.TestCase):
+    def test_classify_session_logs_when_a_gesture_matches_multiple_actions_within_tolerance(self):
+        session = GameplaySession(name="s", events=[PrimitiveEvent(kind=EventKind.TAP, x=100, y=100)])
+        existing = {
+            "far": Action(name="far", events=[PrimitiveEvent(kind=EventKind.TAP, x=115, y=100)]),
+            "near": Action(name="near", events=[PrimitiveEvent(kind=EventKind.TAP, x=103, y=101)]),
+        }
+        logs = []
+        segments = classify_session(session, {}, project_actions=existing, on_log=logs.append)
+        self.assertEqual(segments[0].action_name, "near")
+        self.assertTrue(any("matched 2 existing actions" in line for line in logs))
+
+
+class DiffClassificationsTest(unittest.TestCase):
+    def test_unchanged_segment_counted_as_unchanged(self):
+        old = [SessionSegment(start_index=0, end_index=1, action_name="jump")]
+        new = [SessionSegment(start_index=0, end_index=1, action_name="jump")]
+        self.assertEqual(diff_classifications(old, new), {"unchanged": 1, "changed": 0, "added": 0, "removed": 0})
+
+    def test_same_span_different_action_counted_as_changed(self):
+        old = [SessionSegment(start_index=0, end_index=1, action_name="jump")]
+        new = [SessionSegment(start_index=0, end_index=1, action_name="jump_v2")]
+        self.assertEqual(diff_classifications(old, new), {"unchanged": 0, "changed": 1, "added": 0, "removed": 0})
+
+    def test_new_span_counted_as_added(self):
+        old = []
+        new = [SessionSegment(start_index=0, end_index=1, action_name="jump")]
+        self.assertEqual(diff_classifications(old, new), {"unchanged": 0, "changed": 0, "added": 1, "removed": 0})
+
+    def test_missing_span_counted_as_removed(self):
+        old = [SessionSegment(start_index=0, end_index=1, action_name="jump")]
+        new = []
+        self.assertEqual(diff_classifications(old, new), {"unchanged": 0, "changed": 0, "added": 0, "removed": 1})
+
+
+class ProposeCombosTest(unittest.TestCase):
+    def _right_and_jump_regions(self):
+        return _regions(
+            HudRegion(name="right_button", x=0, y=0, width=10, height=10, action_name="move_right"),
+            HudRegion(name="jump_button", x=100, y=0, width=10, height=10, action_name="jump"),
+        )
+
+    def test_recurring_unmatched_concurrent_cluster_is_proposed_as_a_combo(self):
+        events = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5, pointer_id=0),
+            PrimitiveEvent(kind=EventKind.PRESS, x=105, y=5, pointer_id=1),
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=1),
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=0),
+        ]
+        session = GameplaySession(name="s", events=events)
+        proposals = propose_combos(session, self._right_and_jump_regions())
+        self.assertEqual(set(proposals), {"jump_button+right_button"})
+        combo = proposals["jump_button+right_button"]
+        self.assertEqual(set(combo.region_names), {"right_button", "jump_button"})
+        self.assertEqual(combo.action_name, "jump_button+right_button")
+
+    def test_already_defined_combo_is_not_reproposed(self):
+        events = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5, pointer_id=0),
+            PrimitiveEvent(kind=EventKind.PRESS, x=105, y=5, pointer_id=1),
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=1),
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=0),
+        ]
+        session = GameplaySession(name="s", events=events)
+        combos = _combos(HudRegionCombo(name="right_jump", region_names=["right_button", "jump_button"],
+                                         action_name="right_jump"))
+        proposals = propose_combos(session, self._right_and_jump_regions(), combos)
+        self.assertEqual(proposals, {})
+
+    def test_solo_non_overlapping_gestures_are_not_proposed_as_a_combo(self):
+        session = GameplaySession(name="s", events=[PrimitiveEvent(kind=EventKind.TAP, x=5, y=5)])
+        proposals = propose_combos(session, self._right_and_jump_regions())
+        self.assertEqual(proposals, {})
+
+
+class BuildGameRunTest(unittest.TestCase):
+    def test_empty_segments_produce_an_empty_run(self):
+        session = GameplaySession(name="s", events=[])
+        run = build_game_run(session, "my_run")
+        self.assertEqual(run.name, "my_run")
+        self.assertEqual(run.nodes, {})
+        self.assertEqual(run.edges, [])
+
+    def test_one_segment_produces_one_action_node_and_no_delay(self):
+        session = GameplaySession(name="s", events=[PrimitiveEvent(kind=EventKind.TAP, x=5, y=5)])
+        session.segments = [SessionSegment(start_index=0, end_index=1, action_name="jump")]
+        run = build_game_run(session, "my_run")
+        action_nodes = [n for n in run.nodes.values() if n.kind == RunNodeKind.ACTION]
+        self.assertEqual(len(action_nodes), 1)
+        self.assertEqual(action_nodes[0].action_name, "jump")
+        self.assertEqual(run.edges, [])
+
+    def test_gap_between_segments_becomes_a_delay_node(self):
+        events = [
+            PrimitiveEvent(kind=EventKind.TAP, x=5, y=5),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=15),
+            PrimitiveEvent(kind=EventKind.TAP, x=9, y=9),
+        ]
+        session = GameplaySession(name="s", events=events)
+        session.segments = [
+            SessionSegment(start_index=0, end_index=1, action_name="jump"),
+            SessionSegment(start_index=2, end_index=3, action_name="attack"),
+        ]
+        run = build_game_run(session, "my_run")
+        delay_nodes = [n for n in run.nodes.values() if n.kind == RunNodeKind.DELAY]
+        action_nodes = sorted((n for n in run.nodes.values() if n.kind == RunNodeKind.ACTION),
+                               key=lambda n: n.x)
+        self.assertEqual(len(delay_nodes), 1)
+        self.assertEqual(delay_nodes[0].frames, 15)
+        self.assertEqual([n.action_name for n in action_nodes], ["jump", "attack"])
+        # jump -> delay -> attack, chained
+        self.assertEqual(len(run.edges), 2)
+        self.assertEqual(len(run.roots()), 1)
+
+    def test_zero_gap_chains_actions_directly_with_no_delay_node(self):
+        session = GameplaySession(name="s", events=[
+            PrimitiveEvent(kind=EventKind.TAP, x=5, y=5),
+            PrimitiveEvent(kind=EventKind.TAP, x=9, y=9),
+        ])
+        session.segments = [
+            SessionSegment(start_index=0, end_index=1, action_name="jump"),
+            SessionSegment(start_index=1, end_index=2, action_name="attack"),
+        ]
+        run = build_game_run(session, "my_run")
+        self.assertEqual([n.kind for n in run.nodes.values()], [RunNodeKind.ACTION, RunNodeKind.ACTION])
+        self.assertEqual(len(run.edges), 1)
+
+    def test_result_validates_cleanly_against_a_matching_action_dict(self):
+        session = GameplaySession(name="s", events=[PrimitiveEvent(kind=EventKind.TAP, x=5, y=5)])
+        session.segments = [SessionSegment(start_index=0, end_index=1, action_name="jump")]
+        run = build_game_run(session, "my_run")
+        self.assertEqual(run.validate({"jump": Action(name="jump")}), [])
+
+    def test_no_project_actions_means_no_catchup_delay(self):
+        events = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=50),
+            PrimitiveEvent(kind=EventKind.RELEASE),
+        ]
+        session = GameplaySession(name="s", events=events)
+        session.segments = [SessionSegment(start_index=0, end_index=3, action_name="right_jump")]
+        run = build_game_run(session, "my_run")
+        self.assertEqual([n.kind for n in run.nodes.values()], [RunNodeKind.ACTION])
+
+    def test_action_shorter_than_recorded_span_gets_a_catchup_delay_node(self):
+        events = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=50),
+            PrimitiveEvent(kind=EventKind.RELEASE),
+        ]
+        session = GameplaySession(name="s", events=events)
+        session.segments = [SessionSegment(start_index=0, end_index=3, action_name="right_jump")]
+        actions = {"right_jump": Action(name="right_jump", events=[PrimitiveEvent(kind=EventKind.WAIT, frames=6)])}
+        run = build_game_run(session, "my_run", actions)
+        nodes = sorted(run.nodes.values(), key=lambda n: n.x)
+        self.assertEqual([n.kind for n in nodes], [RunNodeKind.ACTION, RunNodeKind.DELAY])
+        self.assertEqual(nodes[1].frames, 44)
+        self.assertEqual(len(run.edges), 1)
+        self.assertEqual(len(run.roots()), 1)
+
+    def test_action_at_least_as_long_as_recorded_span_gets_no_catchup_delay(self):
+        events = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=5),
+            PrimitiveEvent(kind=EventKind.RELEASE),
+        ]
+        session = GameplaySession(name="s", events=events)
+        session.segments = [SessionSegment(start_index=0, end_index=3, action_name="a")]
+        actions = {"a": Action(name="a", events=[PrimitiveEvent(kind=EventKind.WAIT, frames=20)])}
+        run = build_game_run(session, "my_run", actions)
+        self.assertEqual([n.kind for n in run.nodes.values()], [RunNodeKind.ACTION])
+
+
+class CompareReplayDurationsTest(unittest.TestCase):
+    def test_matching_action_timing_reports_no_mismatch(self):
+        events = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=10),
+            PrimitiveEvent(kind=EventKind.RELEASE),
+        ]
+        session = GameplaySession(name="s", events=events)
+        session.segments = [SessionSegment(start_index=0, end_index=3, action_name="hold")]
+        actions = {"hold": Action(name="hold", events=[
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=10),
+            PrimitiveEvent(kind=EventKind.RELEASE),
+        ])}
+        result = compare_replay_durations(session, actions)
+        self.assertEqual(result["raw_frames"], 10)
+        self.assertEqual(result["classified_frames"], 10)
+        self.assertEqual(result["mismatches"], [])
+
+    def test_a_long_recorded_span_replayed_by_a_short_canned_action_is_flagged(self):
+        # the real bug this catches: a combo/action's own canned timing is much shorter
+        # than how long the classified span actually took to record.
+        events = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=300),
+            PrimitiveEvent(kind=EventKind.RELEASE),
+        ]
+        session = GameplaySession(name="s", events=events)
+        session.segments = [SessionSegment(start_index=0, end_index=3, action_name="run_and_jump",
+                                            label="right_jump")]
+        actions = {"run_and_jump": Action(name="run_and_jump", events=[
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=6),
+            PrimitiveEvent(kind=EventKind.RELEASE),
+        ])}
+        result = compare_replay_durations(session, actions)
+        self.assertEqual(result["raw_frames"], 300)
+        self.assertEqual(result["classified_frames"], 6)
+        self.assertEqual(result["mismatches"], [("right_jump", "run_and_jump", 300, 6)])
+
+    def test_small_differences_within_threshold_are_not_flagged(self):
+        events = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=10),
+            PrimitiveEvent(kind=EventKind.RELEASE),
+        ]
+        session = GameplaySession(name="s", events=events)
+        session.segments = [SessionSegment(start_index=0, end_index=3, action_name="hold")]
+        actions = {"hold": Action(name="hold", events=[
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=11),
+            PrimitiveEvent(kind=EventKind.RELEASE),
+        ])}
+        result = compare_replay_durations(session, actions, mismatch_threshold_frames=3)
+        self.assertEqual(result["mismatches"], [])
+
+    def test_missing_action_counts_as_zero_frames_and_can_still_be_flagged(self):
+        session = GameplaySession(name="s", events=[
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=50),
+            PrimitiveEvent(kind=EventKind.RELEASE),
+        ])
+        session.segments = [SessionSegment(start_index=0, end_index=3, action_name="missing")]
+        result = compare_replay_durations(session, {})
+        self.assertEqual(result["classified_frames"], 0)
+        self.assertEqual(result["mismatches"], [("missing", "missing", 50, 0)])
 
 
 class PatternMatchClassificationTest(unittest.TestCase):

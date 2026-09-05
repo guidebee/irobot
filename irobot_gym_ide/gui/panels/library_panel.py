@@ -30,12 +30,19 @@ _GROUPS = [
 # DefinePanel. That leaves only Actions addable/removable from this toolbar.
 _ADDABLE_CATEGORIES = {"action"}
 _REMOVABLE_CATEGORIES = {"action", "hud_region", "template"}
+# Renamable: only categories another definition can reference *by name* elsewhere in the
+# project (HudRegion.action_name/release_action_name, HudRegionCombo.action_name/
+# region_names, RunNode.action_name) -- see ACTION_CLASSIFICATION_DESIGN.md G1. A bare
+# free-text name edit would silently orphan those references, so rename goes through
+# Project.rename_action/rename_hud_region instead, which cascade the update project-wide.
+_RENAMABLE_CATEGORIES = {"action", "hud_region"}
 
 
 class LibraryPanel(QWidget):
     selectionChanged = Signal(str, str)   # (category, name) -- ("", "") for a group header or nothing selected
     addRequested = Signal(str)            # category
     removeRequested = Signal(str, str)    # (category, name)
+    renameRequested = Signal(str, str)    # (category, name)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -49,8 +56,11 @@ class LibraryPanel(QWidget):
         self._add_btn.clicked.connect(self._on_add_clicked)
         self._remove_btn = QPushButton("Remove")
         self._remove_btn.clicked.connect(self._on_remove_clicked)
+        self._rename_btn = QPushButton("Rename")
+        self._rename_btn.clicked.connect(self._on_rename_clicked)
         btn_row.addWidget(self._add_btn)
         btn_row.addWidget(self._remove_btn)
+        btn_row.addWidget(self._rename_btn)
         layout.addLayout(btn_row)
 
         self._tree = QTreeWidget()
@@ -118,6 +128,7 @@ class LibraryPanel(QWidget):
         is_leaf = bool(current and current.data(0, Qt.UserRole)[1] is not None)
         self._add_btn.setEnabled(self._current_category in _ADDABLE_CATEGORIES)
         self._remove_btn.setEnabled(is_leaf and self._current_category in _REMOVABLE_CATEGORIES)
+        self._rename_btn.setEnabled(is_leaf and self._current_category in _RENAMABLE_CATEGORIES)
 
     def _on_add_clicked(self) -> None:
         if self._current_category in _ADDABLE_CATEGORIES:
@@ -130,3 +141,11 @@ class LibraryPanel(QWidget):
         category, name = current.data(0, Qt.UserRole)
         if name is not None and category in _REMOVABLE_CATEGORIES:
             self.removeRequested.emit(category, name)
+
+    def _on_rename_clicked(self) -> None:
+        current = self._tree.currentItem()
+        if current is None:
+            return
+        category, name = current.data(0, Qt.UserRole)
+        if name is not None and category in _RENAMABLE_CATEGORIES:
+            self.renameRequested.emit(category, name)

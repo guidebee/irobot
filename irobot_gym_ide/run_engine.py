@@ -195,7 +195,7 @@ class GameRunExecutor:
         return "found" if found else "not_found"
 
     def _sleep_frames(self, frames: int) -> None:
-        remaining = frames * FRAME_MS / 1000.0
+        remaining = frames * FRAME_MS * self.connection.time_scale / 1000.0
         step = 0.05
         while remaining > 0 and not self._stop.is_set():
             time.sleep(min(step, remaining))

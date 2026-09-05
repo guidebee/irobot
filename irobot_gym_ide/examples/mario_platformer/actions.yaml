@@ -1,23 +1,39 @@
 actions:
 - name: attack
-  description: tap the attack/dash button
+  description: >-
+    tap the attack/dash button. Uses pointer_id 1, not the default 0, so it doesn't collide
+    with left_start/right_start (which hold pointer 0 for the whole run -- see
+    ACTION_CLASSIFICATION_DESIGN.md's replay-time pointer-conflict note): a PRESS on an
+    already-held pointer is silently skipped by connection.py, and a mismatched RELEASE on
+    it would end the hold early instead of doing anything to this action's own touch.
   events:
   - kind: press
+    pointer_id: 1
     x: 1952
     y: 1060
   - kind: wait
+    pointer_id: 1
     frames: 10
   - kind: release
+    pointer_id: 1
     key_name: back
 - name: jump
-  description: recorded from 1 real device touch(es)
+  description: >-
+    recorded from 1 real device touch(es). Uses pointer_id 1, not the default 0, so it
+    doesn't collide with left_start/right_start (which hold pointer 0 for the whole run --
+    see ACTION_CLASSIFICATION_DESIGN.md's replay-time pointer-conflict note): a PRESS on an
+    already-held pointer is silently skipped by connection.py, and a mismatched RELEASE on
+    it would end the hold early instead of doing anything to this action's own touch.
   events:
   - kind: press
+    pointer_id: 1
     x: 2396
     y: 1070
   - kind: wait
+    pointer_id: 1
     frames: 10
   - kind: release
+    pointer_id: 1
     key_name: back
 - name: right_jump
   description: recorded from 2 real device touch(es)

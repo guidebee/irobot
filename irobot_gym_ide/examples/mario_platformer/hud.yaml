@@ -25,10 +25,16 @@ hud_regions:
   width: 270
   height: 210
   action_name: jump
-hud_region_combos:
-- name: right_jump
-  region_names: [right_button, jump_button]
-  action_name: right_jump
-- name: left_jump
-  region_names: [left_button, jump_button]
-  action_name: left_jump
+# No right_jump/left_jump combos here (deliberately -- see ACTION_CLASSIFICATION_DESIGN.md
+# G10): a HudRegionCombo folds a whole overlapping cluster into ONE segment naming its
+# action, which is correct for a short, discrete compound gesture but actively wrong for
+# "hold right the whole time while mashing jump" -- that pattern is ordinary sustained
+# running, not a one-shot move, and collapsing it into the right_jump/left_jump macro's own
+# short canned timing made "Replay Classified" run at a fraction of "Replay Raw"'s real
+# duration (measured on recordings/level2.session.yaml: 237 scripted frames vs. 880 actually
+# recorded). Leaving no combo here means that overlap classifies as separate right_start/
+# jump/right_stop segments instead, which correctly reproduces the real hold duration. The
+# right_jump/left_jump Actions themselves are still fine to keep and use directly (a Game
+# Run node, say, for a deliberate quick nudge-then-jump) -- just not as a HudRegionCombo
+# target for this hold-based control scheme.
+hud_region_combos: []

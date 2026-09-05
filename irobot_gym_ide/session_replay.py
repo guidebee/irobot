@@ -18,6 +18,24 @@ model.GameplaySession's docstring describes:
                         use -- a bad/stale classification shouldn't abort an
                         otherwise-fine replay.
 
+                        replay_raw is the ground truth for how long things
+                        actually took (it's literally the recorded stream), so
+                        after running each segment's action, replay_classified
+                        tops up with a "catch-up" sleep for the difference
+                        between that segment's own real recorded span (model.
+                        frames_between over [start_index, end_index)) and
+                        however long the action's own WAIT events actually
+                        took -- see hud_classifier.compare_replay_durations,
+                        the classify-time diagnostic for this same gap; this
+                        is the replay-time correction, so a session that
+                        diagnostic flags still replays at roughly the right
+                        pace instead of visibly drifting shorter (see
+                        ACTION_CLASSIFICATION_DESIGN.md G10). Only tops up
+                        (never trims) -- an action whose own script already
+                        runs *longer* than the real recording isn't sped up,
+                        since there's no way to un-spend time already used
+                        running its real touch events.
+
 Not itself Gym env stepping, same disclaimer run_engine.py's module docstring
 makes for GameRun -- this is the IDE's own "replay it and watch the log" loop.
 """
@@ -27,16 +45,7 @@ import threading
 import time
 
 from .connection import FRAME_MS, LiveConnection
-from .model import Action, EventKind, GameplaySession
-
-
-def _frames_between(events: list, lo: int, hi: int) -> int:
-    """Sums the `frames` of every WAIT event in events[lo:hi) -- the real
-    recorded gap, in frames, spanned by that slice. Used to compute how long
-    to wait before firing the next classified segment's action, so replay
-    timing between segments still reflects how the session actually played
-    out rather than firing actions back-to-back."""
-    return sum(e.frames for e in events[lo:hi] if e.kind == EventKind.WAIT)
+from .model import Action, EventKind, GameplaySession, frames_between as _frames_between
 
 
 class SessionPlayer:
@@ -83,13 +92,23 @@ class SessionPlayer:
                 prev_end = seg.end_index
                 continue
             skipped = self.connection.run_action(action, self.ref_w, self.ref_h)
-            note = f" ({len(skipped)} event(s) skipped)" if skipped else ""
+            if skipped:
+                reasons = "; ".join(f"event {i}: {reason}" for i, reason in skipped)
+                note = f" ({len(skipped)} event(s) skipped -- {reasons})"
+            else:
+                note = ""
+            recorded_frames = _frames_between(session.events, seg.start_index, seg.end_index)
+            action_frames = sum(e.frames for e in action.events if e.kind == EventKind.WAIT)
+            catchup = recorded_frames - action_frames
+            if catchup > 0 and not self._stop.is_set():
+                self._sleep_frames(catchup)
+                note += f" (+{catchup} frame(s) catch-up to match the real recorded duration)"
             self._on_log(f"  segment {desc}: ran action{note}")
             prev_end = seg.end_index
         self._on_log(f"Replayed session {session.name!r} classified.")
 
     def _sleep_frames(self, frames: int) -> None:
-        remaining = frames * FRAME_MS / 1000.0
+        remaining = frames * FRAME_MS * self.connection.time_scale / 1000.0
         step = 0.05
         while remaining > 0 and not self._stop.is_set():
             time.sleep(min(step, remaining))

@@ -6,7 +6,7 @@ recording/classification/replay logic and just wires up these widgets.
 """
 from __future__ import annotations
 
-from PySide6.QtWidgets import QHBoxLayout, QLabel, QListWidget, QPushButton, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QListWidget, QPushButton, QSpinBox, QVBoxLayout, QWidget
 
 
 class SessionsPanel(QWidget):
@@ -22,6 +22,16 @@ class SessionsPanel(QWidget):
 
         self.session_list = QListWidget()
         layout.addWidget(self.session_list)
+
+        tolerance_row = QHBoxLayout()
+        tolerance_row.addWidget(QLabel(
+            "Action match tolerance (px) -- how close a gesture must land to an existing "
+            "action's own recorded position to count as a match (see ACTION_CLASSIFICATION_DESIGN.md G8):"))
+        self.match_tolerance_spin = QSpinBox()
+        self.match_tolerance_spin.setRange(1, 500)
+        self.match_tolerance_spin.setValue(30)
+        tolerance_row.addWidget(self.match_tolerance_spin)
+        layout.addLayout(tolerance_row)
 
         btn_row = QHBoxLayout()
         self.classify_session_btn = QPushButton("Classify Session")

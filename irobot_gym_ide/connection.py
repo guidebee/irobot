@@ -22,7 +22,7 @@ import threading
 import time
 
 from ._agent_client import agent_client as ac
-from .model import Action, EventKind, PrimitiveEvent
+from .model import Action, EventKind, PrimitiveEvent, scale_point
 
 FRAME_MS = 33  # assumed ms/frame for WAIT events -- no real frame-rate handshake
                 # exists on the wire yet; see docs/irobot_gym_ide_design.md "Known limitations"
@@ -41,6 +41,8 @@ class LiveConnection:
         self._latest_thumbnail = None  # (width, height, pixels: bytes, phash: bytes) color screen_shot frame
         self._latest_resolution = None  # (width, height) from BLOB_MSG_TYPE_RESOLUTION, or None if not received yet
         self._held_pointers = set()  # pointer_ids currently DOWN, per this connection's own bookkeeping
+        self.time_scale = 1.0  # multiplies every WAIT's real-ms duration -- see model.Project.time_scale;
+                                # a caller (MainWindow) syncs this from the loaded project, not this class
 
     # -- lifecycle ----------------------------------------------------
 
@@ -149,12 +151,27 @@ class LiveConnection:
     def send_primitive(self, event: PrimitiveEvent, ref_w: int, ref_h: int) -> str | None:
         """Sends one PrimitiveEvent's wire message(s). Returns None on success,
         or a short human-readable reason it was skipped as a no-op (never
-        raises for a malformed-but-well-typed event -- see module docstring)."""
+        raises for a malformed-but-well-typed event -- see module docstring).
+
+        `ref_w`/`ref_h` are the resolution `event`'s (x, y) was authored/recorded against --
+        NOT necessarily this live device's own real resolution (see model.Project.
+        reference_width/height's docstring: a shared project can be opened against any
+        device). When this connection has already received a BLOB_MSG_TYPE_RESOLUTION and
+        it differs from `ref_w`/`ref_h`, (x, y) is rescaled (model.scale_point) into that
+        real resolution before sending, and the *device's* resolution -- not `ref_w`/`ref_h`
+        -- is sent as touch_message's screen_size, since irobot_server's PositionMapper.map()
+        requires an exact match (see agent_client.touch_message's docstring) and would
+        otherwise silently drop every event from a project authored on a different-resolution
+        device. This is the mechanism that makes a shared, classified session/Game Run
+        actually portable across devices (see ACTION_CLASSIFICATION_DESIGN.md G11) --
+        `time_scale` (below) is the timing half of that same story, which can't be
+        auto-detected the way resolution can and so is a per-project value a recipient tunes
+        by hand."""
         if not self.connected:
             return "not connected"
 
         if event.kind == EventKind.WAIT:
-            time.sleep(event.frames * FRAME_MS / 1000.0)
+            time.sleep(event.frames * FRAME_MS * self.time_scale / 1000.0)
             return None
 
         if event.kind == EventKind.KEY:
@@ -182,19 +199,27 @@ class LiveConnection:
         }[event.kind]
 
         x, y = event.x, event.y
+        send_w, send_h = ref_w, ref_h
+        device_res = self.latest_resolution()
+        if device_res is not None and ref_w and ref_h and device_res != (ref_w, ref_h):
+            device_w, device_h = device_res
+            if x is not None and y is not None:
+                x, y = scale_point(x, y, ref_w, ref_h, device_w, device_h)
+            send_w, send_h = device_w, device_h
+
         if event.kind == EventKind.RELEASE and (x is None or y is None):
             x, y = 0, 0  # position is irrelevant for an UP; server only reads pointer id + action
 
         if event.kind == EventKind.TAP:
             buttons_down = ac.BUTTON_PRIMARY
             self._send_control(ac.touch_message(
-                ac.MOTION_ACTION_DOWN, x, y, ref_w, ref_h, pointer_id=event.pointer_id, buttons=buttons_down))
+                ac.MOTION_ACTION_DOWN, x, y, send_w, send_h, pointer_id=event.pointer_id, buttons=buttons_down))
             self._send_control(ac.touch_message(
-                ac.MOTION_ACTION_UP, x, y, ref_w, ref_h, pointer_id=event.pointer_id, buttons=0))
+                ac.MOTION_ACTION_UP, x, y, send_w, send_h, pointer_id=event.pointer_id, buttons=0))
         else:
             buttons = 0 if event.kind == EventKind.RELEASE else ac.BUTTON_PRIMARY
             self._send_control(ac.touch_message(
-                action_for_kind, x, y, ref_w, ref_h, pointer_id=event.pointer_id, buttons=buttons))
+                action_for_kind, x, y, send_w, send_h, pointer_id=event.pointer_id, buttons=buttons))
 
         if event.kind == EventKind.PRESS:
             self._held_pointers.add(event.pointer_id)

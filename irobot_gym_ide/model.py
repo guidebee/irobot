@@ -135,53 +135,87 @@ class Action:
         return warnings
 
 
-def events_look_alike(a_events: list, b_events: list, position_tolerance_px: int = 30) -> bool:
-    """True if two PrimitiveEvent sequences look like recordings of the same physical
-    gesture -- same non-WAIT event kinds in the same order, same pointer_id, positions
-    within `position_tolerance_px` of each other, same key_name/keycode for KEY events.
-    WAIT durations are ignored entirely (both sequences' WAIT events are filtered out
-    before comparing): two recordings of "the same" hold or drag will never have
-    pixel/frame-identical timing, and that difference alone shouldn't read as "a
-    different gesture" -- rigid equality would never fire on two independently-recorded
-    takes of the literal same button.
+def frames_between(events: list, lo: int, hi: int) -> int:
+    """Sums the `frames` of every WAIT event in events[lo:hi) -- the real recorded gap, in
+    frames, spanned by that slice. Used by session_replay.py to compute how long to wait
+    before firing the next classified segment's action (so replay timing between segments
+    reflects how the session actually played out rather than firing actions back-to-back),
+    and by hud_classifier.build_game_run to give a synthesized GameRun's DELAY nodes that
+    same real gap."""
+    return sum(e.frames for e in events[lo:hi] if e.kind == EventKind.WAIT)
+
+
+def _events_match_distance(a_events: list, b_events: list, position_tolerance_px: int) -> Optional[float]:
+    """None if two PrimitiveEvent sequences don't look like recordings of the same physical
+    gesture at all (different non-WAIT event kinds/order/pointer_id/key, or any
+    corresponding position more than `position_tolerance_px` apart); otherwise the summed
+    pixel distance between their corresponding positions -- smaller means a closer match.
+    WAIT durations are ignored entirely (filtered out of both sequences before comparing):
+    two recordings of "the same" hold or drag will never have pixel/frame-identical timing,
+    and that difference alone shouldn't read as "a different gesture."
 
     Deliberately a plain, explainable heuristic (position tolerance + kind/pointer/key
-    equality) rather than a trained/statistical model -- see hud_classifier.py's module
-    docstring for why: touch events already carry exact discrete kinds and coordinates,
-    so there's no genuine ambiguity here for a learned model to resolve, just "close
-    enough" positions to tolerate real finger-placement jitter between takes."""
+    equality, then nearest-distance ranking) rather than a trained/statistical model -- see
+    hud_classifier.py's module docstring for why: touch events already carry exact discrete
+    kinds and coordinates, so there's no genuine ambiguity here for a learned model to
+    resolve, just "close enough" positions to tolerate real finger-placement jitter between
+    takes, and "which of several close-enough candidates is closest" once more than one
+    qualifies."""
     a = [e for e in a_events if e.kind != EventKind.WAIT]
     b = [e for e in b_events if e.kind != EventKind.WAIT]
     if len(a) != len(b):
-        return False
+        return None
+    total = 0.0
     for ea, eb in zip(a, b):
         if ea.kind != eb.kind or ea.pointer_id != eb.pointer_id:
-            return False
+            return None
         if ea.kind == EventKind.KEY:
             if (ea.keycode, ea.key_name) != (eb.keycode, eb.key_name):
-                return False
+                return None
             continue
         if ea.x is None or ea.y is None or eb.x is None or eb.y is None:
             if (ea.x, ea.y) != (eb.x, eb.y):
-                return False
+                return None
             continue
-        if abs(ea.x - eb.x) > position_tolerance_px or abs(ea.y - eb.y) > position_tolerance_px:
-            return False
-    return True
+        dx, dy = abs(ea.x - eb.x), abs(ea.y - eb.y)
+        if dx > position_tolerance_px or dy > position_tolerance_px:
+            return None
+        total += dx + dy
+    return total
 
 
-def find_matching_action(events: list, actions: dict, position_tolerance_px: int = 30) -> Optional[str]:
-    """The name of the first action in `actions` (dict[str, Action]) whose own events
-    "look alike" `events` per events_look_alike(), or None if none do. Iteration follows
-    `actions`' own dict order -- deterministic given a project's own action dict, not a
-    ranked/scored search. Used both to flag a newly proposed action as a likely duplicate
-    of an existing one (see hud_classifier.propose_actions) and to let a fresh
-    recording's own raw gesture be recognized directly against the project's growing
+def events_look_alike(a_events: list, b_events: list, position_tolerance_px: int = 30) -> bool:
+    """True if two PrimitiveEvent sequences look like recordings of the same physical
+    gesture -- see _events_match_distance for the exact rule."""
+    return _events_match_distance(a_events, b_events, position_tolerance_px) is not None
+
+
+def find_matching_action(events: list, actions: dict, position_tolerance_px: int = 30,
+                          on_ambiguous=None) -> Optional[str]:
+    """The name of the action in `actions` (dict[str, Action]) whose own events look MOST
+    alike `events` -- the smallest _events_match_distance among every candidate within
+    `position_tolerance_px` -- or None if none qualify. Picking the nearest candidate
+    instead of just the first one in dict order matters precisely because the action
+    library keeps growing as the project's classify/propose loop runs (see
+    ACTION_CLASSIFICATION_DESIGN.md G3): more entries means a higher chance more than one is
+    within tolerance, and an arbitrary first-match would get *less* reliable exactly as the
+    library "improves." `on_ambiguous`, if given, is called with the sorted list of every
+    candidate name that qualified (nearest first) whenever more than one did, so a caller
+    can log/flag that the match wasn't unique. Used both to flag a newly proposed action as
+    a likely duplicate of an existing one (see hud_classifier.propose_actions) and to let a
+    fresh recording's own raw gesture be recognized directly against the project's growing
     action library, not just against HudRegions (see hud_classifier.classify_session)."""
+    candidates = []
     for name, action in actions.items():
-        if events_look_alike(events, action.events, position_tolerance_px):
-            return name
-    return None
+        distance = _events_match_distance(events, action.events, position_tolerance_px)
+        if distance is not None:
+            candidates.append((distance, name))
+    if not candidates:
+        return None
+    candidates.sort(key=lambda pair: pair[0])
+    if len(candidates) > 1 and on_ambiguous is not None:
+        on_ambiguous([name for _distance, name in candidates])
+    return candidates[0][1]
 
 
 def orphan_releases(actions: dict) -> list:
@@ -228,6 +262,63 @@ def conflicting_pointer_actions(actions: dict) -> list:
     return [(pid, names) for pid, names in groups.items() if len(names) > 1]
 
 
+def classified_pointer_conflicts(segments: list, actions: dict) -> list:
+    """Simulates the held-pointer state a live LiveConnection tracks (connection.py's
+    `_held_pointers`) while replaying `segments` (a GameplaySession's, in start_index order)
+    -- not just a static per-action check like conflicting_pointer_actions, an actual
+    *sequence* simulation, since the bug this catches only shows up when a hold from one
+    segment is still open when a later segment's action touches the same pointer_id.
+
+    Concretely: connection.py's send_primitive silently *skips* a PRESS on an
+    already-held pointer (logged as a skipped event, easy to miss), but a RELEASE on that
+    pointer still goes through -- so a plain tap-style action sharing pointer_id 0 with an
+    unrelated hold doesn't just fail to press its own touch, its own RELEASE event actively
+    ends the unrelated hold early. This is exactly what made "Replay Classified" replay
+    wrong for a hold with an interleaved, differently-authored tap (see
+    ACTION_CLASSIFICATION_DESIGN.md): a HudRegion pointing at a hold action's pointer, with
+    another action likely to run concurrently (per an unmatched overlapping cluster) sharing
+    that same pointer_id.
+
+    Returns human-readable warnings, one per conflicting segment. Pure function; reasons
+    only about PRESS/RELEASE pointer_ids in `segments`' own referenced actions' events, not
+    positions or timing."""
+    warnings = []
+    held: dict = {}   # pointer_id -> description of the segment currently holding it
+    for seg in sorted(segments, key=lambda s: s.start_index):
+        action = actions.get(seg.action_name)
+        if action is None:
+            continue
+        desc = f"{seg.label or seg.action_name!r} ({seg.action_name!r})"
+        for event in action.events:
+            if event.kind == EventKind.PRESS:
+                holder = held.get(event.pointer_id)
+                if holder is not None:
+                    warnings.append(
+                        f"segment {desc} presses pointer {event.pointer_id}, still held by segment "
+                        f"{holder} -- give one of these actions a different pointer_id, or the hold "
+                        f"will end early / the press will be silently skipped during replay.")
+                held[event.pointer_id] = desc
+            elif event.kind == EventKind.RELEASE:
+                held.pop(event.pointer_id, None)
+    return warnings
+
+
+def scale_point(x: int, y: int, ref_w: int, ref_h: int, target_w: int, target_h: int) -> tuple:
+    """Scales a point given in `ref_w`x`ref_h` space into `target_w`x`target_h` space --
+    same per-axis linear scaling `_scale_rect` uses for a rectangle's origin, extracted as
+    its own function since connection.py needs to scale a bare (x, y) touch coordinate (not
+    a rectangle) when resolving a recorded event against a live device whose real negotiated
+    resolution differs from the project's reference resolution -- see
+    LiveConnection.send_primitive's docstring for why this is what makes a shared project
+    portable across devices with different screen resolutions, instead of every event being
+    silently dropped (irobot_server requires an exact screen-size match) or landing in the
+    wrong place. Falls back to an identity mapping when either reference size is zero, same
+    as `_scale_rect`."""
+    if not ref_w or not ref_h:
+        return x, y
+    return round(x / ref_w * target_w), round(y / ref_h * target_h)
+
+
 def _scale_rect(x: int, y: int, w: int, h: int, ref_w: int, ref_h: int, target_w: int, target_h: int):
     """Scales a rectangle given in `ref_w`x`ref_h` space into `target_w`x`target_h`
     space -- same ratio scaling as MainWindow._reference_to_frame/_frame_to_reference,
@@ -238,7 +329,8 @@ def _scale_rect(x: int, y: int, w: int, h: int, ref_w: int, ref_h: int, target_w
     if not ref_w or not ref_h:
         return x, y, w, h
     sx, sy = target_w / ref_w, target_h / ref_h
-    return round(x * sx), round(y * sy), max(1, round(w * sx)), max(1, round(h * sy))
+    nx, ny = scale_point(x, y, ref_w, ref_h, target_w, target_h)
+    return nx, ny, max(1, round(w * sx)), max(1, round(h * sy))
 
 
 def _resize_nearest(arr, new_w: int, new_h: int):
@@ -813,6 +905,17 @@ class Project:
     port: int = 27183
     reference_width: int = 0
     reference_height: int = 0
+    action_match_tolerance_px: int = 30   # see ACTION_CLASSIFICATION_DESIGN.md G8 -- position
+                                           # tolerance find_matching_action uses to recognize a
+                                           # gesture against an existing action's own recording
+    time_scale: float = 1.0   # see ACTION_CLASSIFICATION_DESIGN.md G11 -- multiplies every
+                              # WAIT/DELAY frame's real-ms duration (connection.FRAME_MS) at
+                              # send/replay time. Position is already device-independent via
+                              # LiveConnection.send_primitive's automatic resolution rescale;
+                              # this is the one factor that genuinely can't be auto-detected
+                              # (a different device's game-logic speed), so a recipient of a
+                              # shared project tunes this by hand for their own device -- 1.0
+                              # reproduces the original author's pacing exactly.
     actions: dict = field(default_factory=dict)   # dict[str, Action]
     runs: dict = field(default_factory=dict)        # dict[str, GameRun]
     templates: dict = field(default_factory=dict)    # dict[str, ImageTemplate]
@@ -824,6 +927,46 @@ class Project:
 
     def remove_action(self, name: str) -> None:
         self.actions.pop(name, None)
+
+    def rename_action(self, old_name: str, new_name: str) -> int:
+        """Renames an action project-wide: the `actions` dict key, the Action's own
+        `.name`, and every HudRegion.action_name/release_action_name, HudRegionCombo.action_name,
+        and RunNode.action_name reference across every GameRun that named `old_name` (see
+        ACTION_CLASSIFICATION_DESIGN.md G1 -- a bare free-text rename left every one of those
+        silently pointing at a name that no longer resolves to anything, and the next
+        classify+propose cycle would just re-create a new action under the orphaned old name).
+        Returns the number of references updated (not counting the action definition itself),
+        for the caller to log. Raises KeyError if `old_name` isn't an existing action, ValueError
+        if `new_name` already names a *different* action."""
+        if old_name not in self.actions:
+            raise KeyError(old_name)
+        if new_name != old_name and new_name in self.actions:
+            raise ValueError(f"action {new_name!r} already exists")
+        if new_name == old_name:
+            return 0
+
+        action = self.actions.pop(old_name)
+        action.name = new_name
+        self.actions[new_name] = action
+
+        updated = 0
+        for region in self.hud_regions.values():
+            if region.action_name == old_name:
+                region.action_name = new_name
+                updated += 1
+            if region.release_action_name == old_name:
+                region.release_action_name = new_name
+                updated += 1
+        for combo in self.hud_region_combos.values():
+            if combo.action_name == old_name:
+                combo.action_name = new_name
+                updated += 1
+        for run in self.runs.values():
+            for node in run.nodes.values():
+                if node.kind == RunNodeKind.ACTION and node.action_name == old_name:
+                    node.action_name = new_name
+                    updated += 1
+        return updated
 
     def add_run(self, run: GameRun) -> None:
         self.runs[run.name] = run
@@ -842,6 +985,30 @@ class Project:
 
     def remove_hud_region(self, name: str) -> None:
         self.hud_regions.pop(name, None)
+
+    def rename_hud_region(self, old_name: str, new_name: str) -> int:
+        """Renames a HUD region project-wide: the `hud_regions` dict key, the region's own
+        `.name`, and every HudRegionCombo.region_names entry naming `old_name`. Same rationale
+        as rename_action -- a bare free-text rename would silently break any combo referencing
+        this region. Returns the number of combo references updated. Raises KeyError if
+        `old_name` isn't an existing region, ValueError if `new_name` already names a
+        *different* region."""
+        if old_name not in self.hud_regions:
+            raise KeyError(old_name)
+        if new_name != old_name and new_name in self.hud_regions:
+            raise ValueError(f"HUD region {new_name!r} already exists")
+        if new_name == old_name:
+            return 0
+
+        region = self.hud_regions.pop(old_name)
+        region.name = new_name
+        self.hud_regions[new_name] = region
+
+        updated = 0
+        for combo in self.hud_region_combos.values():
+            updated += sum(1 for n in combo.region_names if n == old_name)
+            combo.region_names = [new_name if n == old_name else n for n in combo.region_names]
+        return updated
 
     def add_hud_region_combo(self, combo: HudRegionCombo) -> None:
         self.hud_region_combos[combo.name] = combo
@@ -863,6 +1030,8 @@ class Project:
             "host": self.host,
             "port": self.port,
             "reference_resolution": {"width": self.reference_width, "height": self.reference_height},
+            "action_match_tolerance_px": self.action_match_tolerance_px,
+            "time_scale": self.time_scale,
             "actions": [a.to_dict() for a in self.actions.values()],
             "runs": [r.to_dict() for r in self.runs.values()],
             "templates": [t.to_dict() for t in self.templates.values()],
@@ -886,6 +1055,8 @@ class Project:
             port=d.get("port", 27183),
             reference_width=res.get("width", 0),
             reference_height=res.get("height", 0),
+            action_match_tolerance_px=d.get("action_match_tolerance_px", 30),
+            time_scale=d.get("time_scale", 1.0),
         )
         for a in d.get("actions", []):
             p.add_action(Action.from_dict(a))

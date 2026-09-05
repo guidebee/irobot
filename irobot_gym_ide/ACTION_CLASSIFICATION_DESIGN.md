@@ -1,6 +1,8 @@
 # Action definitions & classification — design and a punch list of gaps
 
-Status: **implemented** (`model.py`, `hud_classifier.py`, `gui/main_window.py`'s `_classify_session`).
+Status: **implemented, including the G1–G6/G8 punch-list fixes below** (`model.py`,
+`hud_classifier.py`, `gui/main_window.py`'s `_classify_session`, `gui/panels/library_panel.py`,
+`gui/panels/sessions_panel.py`).
 This doc records the design as built, the reasoning behind it, and a prioritized list of gaps to
 close next — companion to [`GAME_RUN_AI_ASSIST_DESIGN.md`](GAME_RUN_AI_ASSIST_DESIGN.md) (which
 covers authoring a `GameRun` node graph) and [`GAME_RUN_EDITOR_GUIDE.md`](GAME_RUN_EDITOR_GUIDE.md)
@@ -8,9 +10,13 @@ covers authoring a `GameRun` node graph) and [`GAME_RUN_EDITOR_GUIDE.md`](GAME_R
 actually gets built and refined in the first place, since neither hand-authoring every action nor a
 one-shot recording gets there: real HUD layouts need an iterative bootstrap.
 
-Each gap in §3 gets its own status line, flipped from **open** to **Fixed (see commit/PR)** as it's
-implemented — that's the "update the design doc as we go" half of this doc's purpose, not just a
-one-time review.
+Each gap in §3 gets its own status line, flipped from **open** to **Fixed** as it's implemented —
+that's the "update the design doc as we go" half of this doc's purpose, not just a one-time review.
+**Update:** G1–G6, G8, and G10 are now implemented (G1-G6/G8 all in one pass rather than the
+originally-planned incremental order, per the build order in §4; G10 discovered separately via
+real user testing after that pass shipped -- see each gap's status line below for exactly what
+landed and where its tests live); G7 is a recorded decision, not a code change; G9 remains
+genuinely open, to revisit only if it ever matters at real scale.
 
 ## 1. The pipeline as built
 
@@ -88,98 +94,218 @@ one-time review.
 
 ### High priority — correctness/safety
 
-**G1. Renaming an action doesn't cascade.** *(status: open)*
+**G1. Renaming an action doesn't cascade.** *(status: Fixed)*
 `HudRegion.action_name`/`release_action_name`, `HudRegionCombo.action_name`, and
-`RunNode.action_name` are all plain strings naming an action — nothing updates them when a human
-renames an action in the Inspector. A fresh `unknown_N` proposal is safe to rename (nothing points at
-it yet), but renaming an action a `HudRegion` *already* references (e.g. `jump_button.action_name ==
-"jump"`, human renames `"jump"` to `"jump_v2"`) silently orphans that region. Worse, the *next*
-classify+propose cycle sees `HudRegion.action_name == "jump"` still doesn't exist as a real action
-and proposes a brand-new `"jump"` action from whatever gesture happens to land there next — quietly
-re-creating the exact thing the human tried to rename away from. This is the one gap that can
-actively fight the §1.5 iterate loop instead of just leaving something imperfect.
-*Fix direction:* a dedicated "rename action" operation (not free-text edit of the name field) that
-finds and updates every `HudRegion`/`HudRegionCombo`/`RunNode` reference project-wide, same spirit as
-an IDE's "rename symbol" refactor.
+`RunNode.action_name` are all plain strings naming an action — nothing updated them when a human
+renamed an action in the Inspector. Fixed with `Project.rename_action(old_name, new_name)` (model.py):
+renames the `actions` dict key and the `Action`'s own `.name`, then cascades to every
+`HudRegion.action_name`/`release_action_name`, `HudRegionCombo.action_name`, and
+`RunNode.action_name` reference across every `GameRun` in the project, returning the number of
+references updated. Raises `KeyError`/`ValueError` for a missing/colliding name rather than silently
+doing the wrong thing. The Library dock's Rename button (`gui/panels/library_panel.py`'s
+`renameRequested` signal, `_RENAMABLE_CATEGORIES`) drives this instead of a bare free-text name edit
+(there was no rename UI at all before this). `Project.rename_hud_region` gets the same treatment for
+HUD region names (cascading into `HudRegionCombo.region_names`), since a region rename can orphan a
+combo the same way an action rename could orphan a region/combo/run. Tests:
+`ProjectRenameActionTest`/`ProjectRenameHudRegionTest` in `test_model.py`.
 
-**G2. "Zero unknown" measures coverage, not correctness.** *(status: open)*
+**G2. "Zero unknown" measures coverage, not correctness.** *(status: Fixed)*
 A gesture can pattern-match the *wrong* existing action (tolerance-based, not exact) and the loop
-will call that "resolved." There's currently no visibility into *which* segments were matched by
-fuzzy pattern-matching vs. a crisp HUD region, even though that distinction is already sitting
-unused in `SessionSegment.label` (`"pattern:<name>"` vs. the region's own name).
-*Fix direction:* surface that distinction in the classify-session log/GUI so a human spot-checks
-pattern-matched segments at least once, not just the outright unknowns.
+will call that "resolved," with no visibility into *which* segments were matched by fuzzy
+pattern-matching vs. a crisp HUD region. Fixed: `classify_session`'s summary log line now breaks the
+matched count down by *how* each gesture matched -- `"N via HUD region, M via HUD combo, K via
+existing-action pattern"` -- so a human can tell at a glance how much of a session's classification
+rests on the fuzzier signal and is worth a second look, not just the outright-unmatched count.
+`SessionSegment.label` already carried the `"pattern:<name>"` marker this reads from.
 
-**G3. `find_matching_action` is first-match, not best-match.** *(status: open)*
-It returns the first action in dict order within tolerance, not the closest one. As the library
-"gradually improves" and grows, the odds of two near-duplicate actions both being in range of a new
-gesture go *up*, not down — this failure mode gets more likely precisely as the process succeeds,
-which is a nasty property for something meant to converge.
-*Fix direction:* pick the nearest candidate (minimum position delta) instead of the first; log when
-more than one candidate qualifies within tolerance so a human notices the library is getting
-crowded in that spot.
+**G3. `find_matching_action` was first-match, not best-match.** *(status: Fixed)*
+It returned the first action in dict order within tolerance, not the closest one -- a failure mode
+that gets more likely precisely as the library grows, which is a nasty property for something meant
+to converge. Fixed: `model.find_matching_action` now ranks every within-tolerance candidate by
+summed position distance (`model._events_match_distance`) and returns the nearest; an optional
+`on_ambiguous` callback is invoked with every qualifying candidate name (nearest first) whenever more
+than one qualifies, so a caller can log it. Wired into both `classify_session` (logs a "Note: gesture
+matched N existing actions..." line) and `propose_actions`' duplicate-flagging (`_flag_if_duplicate`).
+Tests: `FindMatchingActionTest` in `test_model.py`, `PatternMatchAmbiguityTest` in
+`test_hud_classifier.py`.
 
 ### Medium priority — workflow ergonomics
 
-**G4. No diff view when reclassifying.** *(status: open)*
-Today, re-classifying a session with existing segments is a blunt "overwrite them, yes/no?" The
-whole point of the iterate step is seeing *what improved* after growing the library — a before/after
-summary (N segments unchanged, M previously-unknown gestures now resolved, K segments reclassified
-differently) would make that legible instead of a blind overwrite.
+**G4. No diff view when reclassifying.** *(status: Fixed)*
+Re-classifying a session with existing segments used to be a blunt "overwrite them, yes/no?" Fixed
+with `hud_classifier.diff_classifications(old_segments, new_segments)` -- a pure function keyed by
+`(start_index, end_index)` span returning `{unchanged, changed, added, removed}` counts -- computed
+in `gui/main_window.py`'s `_classify_session` *before* asking to overwrite, so the confirmation
+dialog shows what a fresh classification would actually change (e.g. "3 newly classified, 1 changed
+to a different action") instead of a blind overwrite prompt. Tests: `DiffClassificationsTest` in
+`test_hud_classifier.py`.
 
-**G5. No `propose_combos` sibling.** *(status: open)*
-A single unmatched gesture auto-proposes as `unknown_N`. A recurring *combo* (two regions touched
-concurrently with no matching `HudRegionCombo`) only produces a log warning
-(`"...have no matching HudRegionCombo -- classified separately"`) — there's no automatic-suggestion
-path analogous to `propose_actions` for combos. Any game leaning on simultaneous-touch actions gets
-half the bootstrap convenience the single-button case gets.
+**G5. No `propose_combos` sibling.** *(status: Fixed)*
+A single unmatched gesture auto-proposed as `unknown_N`; a recurring *combo* (two regions touched
+concurrently with no matching `HudRegionCombo`) only produced a log warning, with no
+automatic-suggestion path analogous to `propose_actions`. Fixed with
+`hud_classifier.propose_combos(session, regions, combos)`: finds every concurrent-region cluster with
+no matching combo, proposes one new `HudRegionCombo` per distinct region-name set (named by joining
+the region names, e.g. `"jump_button+right_button"`). Accepting a proposal doesn't itself create the
+backing Action -- the *next* classify_session run folds the cluster into one segment naming the
+combo's `action_name`, and `propose_actions` then proposes that action from the cluster's own raw
+events, same as any other not-yet-real action name; deliberately reuses that existing machinery
+rather than duplicating it. Wired into `_classify_session` with its own accept/decline dialog, after
+the action-proposal step. Tests: `ProposeCombosTest` in `test_hud_classifier.py`.
 
-**G6. `unknown_N` proposals carry no positional/visual context.** *(status: open)*
-No coordinates in the log line or description, no frame thumbnail — reviewing a batch of
-`unknown_7`..`unknown_12` means opening each in the Inspector and reverse-engineering what it was
-from raw (x, y) alone. Cheapest fix: put the coordinates in the description/log line. A frame
-thumbnail (recording sessions already have access to `LiveConnection.latest_frame()` per
-`GAME_RUN_AI_ASSIST_DESIGN.md` §3.1) would be a further, pricier improvement.
+**G6. `unknown_N` proposals carried no positional/visual context.** *(status: partially Fixed)*
+No coordinates in the log line or description, no frame thumbnail. Fixed the cheap half: both
+`propose_actions`' classified-name proposals and its `unknown_N` placeholders now include the
+gesture's own `(x, y)` in the description and the log line (`_location` helper in
+`hud_classifier.py`). The frame-thumbnail half (recording sessions already have access to
+`LiveConnection.latest_frame()` per `GAME_RUN_AI_ASSIST_DESIGN.md` §3.1) is real GUI/capture work and
+remains undone -- left as a follow-up if coordinates alone turn out not to be enough context in
+practice. Tests: coordinate-inclusion cases in `ProposeActionsTest`, `test_hud_classifier.py`.
+
+**G10. A HUD Combo can silently make "Replay Classified" much shorter than "Replay Raw."**
+*(status: Fixed -- discovered after G1-G9 shipped, via real user testing)*
+Classification correctly *names* every segment, but nothing checked whether a segment's action
+*timing* bears any resemblance to how long that segment's real gesture actually took to record.
+Concretely: `examples/mario_platformer`'s `right_jump`/`left_jump` `HudRegionCombo`s (added
+in an earlier pass of this doc's own work) fold a whole "hold right while mashing jump" span into
+one segment naming the `right_jump` action -- correct as a *label*, very wrong as a *replay*,
+since that action's own canned macro only waits ~6 frames while the real recorded span was 284-339
+frames. Measured on `recordings/level2.session.yaml`: Replay Raw's scripted total is 880 frames;
+with the combo, Replay Classified's was only 237; without it, 877 (i.e. matching). The
+HudRegionCombo mechanism is a good fit for a short, discrete, one-shot compound gesture (a quick
+nudge + jump) but an actively harmful fit for "hold indefinitely while repeating something," which
+is just ordinary sustained gameplay, not a special move.
+*Fix:* removed the `right_jump`/`left_jump` combos from `hud.yaml` (the underlying
+`right_jump`/`left_jump` *Actions* are untouched and still usable directly, e.g. from a Game Run
+node) so that overlap now classifies as separate `right_start`/`jump`/`right_stop` segments, which
+correctly bookend the real hold duration; re-classified and re-saved `level2.session.yaml` to
+match. Also added `hud_classifier.compare_replay_durations(session, project_actions)` -- computes
+Replay Raw's scripted total, what Replay Classified would actually take, and a per-segment
+mismatch list (recorded span duration vs. that segment's action's own WAIT total) -- wired into
+`_classify_session`'s log output so this class of issue surfaces automatically at classify-time
+for any project, not just this one, and not only after a human notices a replay feels off. Tests:
+`CompareReplayDurationsTest` in `test_hud_classifier.py`.
+
+**G10 addendum: replay-time self-correction, using Replay Raw as the ground truth.** *(status: Fixed)*
+Removing the bad combo fixes *this* project's data, but the underlying gap (an action's own
+canned timing can diverge from what a specific occurrence actually took) is structural, not
+specific to one HudRegionCombo -- any reused action will drift from *this* recording's real
+timing to some degree. Since Replay Raw is, by construction, the exact recorded stream, it's the
+natural ground truth to reconcile Replay Classified against directly, rather than only
+diagnosing the gap at classify-time. Fixed: `session_replay.SessionPlayer.replay_classified` now
+tops up with a "catch-up" sleep after running each segment's action, for the difference between
+that segment's real recorded span (`model.frames_between` over `[start_index, end_index)`) and
+the action's own WAIT total -- logged as `"(+N frame(s) catch-up...)"`. `hud_classifier.
+build_game_run` got the same treatment: passing `project_actions` now appends an extra DELAY
+node after an ACTION node whenever its segment's real span exceeds the action's own timing, so a
+built Game Run graph paces the same way under `run_engine.py`.
+
+**The guarantee this gives, precisely stated, since it's asymmetric by design:** catch-up only
+tops up, never trims -- there's no way to un-spend time an action's own script already took
+sending real touch events, so Replay Classified's total can no longer come out *shorter* than
+Replay Raw's, but it can still come out *slightly longer* in aggregate for a session with many
+quick, reused actions whose own canned timing individually exceeds some occurrences' real
+duration (each such occurrence still pays that action's full fixed cost; only the segments where
+the reverse was true get topped up). Measured on `recordings/level2.session.yaml`: raw is 880
+frames; classified was 877 without catch-up (this project's own numbers happened to roughly
+balance out) and 985 with it -- worse in this one aggregate-total sense, but for the right
+reason: it's no longer possible for a future combo/action mismatch to silently produce a
+237-frame-style collapse without at least being bounded below by the real recording. Solves the
+reported symptom ("classified replay feels too short") directly rather than only diagnosing it.
+Tests: catch-up cases in `test_session_replay.py`'s `ReplayClassifiedTest` and
+`test_hud_classifier.py`'s `BuildGameRunTest`.
 
 ### Low priority — inherent limitations to decide on explicitly, not silently hope away
 
-**G7. Drag/analog gestures may never reach "zero unknown."** *(status: open, decision needed)*
-`events_look_alike` requires equal non-WAIT event counts; two recordings of the same swipe/drag
-almost never sample to the same length, so they'll essentially never pattern-match each other. Any
-game with joystick/aim-drag controls should not expect "classify until zero unknown" to be a
-reachable goal for those gestures specifically — worth deciding up front whether that's an accepted
-permanent exception (e.g. only tap/hold-style gestures are expected to fully converge; drags stay
-manually labeled or get a separate simplification/resampling step) rather than discovering it
-mid-project.
+**G7. Drag/analog gestures may never reach "zero unknown."** *(status: decision recorded, no code change)*
+`events_look_alike`/`_events_match_distance` require equal non-WAIT event counts; two recordings of
+the same swipe/drag almost never sample to the same length, so they'll essentially never
+pattern-match each other. Decision: this is an **accepted permanent exception**, not a bug to chase --
+"classify until zero unknown" is a realistic convergence target only for tap/hold-style gestures.
+A game with joystick/aim-drag controls should expect those specific gestures to stay manually
+labeled (or get a dedicated simplification/resampling step, not designed here) rather than trying to
+drive their unknown count to zero through this pipeline.
 
-**G8. `position_tolerance_px` is a hardcoded constant (default 30), not exposed anywhere.**
-*(status: open)* Fine for one screen density/button spacing, potentially wrong for a cramped HUD with
-small adjacent buttons (too loose → false matches) or a sparse one (too tight → real repeats with
-finger jitter fail to match). No project-level setting or per-region override exists yet.
+**G8. `position_tolerance_px` was a hardcoded constant, not exposed anywhere.** *(status: Fixed)*
+Fine for one screen density/button spacing, wrong for others, with no project-level setting. Fixed:
+`Project.action_match_tolerance_px` (default 30, persisted in `project.yaml` via `io.py`'s
+`_META_KEYS`) is now the single source of truth, threaded through every `classify_session`/
+`propose_actions` call in `gui/main_window.py`. A spin box on the Sessions tab
+(`gui/panels/sessions_panel.py`'s `match_tolerance_spin`) lets a human tune it per project; changing
+it updates `project.action_match_tolerance_px` directly (`_on_match_tolerance_changed`). No
+per-region override exists (a single project-wide value only) -- left as a further refinement if one
+project's HUD ever needs different tolerances in different areas of the screen.
 
 **G9. Pattern-matching is O(gestures × actions).** *(status: open, no action needed yet)*
 Fine at today's scale (a HUD-driven game's action library — tens, not thousands). Worth remembering
 if this pipeline is later run over large recorded corpora for behavior-cloning-style dataset
 generation rather than one-off IDE sessions, per the stated eventual Gym/Game-Run consumers of this
-library.
+library. Revisit only if a real project's session/action counts make this measurably slow.
 
-## 4. Suggested build order
+**G11. A classified session/Game Run needs to be shareable across devices with a different
+resolution and/or a different frame/game rate.** *(status: Fixed)* The user's own use case: record
+and classify a playthrough on one device, then share the resulting Actions/HUD Regions/Game Run
+with other people playing the *same game* on their *own*, likely different, devices. Two
+independent axes of "different device," requiring two different solutions since only one of them
+is actually measurable at runtime:
 
-1. **G1** (rename cascade) — do this first; it's the one gap that can actively corrupt the iterate
+- **Screen resolution — solved automatically, no manual factor needed.** Every stored `(x, y)` was
+  already in the project's own reference resolution (`Project.reference_width/height`), but
+  `LiveConnection.send_primitive` previously required that value to *already* equal whatever
+  device it was connected to -- `agent_client.touch_message`'s own docstring is explicit that
+  `irobot_server`'s `PositionMapper.map()` requires an exact `Size.equals()` match on `screen_size`
+  or it silently drops the event, so opening a shared project against a different-resolution
+  device meant either every touch landing in the wrong place or being dropped outright, and the
+  existing "Apply Detected Resolution" button only ever rewrote the *label*, not the coordinates
+  (its own log line said so: "existing event coordinates stay numerically the same"). Fixed:
+  `send_primitive` now compares the authored reference resolution it's given against this
+  connection's own `latest_resolution()` (already-existing live detection, `BLOB_MSG_TYPE_RESOLUTION`)
+  and, when they differ, rescales `(x, y)` into the device's real resolution via the new
+  `model.scale_point` (extracted from `_scale_rect`'s existing per-axis linear scaling) before
+  sending, using the *device's* real size as `screen_size` rather than the project's own --
+  satisfying `PositionMapper`'s exact-match requirement while still landing at the proportionally
+  correct spot. This needs no user action at all: connect to a different device and positions
+  just work. Tests: `ResolutionRescaleTest` in the new `test_connection.py`.
+- **Frame/game rate — cannot be auto-detected, so it's a manual per-recipient factor.** Unlike
+  resolution, there's no wire message reporting "how fast this device's game logic actually runs,"
+  so this can't be solved the same way. Fixed: `Project.time_scale` (default `1.0`, persisted like
+  `action_match_tolerance_px`) multiplies every `WAIT`/`DELAY` frame's real-ms duration
+  (`connection.FRAME_MS`) at the one place all of them ultimately sleep --
+  `LiveConnection.send_primitive`'s WAIT handling, and `run_engine.GameRunExecutor`/
+  `session_replay.SessionPlayer`'s own `_sleep_frames`, both of which already hold a
+  `self.connection` to read it from. A spin box next to Reference width/height in the main project
+  form lets a recipient tune it for their own device without touching a single recorded `frames`
+  value; `1.0` reproduces the original author's pacing exactly, since each recipient's own copy of
+  `project.yaml` is independently editable (sharing here just means copying the project directory
+  -- no separate "local override" layer needed). Tests: `TimeScaleTest` in `test_connection.py`.
+
+**The combined result**: "the original is the base," per the user's own framing -- a shared
+project's Actions/HUD Regions/Sessions/Game Runs are untouched, portable data; a recipient opens
+them, connects to their own device (resolution handled automatically), and dials in one `time_scale`
+number until pacing feels right, without editing any recorded coordinate or frame count by hand.
+
+## 4. Build order followed
+
+All of G1–G6 and G8 landed together in one pass rather than the incremental order originally
+sketched below, since the underlying model changes (particularly G1's rename cascade and G3's
+distance-ranked matching) turned out to share enough surface area with G2/G4/G5/G6/G8 that
+implementing them separately would have meant repeatedly re-touching the same functions. The
+original reasoning for relative priority still holds and is preserved here for context:
+
+1. **G1** (rename cascade) — first, since it's the one gap that could actively corrupt the iterate
    loop the rest of this doc's process depends on.
-2. **G3** (nearest-match, not first-match) — small, and directly improves match quality as the
-   library grows, which is the process's core selling point.
+2. **G3** (nearest-match, not first-match) — directly improves match quality as the library grows,
+   the process's core selling point.
 3. **G2** (surface pattern-matched segments distinctly) — small logging/labeling change, big trust
    improvement for the "verify" half of the loop.
-4. **G6** (coordinates in unknown proposals) — cheap, do anytime, no dependencies.
-5. **G4** (diff view on reclassify) — moderate GUI work, biggest ergonomics win for repeated
-   iteration.
-6. **G5** (`propose_combos`) — closes the combo-side asymmetry once the single-region path (G1–G4)
-   is solid.
-7. **G7/G8** — not code changes so much as decisions to make explicit and (for G8) a config surface
-   to add once a real project hits the limitation.
-8. **G9** — only if/when session corpora actually get large enough for it to matter.
+4. **G6** (coordinates in unknown proposals) — cheap, no dependencies.
+5. **G4** (diff view on reclassify) — biggest ergonomics win for repeated iteration.
+6. **G5** (`propose_combos`) — closes the combo-side asymmetry once the single-region path is solid.
+7. **G8** — a config surface, once the tolerance value it exposes was actually being used consistently
+   everywhere (G1–G5 all touch call sites that needed the same threading).
+8. **G7** — a decision to record, not a code change; recorded above.
+9. **G9** — deliberately left open; revisit only at real scale.
 
-Each step above is independently mergeable and testable against the existing pure-Python suite
-(`irobot_gym_ide/tests/test_model.py`, `test_hud_classifier.py`) the same way the rest of this
-codebase's model-level logic is — no device required.
+Every function above is covered by the existing pure-Python suite
+(`irobot_gym_ide/tests/test_model.py`, `test_hud_classifier.py`) — no device required. Full suite:
+160 tests passing as of this update.

@@ -45,6 +45,7 @@ SESSION_SUFFIX = ".session.yaml"
 _META_KEYS = (
     "schema_version", "id", "name", "description", "created_at", "updated_at",
     "package", "activity", "serial", "host", "port", "reference_resolution",
+    "action_match_tolerance_px", "time_scale",
 )
 
 

@@ -19,6 +19,7 @@ class FakeConnection:
         self.calls = []
         self._lock = threading.Lock()
         self.skip_reason = skip_reason
+        self.time_scale = 1.0
 
     def run_action(self, action: Action, ref_w: int, ref_h: int) -> list:
         with self._lock:
@@ -105,6 +106,48 @@ class ReplayClassifiedTest(unittest.TestCase):
             SessionPlayer(connection, ref_w=100, ref_h=200).replay_classified(session, actions)
         total_slept = sum(slept)
         self.assertAlmostEqual(total_slept, 10 * FRAME_MS / 1000.0, places=3)
+
+    def test_action_shorter_than_recorded_span_gets_a_catchup_sleep(self):
+        # the segment's real recorded span (events[0:3), a PRESS + WAIT(50) + RELEASE) took
+        # 50 frames, but the classified action's own WAIT total is only 6 frames -- replay
+        # should top up the missing 44 frames so overall pacing matches the real recording.
+        events = _events([(EventKind.PRESS, 0), (EventKind.WAIT, 50), (EventKind.RELEASE, 0)])
+        session = GameplaySession(name="s", events=events, segments=[
+            SessionSegment(start_index=0, end_index=3, action_name="right_jump"),
+        ])
+        actions = {"right_jump": Action(name="right_jump", events=[
+            PrimitiveEvent(kind=EventKind.WAIT, frames=6),
+        ])}
+        connection = FakeConnection()
+        slept = []
+        with patch("irobot_gym_ide.session_replay.time.sleep", side_effect=slept.append):
+            SessionPlayer(connection, ref_w=100, ref_h=200).replay_classified(session, actions)
+        self.assertAlmostEqual(sum(slept), 44 * FRAME_MS / 1000.0, places=3)
+
+    def test_catchup_is_logged(self):
+        events = _events([(EventKind.PRESS, 0), (EventKind.WAIT, 50), (EventKind.RELEASE, 0)])
+        session = GameplaySession(name="s", events=events, segments=[
+            SessionSegment(start_index=0, end_index=3, action_name="right_jump"),
+        ])
+        actions = {"right_jump": Action(name="right_jump")}
+        connection = FakeConnection()
+        logs = []
+        with patch("irobot_gym_ide.session_replay.time.sleep"):
+            SessionPlayer(connection, ref_w=100, ref_h=200, on_log=logs.append).replay_classified(
+                session, actions)
+        self.assertTrue(any("+50 frame(s) catch-up" in line for line in logs))
+
+    def test_action_at_least_as_long_as_recorded_span_gets_no_catchup(self):
+        events = _events([(EventKind.PRESS, 0), (EventKind.WAIT, 5), (EventKind.RELEASE, 0)])
+        session = GameplaySession(name="s", events=events, segments=[
+            SessionSegment(start_index=0, end_index=3, action_name="a"),
+        ])
+        actions = {"a": Action(name="a", events=[PrimitiveEvent(kind=EventKind.WAIT, frames=20)])}
+        connection = FakeConnection()
+        slept = []
+        with patch("irobot_gym_ide.session_replay.time.sleep", side_effect=slept.append):
+            SessionPlayer(connection, ref_w=100, ref_h=200).replay_classified(session, actions)
+        self.assertEqual(slept, [])
 
     def test_stop_halts_before_next_segment(self):
         events = _events([(EventKind.TAP, 0)] * 4)

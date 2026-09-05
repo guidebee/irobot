@@ -29,6 +29,7 @@ class FakeConnection:
         self.calls = []
         self._lock = threading.Lock()
         self._frame = frame
+        self.time_scale = 1.0
 
     def run_action(self, action: Action, ref_w: int, ref_h: int) -> list:
         with self._lock:
