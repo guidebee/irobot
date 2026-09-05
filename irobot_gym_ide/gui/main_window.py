@@ -37,7 +37,7 @@ from ..model import (
 )
 from ..connection import LiveConnection
 from ..device_recorder import DeviceEventRecorder, merge_gestures_into_events, segment_into_gestures
-from ..hud_classifier import classify_session
+from ..hud_classifier import classify_session, propose_actions
 from ..run_engine import GameRunExecutor
 from ..session_replay import SessionPlayer
 from .canvas import CanvasView
@@ -1241,11 +1241,36 @@ class MainWindow(QMainWindow):
                 return
 
         session.segments = classify_session(
-            session, self.project.hud_regions, self.project.hud_region_combos, on_log=self._log_line)
+            session, self.project.hud_regions, self.project.hud_region_combos,
+            project_actions=self.project.actions, on_log=self._log_line)
         for warning in session.validate(self.project.actions):
             self._log_line(f"  warning: {warning}")
         project_io.save_session(session, self.project_path)
         self._log_line(f"Saved classification to {path}.")
+
+        proposals = propose_actions(session, self.project.actions, on_log=self._log_line)
+        if not proposals:
+            return
+        names = sorted(proposals)
+        dup_names = sorted(n for n, a in proposals.items() if "possible duplicate" in a.description)
+        dup_note = f"\n\n({len(dup_names)} flagged as a possible duplicate of an existing action: " \
+                   f"{', '.join(dup_names)})" if dup_names else ""
+        reply = QMessageBox.question(
+            self, "Add Proposed Actions",
+            f"Classification proposes {len(proposals)} new action definition(s):\n\n{', '.join(names)}"
+            f"{dup_note}\n\nAdd them to the project? You can rename, edit, or delete any of them afterward "
+            f"in the Inspector.",
+            QMessageBox.Yes | QMessageBox.No)
+        if reply != QMessageBox.Yes:
+            self._log_line("Proposed actions discarded (not added to the project).")
+            return
+        for action in proposals.values():
+            self.project.add_action(action)
+        self._refresh_action_list()
+        self._warn_pointer_conflicts()
+        self._log_line(
+            f"Added {len(proposals)} proposed action(s) to the project ({', '.join(names)}) -- "
+            f"review/rename/edit them in the Inspector, then Save Project to keep them.")
 
     def closeEvent(self, event) -> None:
         if self._device_recorder is not None:

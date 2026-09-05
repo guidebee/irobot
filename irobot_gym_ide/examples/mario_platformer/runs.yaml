@@ -5,7 +5,7 @@ runs:
     kind: action
     x: 40
     y: 40
-    action_name: right
+    action_name: right_start
   - id: n_rep
     kind: repeat
     x: 240
@@ -21,6 +21,11 @@ runs:
     x: 640
     y: 200
     action_name: attack
+  - id: n_right_stop
+    kind: action
+    x: 840
+    y: 200
+    action_name: right_stop
   edges:
   - id: e1
     source: n_right
@@ -33,3 +38,6 @@ runs:
     source: n_rep
     target: n_attack
     via: after
+  - id: e4
+    source: n_attack
+    target: n_right_stop

@@ -4,23 +4,31 @@ hud_regions:
   y: 950
   width: 253
   height: 203
-  action_name: ''
+  action_name: left_start
+  release_action_name: left_stop
 - name: right_button
   x: 534
   y: 947
   width: 267
   height: 203
-  action_name: ''
+  action_name: right_start
+  release_action_name: right_stop
 - name: fire_button
   x: 1856
   y: 967
   width: 233
   height: 190
-  action_name: ''
+  action_name: attack
 - name: jump_button
   x: 2270
   y: 960
   width: 270
   height: 210
-  action_name: ''
-hud_region_combos: []
+  action_name: jump
+hud_region_combos:
+- name: right_jump
+  region_names: [right_button, jump_button]
+  action_name: right_jump
+- name: left_jump
+  region_names: [left_button, jump_button]
+  action_name: left_jump

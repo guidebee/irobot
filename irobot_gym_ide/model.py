@@ -135,6 +135,55 @@ class Action:
         return warnings
 
 
+def events_look_alike(a_events: list, b_events: list, position_tolerance_px: int = 30) -> bool:
+    """True if two PrimitiveEvent sequences look like recordings of the same physical
+    gesture -- same non-WAIT event kinds in the same order, same pointer_id, positions
+    within `position_tolerance_px` of each other, same key_name/keycode for KEY events.
+    WAIT durations are ignored entirely (both sequences' WAIT events are filtered out
+    before comparing): two recordings of "the same" hold or drag will never have
+    pixel/frame-identical timing, and that difference alone shouldn't read as "a
+    different gesture" -- rigid equality would never fire on two independently-recorded
+    takes of the literal same button.
+
+    Deliberately a plain, explainable heuristic (position tolerance + kind/pointer/key
+    equality) rather than a trained/statistical model -- see hud_classifier.py's module
+    docstring for why: touch events already carry exact discrete kinds and coordinates,
+    so there's no genuine ambiguity here for a learned model to resolve, just "close
+    enough" positions to tolerate real finger-placement jitter between takes."""
+    a = [e for e in a_events if e.kind != EventKind.WAIT]
+    b = [e for e in b_events if e.kind != EventKind.WAIT]
+    if len(a) != len(b):
+        return False
+    for ea, eb in zip(a, b):
+        if ea.kind != eb.kind or ea.pointer_id != eb.pointer_id:
+            return False
+        if ea.kind == EventKind.KEY:
+            if (ea.keycode, ea.key_name) != (eb.keycode, eb.key_name):
+                return False
+            continue
+        if ea.x is None or ea.y is None or eb.x is None or eb.y is None:
+            if (ea.x, ea.y) != (eb.x, eb.y):
+                return False
+            continue
+        if abs(ea.x - eb.x) > position_tolerance_px or abs(ea.y - eb.y) > position_tolerance_px:
+            return False
+    return True
+
+
+def find_matching_action(events: list, actions: dict, position_tolerance_px: int = 30) -> Optional[str]:
+    """The name of the first action in `actions` (dict[str, Action]) whose own events
+    "look alike" `events` per events_look_alike(), or None if none do. Iteration follows
+    `actions`' own dict order -- deterministic given a project's own action dict, not a
+    ranked/scored search. Used both to flag a newly proposed action as a likely duplicate
+    of an existing one (see hud_classifier.propose_actions) and to let a fresh
+    recording's own raw gesture be recognized directly against the project's growing
+    action library, not just against HudRegions (see hud_classifier.classify_session)."""
+    for name, action in actions.items():
+        if events_look_alike(events, action.events, position_tolerance_px):
+            return name
+    return None
+
+
 def orphan_releases(actions: dict) -> list:
     """Project-wide check: a RELEASE on a pointer_id that no action in the
     whole project ever PRESSes is very likely a typo'd pointer_id or a
@@ -357,7 +406,7 @@ class ImageTemplate:
 @dataclass
 class HudRegion:
     """A fixed-position rectangle over a game's HUD -- a joystick, a jump
-    button, an attack button -- named and paired with the Action a gesture
+    button, an attack button -- named and paired with the Action(s) a gesture
     landing inside it represents. Unlike ImageTemplate (which compares
     pixels to test whether something currently *looks* a certain way), a
     HudRegion is purely spatial: it classifies WHERE a gesture started, not
@@ -373,6 +422,21 @@ class HudRegion:
     in-rectangle test against the region's own reference-resolution
     coordinates already lines up.
 
+    `release_action_name`, if set, marks this region as a HOLD control (a
+    movement d-pad button, not a one-shot tap button like jump/attack) --
+    mirroring Android's real touchscreen model, where a held button is one
+    DOWN, silence while held, and one UP (see model.py's module docstring
+    and the *_start/*_stop action pairs in examples/mario_platformer.yaml).
+    For a hold region, `action_name` names the action fired when the finger
+    lands (the "start" half, e.g. "right_start") and `release_action_name`
+    names the action fired when it lifts (the "stop" half, e.g.
+    "right_stop") -- hud_classifier.py emits two bookend SessionSegments for
+    such a region instead of one segment spanning the whole gesture, so
+    "Replay Classified" reproduces the real held duration rather than
+    running a fixed-length canned action. Left "" (the default), a region is
+    a plain one-shot control and `action_name` alone names the single action
+    for its whole gesture, exactly as before this field existed.
+
     See hud_classifier.py for how a project's HudRegions turn a
     GameplaySession's raw gesture stream into SessionSegments."""
     name: str
@@ -381,10 +445,15 @@ class HudRegion:
     width: int = 0
     height: int = 0
     action_name: str = ""
+    release_action_name: str = ""
 
     @property
     def area(self) -> int:
         return max(0, self.width) * max(0, self.height)
+
+    @property
+    def is_hold(self) -> bool:
+        return bool(self.release_action_name)
 
     def contains(self, x: int, y: int) -> bool:
         return self.x <= x < self.x + self.width and self.y <= y < self.y + self.height
@@ -392,7 +461,7 @@ class HudRegion:
     def to_dict(self) -> dict:
         return {
             "name": self.name, "x": self.x, "y": self.y, "width": self.width, "height": self.height,
-            "action_name": self.action_name,
+            "action_name": self.action_name, "release_action_name": self.release_action_name,
         }
 
     @staticmethod
@@ -401,6 +470,7 @@ class HudRegion:
             name=d["name"], x=d.get("x", 0), y=d.get("y", 0),
             width=d.get("width", 0), height=d.get("height", 0),
             action_name=d.get("action_name", ""),
+            release_action_name=d.get("release_action_name", ""),
         )
 
 

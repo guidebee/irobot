@@ -80,6 +80,11 @@ class HudRegionInspector(QWidget):
         self._action_edit.editingFinished.connect(self._on_action_edited)
         form.addRow("Action name", self._action_edit)
 
+        self._release_action_edit = QLineEdit()
+        self._release_action_edit.setPlaceholderText("(leave blank for a one-shot tap region)")
+        self._release_action_edit.editingFinished.connect(self._on_release_action_edited)
+        form.addRow("Release action name (hold regions)", self._release_action_edit)
+
         self._x_spin = QSpinBox(); self._x_spin.setRange(0, 100000)
         self._y_spin = QSpinBox(); self._y_spin.setRange(0, 100000)
         self._w_spin = QSpinBox(); self._w_spin.setRange(0, 100000)
@@ -99,6 +104,7 @@ class HudRegionInspector(QWidget):
         self._loading = True
         try:
             self._action_edit.setText(region.action_name if region else "")
+            self._release_action_edit.setText(region.release_action_name if region else "")
             self._x_spin.setValue(region.x if region else 0)
             self._y_spin.setValue(region.y if region else 0)
             self._w_spin.setValue(region.width if region else 0)
@@ -110,6 +116,11 @@ class HudRegionInspector(QWidget):
         if self._loading or self._region is None:
             return
         self._region.action_name = self._action_edit.text()
+
+    def _on_release_action_edited(self) -> None:
+        if self._loading or self._region is None:
+            return
+        self._region.release_action_name = self._release_action_edit.text()
 
     def _on_rect_edited(self, _value: int) -> None:
         if self._loading or self._region is None:

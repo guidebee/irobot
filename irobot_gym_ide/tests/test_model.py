@@ -6,7 +6,7 @@ import unittest
 
 from ..model import (
     Action, EventKind, GameRun, HudRegion, HudRegionCombo, ImageTemplate, PrimitiveEvent, Project, RunEdge, RunNode,
-    RunNodeKind, conflicting_pointer_actions, orphan_releases,
+    RunNodeKind, conflicting_pointer_actions, events_look_alike, find_matching_action, orphan_releases,
 )
 
 try:
@@ -105,6 +105,62 @@ class OrphanReleasesTest(unittest.TestCase):
             "stop": Action(name="stop", events=[PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=3)]),
         }
         self.assertEqual(orphan_releases(actions), [("stop", 3)])
+
+
+class EventsLookAlikeTest(unittest.TestCase):
+    def test_identical_events_look_alike(self):
+        events = [PrimitiveEvent(kind=EventKind.TAP, x=10, y=20)]
+        self.assertTrue(events_look_alike(events, events))
+
+    def test_positions_within_tolerance_look_alike(self):
+        a = [PrimitiveEvent(kind=EventKind.TAP, x=100, y=100)]
+        b = [PrimitiveEvent(kind=EventKind.TAP, x=115, y=90)]
+        self.assertTrue(events_look_alike(a, b, position_tolerance_px=30))
+
+    def test_positions_beyond_tolerance_dont_look_alike(self):
+        a = [PrimitiveEvent(kind=EventKind.TAP, x=100, y=100)]
+        b = [PrimitiveEvent(kind=EventKind.TAP, x=500, y=500)]
+        self.assertFalse(events_look_alike(a, b, position_tolerance_px=30))
+
+    def test_wait_durations_are_ignored(self):
+        a = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5, pointer_id=0),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=5),
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=0),
+        ]
+        b = [
+            PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5, pointer_id=0),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=200),
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=0),
+        ]
+        self.assertTrue(events_look_alike(a, b))
+
+    def test_different_kind_sequence_lengths_dont_look_alike(self):
+        a = [PrimitiveEvent(kind=EventKind.TAP, x=5, y=5)]
+        b = [PrimitiveEvent(kind=EventKind.PRESS, x=5, y=5), PrimitiveEvent(kind=EventKind.RELEASE)]
+        self.assertFalse(events_look_alike(a, b))
+
+    def test_key_events_compare_by_key_name_not_position(self):
+        a = [PrimitiveEvent(kind=EventKind.KEY, key_name="back")]
+        b = [PrimitiveEvent(kind=EventKind.KEY, key_name="back")]
+        c = [PrimitiveEvent(kind=EventKind.KEY, key_name="home")]
+        self.assertTrue(events_look_alike(a, b))
+        self.assertFalse(events_look_alike(a, c))
+
+
+class FindMatchingActionTest(unittest.TestCase):
+    def test_finds_the_matching_action_name(self):
+        actions = {
+            "jump": Action(name="jump", events=[PrimitiveEvent(kind=EventKind.TAP, x=900, y=800)]),
+            "attack": Action(name="attack", events=[PrimitiveEvent(kind=EventKind.TAP, x=100, y=100)]),
+        }
+        result = find_matching_action([PrimitiveEvent(kind=EventKind.TAP, x=905, y=795)], actions)
+        self.assertEqual(result, "jump")
+
+    def test_returns_none_when_nothing_matches(self):
+        actions = {"jump": Action(name="jump", events=[PrimitiveEvent(kind=EventKind.TAP, x=900, y=800)])}
+        result = find_matching_action([PrimitiveEvent(kind=EventKind.TAP, x=5, y=5)], actions)
+        self.assertIsNone(result)
 
 
 class ProjectRoundTripTest(unittest.TestCase):
@@ -288,6 +344,17 @@ class HudRegionTest(unittest.TestCase):
 
     def test_area(self):
         self.assertEqual(HudRegion(name="r", width=10, height=20).area, 200)
+
+    def test_is_hold_reflects_release_action_name(self):
+        self.assertFalse(HudRegion(name="jump_button", action_name="jump").is_hold)
+        self.assertTrue(HudRegion(name="right_button", action_name="right_start",
+                                   release_action_name="right_stop").is_hold)
+
+    def test_round_trip_preserves_release_action_name(self):
+        region = HudRegion(name="right_button", action_name="right_start", release_action_name="right_stop")
+        restored = HudRegion.from_dict(region.to_dict())
+        self.assertEqual(restored.release_action_name, "right_stop")
+        self.assertTrue(restored.is_hold)
 
 
 class HudRegionComboTest(unittest.TestCase):

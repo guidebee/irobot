@@ -57,23 +57,23 @@ actions:
   - kind: release
     pointer_id: 1
     key_name: back
-- name: left
-  description: recorded from 1 real device touch(es)
+- name: left_start
+  description: press and hold the left button (matches Android's touch DOWN -- no repeat needed while held)
   events:
   - kind: press
     x: 265
     y: 1072
-  - kind: wait
-    frames: 10
+- name: left_stop
+  description: release the left button (matches Android's touch UP)
+  events:
   - kind: release
-    key_name: back
-- name: right
-  description: recorded from 1 real device touch(es)
+- name: right_start
+  description: press and hold the right button (matches Android's touch DOWN -- no repeat needed while held)
   events:
   - kind: press
     x: 742
     y: 1063
-  - kind: wait
-    frames: 10
+- name: right_stop
+  description: release the right button (matches Android's touch UP)
+  events:
   - kind: release
-    key_name: back
