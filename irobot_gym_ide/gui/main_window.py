@@ -22,6 +22,8 @@ import threading
 from datetime import datetime, timezone
 from pathlib import Path
 
+import yaml
+
 from PySide6.QtCore import QObject, QSettings, QTimer, Signal
 from PySide6.QtWidgets import (
     QMainWindow, QDockWidget, QWidget, QVBoxLayout, QHBoxLayout, QFormLayout,
@@ -37,11 +39,13 @@ from ..model import (
 )
 from ..connection import LiveConnection
 from ..device_recorder import DeviceEventRecorder, merge_gestures_into_events, segment_into_gestures
+from ..dry_run import DryRunConnection
+from ..gym_export import export_action_map
 from ..hud_classifier import (
     build_game_run, classify_session, compare_replay_durations, diff_classifications, propose_actions,
     propose_combos,
 )
-from ..run_engine import GameRunExecutor
+from ..run_engine import GameRunExecutor, summarize_assertions
 from ..session_replay import SessionPlayer
 from .canvas import CanvasView
 from .panels.define_panel import DefinePanel
@@ -257,6 +261,7 @@ class MainWindow(QMainWindow):
         self._define_panel.capture_hud_region_btn.toggled.connect(self._toggle_hud_capture_mode)
         self._define_panel.add_combo_btn.clicked.connect(self._add_hud_combo)
         self._define_panel.remove_combo_btn.clicked.connect(self._remove_hud_combo)
+        self._define_panel.export_action_map_btn.clicked.connect(self._export_action_map)
         # short aliases -- kept so the rest of this class's methods (_on_canvas_clicked,
         # _toggle_capture_mode, _toggle_device_recording, etc.) don't need renaming
         self._new_kind_combo = self._define_panel.new_kind_combo
@@ -281,11 +286,13 @@ class MainWindow(QMainWindow):
             get_template_names=lambda: list(self.project.templates.keys()))
         self._game_run_panel.add_run_btn.clicked.connect(self._add_run)
         self._game_run_panel.remove_run_btn.clicked.connect(self._remove_run)
+        self._game_run_panel.run_all_btn.clicked.connect(self._run_all_game_runs)
         self._game_run_panel.run_list.currentItemChanged.connect(self._on_run_selected)
         self._run_list = self._game_run_panel.run_list
         self._run_editor = self._game_run_panel.run_editor
         self._run_editor.graphChanged.connect(self._on_run_graph_changed)
         self._run_editor.runRequested.connect(self._run_game_run)
+        self._run_editor.previewRequested.connect(self._preview_game_run)
         self._run_editor.stopRequested.connect(self._stop_game_run)
 
         # Each page is wrapped in a scroll area so a tall page's stacked
@@ -653,6 +660,75 @@ class MainWindow(QMainWindow):
 
         threading.Thread(target=worker, daemon=True).start()
 
+    def _run_all_game_runs(self) -> None:
+        """Runs every Game Run in the project, in turn, against the live device -- a
+        regression suite over whatever Assert nodes each one has (see
+        ACTION_CLASSIFICATION_DESIGN.md G16). Each run's own assertion labels get prefixed
+        with that run's name (e.g. "level1_run:cleared_gap") directly on the shared executor's
+        `assertions` list, so `_on_run_finished`'s existing summarize_assertions() call -- no
+        changes needed there -- reports one aggregate PASS/FAIL summary traceable back to
+        which run each failure came from, instead of needing separate per-run reporting
+        machinery."""
+        if self.connection is None or not self.connection.connected:
+            self._run_editor.log_line("Run All ignored: not connected.")
+            return
+        ref = self._require_reference_resolution()
+        if ref is None:
+            return
+        ref_w, ref_h = ref
+        runs = list(self.project.runs.values())
+        if not runs:
+            self._run_editor.log_line("Run All: project has no Game Runs.")
+            return
+        executor = GameRunExecutor(
+            self.connection, self.project.actions, ref_w, ref_h,
+            on_log=self._run_signals.logLine.emit, templates=self.project.templates)
+        self._run_executor = executor
+        self._run_editor.set_running(True)
+        self._run_editor.log_line(f"Running all {len(runs)} Game Run(s) as a regression suite...")
+
+        def worker() -> None:
+            try:
+                for run in runs:
+                    if executor.stopped:
+                        break
+                    start = len(executor.assertions)
+                    self._run_signals.logLine.emit(f"--- {run.name} ---")
+                    executor.run(run)
+                    executor.assertions[start:] = [
+                        (f"{run.name}:{label}", ok, similarity)
+                        for label, ok, similarity in executor.assertions[start:]
+                    ]
+            finally:
+                self._run_signals.finished.emit()
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    def _preview_game_run(self, game_run: GameRun | None) -> None:
+        """Runs `game_run` against a DryRunConnection instead of the live device -- see
+        dry_run.py's module docstring: GameRunExecutor needed no changes to support this,
+        just a different `connection`. Works with no device connected at all; still needs a
+        reference resolution (the Actions themselves are defined in that space, dry run or
+        not)."""
+        if game_run is None:
+            return
+        ref_w, ref_h = self.project.reference_width or 1, self.project.reference_height or 1
+        dry_connection = DryRunConnection(time_scale=self.project.time_scale, on_log=self._run_signals.logLine.emit)
+        executor = GameRunExecutor(
+            dry_connection, self.project.actions, ref_w, ref_h,
+            on_log=self._run_signals.logLine.emit, templates=self.project.templates)
+        self._run_executor = executor
+        self._run_editor.set_running(True)
+        self._run_editor.log_line(f"Previewing {game_run.name!r} (dry run, no device)...")
+
+        def worker() -> None:
+            try:
+                executor.run(game_run)
+            finally:
+                self._run_signals.finished.emit()
+
+        threading.Thread(target=worker, daemon=True).start()
+
     def _stop_game_run(self) -> None:
         if self._run_executor is not None:
             self._run_executor.stop()
@@ -661,6 +737,8 @@ class MainWindow(QMainWindow):
     def _on_run_finished(self) -> None:
         self._run_editor.set_running(False)
         self._run_editor.log_line("Run finished.")
+        if self._run_executor is not None and self._run_executor.assertions:
+            self._run_editor.log_line(summarize_assertions(self._run_executor.assertions))
 
     # -- compare templates --------------------------------------------------------
 
@@ -812,6 +890,23 @@ class MainWindow(QMainWindow):
         self._selected_combo = None
         self._refresh_combo_list()
         self._inspector_stack.show_hud_combo(None)
+
+    def _export_action_map(self) -> None:
+        default_dir = str(self.project_path.parent) if self.project_path is not None else ""
+        path, _filter = QFileDialog.getSaveFileName(
+            self, "Export Action Map", f"{default_dir}/action_map.yaml", "YAML files (*.yaml)")
+        if not path:
+            return
+        action_map = export_action_map(self.project, on_log=self._log_line)
+        try:
+            with open(path, "w", encoding="utf-8") as f:
+                yaml.safe_dump(action_map, f, sort_keys=False, allow_unicode=True)
+        except OSError as e:
+            QMessageBox.critical(self, "Export Action Map", str(e))
+            return
+        self._log_line(
+            f"Exported Action Map to {path} ({len(action_map['buttons'])} button(s), "
+            f"{len(action_map['macros'])} macro(s){', ' + str(len(action_map['compound_macros'])) + ' compound macro(s)' if 'compound_macros' in action_map else ''}).")
 
     def _warn_pointer_conflicts(self) -> None:
         conflicts = conflicting_pointer_actions(self.project.actions)

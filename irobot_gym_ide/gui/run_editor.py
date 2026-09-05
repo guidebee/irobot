@@ -21,11 +21,11 @@ from PySide6.QtGui import QBrush, QColor, QPainter, QPainterPath, QPen
 from PySide6.QtWidgets import (
     QComboBox, QGraphicsEllipseItem, QGraphicsItem, QGraphicsPathItem,
     QGraphicsRectItem, QGraphicsScene, QGraphicsSimpleTextItem, QGraphicsView,
-    QHBoxLayout, QInputDialog, QLabel, QMessageBox, QPlainTextEdit, QPushButton,
+    QHBoxLayout, QInputDialog, QLabel, QLineEdit, QMessageBox, QPlainTextEdit, QPushButton,
     QSpinBox, QVBoxLayout, QWidget,
 )
 
-from ..model import GameRun, RunEdge, RunNode, RunNodeKind
+from ..model import GameRun, RunEdge, RunNode, RunNodeKind, run_pointer_conflicts
 
 _NODE_W, _NODE_H = 140, 56
 _PORT_R = 6
@@ -36,6 +36,7 @@ _KIND_COLORS = {
     RunNodeKind.REPEAT: QColor("#e67e22"),
     RunNodeKind.COMPARE: QColor("#8e44ad"),
     RunNodeKind.FIND_TEMPLATE: QColor("#16a085"),
+    RunNodeKind.ASSERT: QColor("#27ae60"),
 }
 
 # Node kinds with more than one named output port, each capped at one connection via
@@ -46,8 +47,10 @@ _MULTI_PORT_KINDS = {
     RunNodeKind.FIND_TEMPLATE: ("found", "not_found"),
 }
 
-# Node kinds whose properties panel shows the template combo (see RunEditorWidget).
-_TEMPLATE_KINDS = (RunNodeKind.COMPARE, RunNodeKind.FIND_TEMPLATE)
+# Node kinds whose properties panel shows the template combo (see RunEditorWidget). ASSERT
+# reuses COMPARE's template check but reports PASS/FAIL instead of branching -- see
+# model.RunNodeKind.ASSERT.
+_TEMPLATE_KINDS = (RunNodeKind.COMPARE, RunNodeKind.FIND_TEMPLATE, RunNodeKind.ASSERT)
 
 
 def _new_id() -> str:
@@ -110,6 +113,8 @@ class NodeItem(QGraphicsRectItem):
             text = f"[{node.action_name or '(pick action)'}]"
         elif node.kind == RunNodeKind.DELAY:
             text = f"delay {node.frames}f"
+        elif node.kind == RunNodeKind.ASSERT:
+            text = f"{node.label or '(no label)'} [{node.template_name or '(pick template)'}]"
         elif node.kind in (RunNodeKind.COMPARE, RunNodeKind.FIND_TEMPLATE):
             text = f"[{node.template_name or '(pick template)'}]"
         else:
@@ -317,6 +322,7 @@ class RunEditorWidget(QWidget):
 
     graphChanged = Signal()
     runRequested = Signal(object)   # GameRun
+    previewRequested = Signal(object)   # GameRun -- run against a DryRunConnection, no device
     stopRequested = Signal()
 
     def __init__(self, get_action_names, get_template_names=lambda: [], parent=None):
@@ -334,12 +340,14 @@ class RunEditorWidget(QWidget):
         add_repeat_btn = QPushButton("+ Repeat Node")
         add_compare_btn = QPushButton("+ Compare Node")
         add_find_template_btn = QPushButton("+ Find Template Node")
+        add_assert_btn = QPushButton("+ Assert Node")
         delete_btn = QPushButton("Delete Selected")
         self._run_btn = QPushButton("Run")
+        self._preview_btn = QPushButton("Preview (Dry Run)")
         self._stop_btn = QPushButton("Stop")
         self._stop_btn.setEnabled(False)
         for b in (add_action_btn, add_delay_btn, add_repeat_btn, add_compare_btn, add_find_template_btn,
-                  delete_btn, self._run_btn, self._stop_btn):
+                  add_assert_btn, delete_btn, self._run_btn, self._preview_btn, self._stop_btn):
             toolbar.addWidget(b)
         toolbar.addStretch(1)
         layout.addLayout(toolbar)
@@ -349,8 +357,10 @@ class RunEditorWidget(QWidget):
         add_repeat_btn.clicked.connect(lambda: self._add_node(RunNodeKind.REPEAT))
         add_compare_btn.clicked.connect(lambda: self._add_node(RunNodeKind.COMPARE))
         add_find_template_btn.clicked.connect(lambda: self._add_node(RunNodeKind.FIND_TEMPLATE))
+        add_assert_btn.clicked.connect(lambda: self._add_node(RunNodeKind.ASSERT))
         delete_btn.clicked.connect(self._delete_selected)
         self._run_btn.clicked.connect(lambda: self.runRequested.emit(self.game_run))
+        self._preview_btn.clicked.connect(lambda: self.previewRequested.emit(self.game_run))
         self._stop_btn.clicked.connect(self.stopRequested.emit)
 
         self._scene = RunGraphScene()
@@ -369,6 +379,10 @@ class RunEditorWidget(QWidget):
         self._template_combo = QComboBox()
         self._template_combo.currentTextChanged.connect(self._on_template_combo_changed)
         props_row.addWidget(self._template_combo)
+        self._label_edit = QLineEdit()
+        self._label_edit.setPlaceholderText("assertion label, e.g. cleared_gap")
+        self._label_edit.editingFinished.connect(self._on_label_edited)
+        props_row.addWidget(self._label_edit)
         self._value_spin = QSpinBox()
         self._value_spin.setRange(1, 100000)
         self._value_spin.valueChanged.connect(self._on_value_spin_changed)
@@ -407,7 +421,9 @@ class RunEditorWidget(QWidget):
         if self.game_run is None:
             self._warnings.setText("")
             return
-        self._warnings.setText("\n".join(self.game_run.validate(project_actions, project_templates)))
+        warnings = self.game_run.validate(project_actions, project_templates)
+        warnings += run_pointer_conflicts(self.game_run, project_actions)
+        self._warnings.setText("\n".join(warnings))
 
     # -- toolbar actions --------------------------------------------------------
 
@@ -427,6 +443,7 @@ class RunEditorWidget(QWidget):
     def _set_props_visible(self, node: RunNode | None) -> None:
         self._action_combo.setVisible(node is not None and node.kind == RunNodeKind.ACTION)
         self._template_combo.setVisible(node is not None and node.kind in _TEMPLATE_KINDS)
+        self._label_edit.setVisible(node is not None and node.kind == RunNodeKind.ASSERT)
         self._value_spin.setVisible(node is not None and node.kind in (RunNodeKind.DELAY, RunNodeKind.REPEAT))
 
     def _on_node_selected(self, node: RunNode | None) -> None:
@@ -447,6 +464,8 @@ class RunEditorWidget(QWidget):
                 names = self._get_template_names()
                 self._template_combo.addItems([""] + names)
                 self._template_combo.setCurrentText(node.template_name)
+                if node.kind == RunNodeKind.ASSERT:
+                    self._label_edit.setText(node.label)
             elif node.kind == RunNodeKind.DELAY:
                 self._value_spin.setRange(0, 100000)
                 self._value_spin.setValue(node.frames)
@@ -477,6 +496,16 @@ class RunEditorWidget(QWidget):
         if node is None or node.kind not in _TEMPLATE_KINDS:
             return
         node.template_name = text
+        self._scene._node_items[node.id].refresh_label()
+        self.graphChanged.emit()
+
+    def _on_label_edited(self) -> None:
+        if self._loading:
+            return
+        node = self._selected_node()
+        if node is None or node.kind != RunNodeKind.ASSERT:
+            return
+        node.label = self._label_edit.text()
         self._scene._node_items[node.id].refresh_label()
         self.graphChanged.emit()
 

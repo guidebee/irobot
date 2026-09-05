@@ -5,9 +5,9 @@ import base64
 import unittest
 
 from ..model import (
-    Action, EventKind, GameRun, HudRegion, HudRegionCombo, ImageTemplate, PrimitiveEvent, Project, RunEdge, RunNode,
-    RunNodeKind, SessionSegment, classified_pointer_conflicts, conflicting_pointer_actions, events_look_alike,
-    find_matching_action, orphan_releases, scale_point,
+    Action, ActionKind, EventKind, GameRun, HudRegion, HudRegionCombo, ImageTemplate, PrimitiveEvent, Project,
+    RunEdge, RunNode, RunNodeKind, SessionSegment, classified_pointer_conflicts, conflicting_pointer_actions,
+    events_look_alike, find_matching_action, orphan_releases, run_pointer_conflicts, scale_point,
 )
 
 try:
@@ -83,6 +83,64 @@ class ActionValidateTest(unittest.TestCase):
         action = Action(name="bad", events=[PrimitiveEvent(kind=EventKind.TAP)])
         warnings = action.validate()
         self.assertTrue(any("no (x, y)" in w for w in warnings))
+
+
+class ActionKindTest(unittest.TestCase):
+    def test_lone_press_infers_hold_start(self):
+        action = Action(name="right_start", events=[PrimitiveEvent(kind=EventKind.PRESS, x=1, y=1)])
+        self.assertEqual(action.infer_kind(), ActionKind.HOLD_START)
+        self.assertEqual(action.effective_kind, ActionKind.HOLD_START)
+
+    def test_lone_release_infers_hold_stop(self):
+        action = Action(name="right_stop", events=[PrimitiveEvent(kind=EventKind.RELEASE)])
+        self.assertEqual(action.infer_kind(), ActionKind.HOLD_STOP)
+
+    def test_single_tap_infers_momentary(self):
+        action = Action(name="jump", events=[PrimitiveEvent(kind=EventKind.TAP, x=1, y=1)])
+        self.assertEqual(action.infer_kind(), ActionKind.MOMENTARY)
+
+    def test_press_release_pair_infers_momentary(self):
+        action = Action(name="tap_and_hold", events=[
+            PrimitiveEvent(kind=EventKind.PRESS, x=1, y=1),
+            PrimitiveEvent(kind=EventKind.RELEASE),
+        ])
+        self.assertEqual(action.infer_kind(), ActionKind.MOMENTARY)
+
+    def test_multi_pointer_sequence_infers_macro(self):
+        action = Action(name="right_jump", events=[
+            PrimitiveEvent(kind=EventKind.PRESS, x=1, y=1, pointer_id=0),
+            PrimitiveEvent(kind=EventKind.PRESS, x=2, y=2, pointer_id=1),
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=0),
+            PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=1),
+        ])
+        self.assertEqual(action.infer_kind(), ActionKind.MACRO)
+
+    def test_wait_events_dont_affect_inference(self):
+        action = Action(name="jump", events=[
+            PrimitiveEvent(kind=EventKind.PRESS, x=1, y=1),
+            PrimitiveEvent(kind=EventKind.WAIT, frames=10),
+            PrimitiveEvent(kind=EventKind.RELEASE),
+        ])
+        self.assertEqual(action.infer_kind(), ActionKind.MOMENTARY)
+
+    def test_explicit_kind_overrides_inference(self):
+        action = Action(name="right_jump", kind=ActionKind.MACRO, events=[
+            PrimitiveEvent(kind=EventKind.TAP, x=1, y=1),
+        ])
+        self.assertEqual(action.infer_kind(), ActionKind.MOMENTARY)
+        self.assertEqual(action.effective_kind, ActionKind.MACRO)
+
+    def test_kind_round_trips_through_to_dict_from_dict(self):
+        action = Action(name="right_start", kind=ActionKind.HOLD_START,
+                         events=[PrimitiveEvent(kind=EventKind.PRESS, x=1, y=1)])
+        restored = Action.from_dict(action.to_dict())
+        self.assertEqual(restored.kind, ActionKind.HOLD_START)
+
+    def test_unset_kind_is_omitted_from_to_dict(self):
+        action = Action(name="jump", events=[PrimitiveEvent(kind=EventKind.TAP, x=1, y=1)])
+        self.assertNotIn("kind", action.to_dict())
+        restored = Action.from_dict(action.to_dict())
+        self.assertIsNone(restored.kind)
 
 
 class ConflictingPointerActionsTest(unittest.TestCase):
@@ -162,6 +220,74 @@ class ClassifiedPointerConflictsTest(unittest.TestCase):
     def test_unknown_action_name_is_skipped_not_raised(self):
         segments = [SessionSegment(start_index=0, end_index=1, action_name="missing")]
         self.assertEqual(classified_pointer_conflicts(segments, {}), [])
+
+
+class RunPointerConflictsTest(unittest.TestCase):
+    def _actions(self):
+        return {
+            "right_start": Action(name="right_start", events=[PrimitiveEvent(kind=EventKind.PRESS, x=1, y=1)]),
+            "right_stop": Action(name="right_stop", events=[PrimitiveEvent(kind=EventKind.RELEASE)]),
+            "jump": Action(name="jump", events=[
+                PrimitiveEvent(kind=EventKind.PRESS, x=9, y=9),
+                PrimitiveEvent(kind=EventKind.RELEASE),
+            ]),
+            "jump_other_pointer": Action(name="jump_other_pointer", events=[
+                PrimitiveEvent(kind=EventKind.PRESS, x=9, y=9, pointer_id=1),
+                PrimitiveEvent(kind=EventKind.RELEASE, pointer_id=1),
+            ]),
+        }
+
+    def _chain(self, *action_names):
+        run = GameRun(name="r")
+        for i, name in enumerate(action_names):
+            run.add_node(RunNode(id=f"n{i}", kind=RunNodeKind.ACTION, action_name=name))
+        for i in range(len(action_names) - 1):
+            run.add_edge(RunEdge(id=f"e{i}", source=f"n{i}", target=f"n{i + 1}"))
+        return run
+
+    def test_sequential_chain_with_same_pointer_conflict_is_flagged(self):
+        run = self._chain("right_start", "jump", "right_stop")
+        warnings = run_pointer_conflicts(run, self._actions())
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("right_start", warnings[0])
+        self.assertIn("pointer 0", warnings[0])
+
+    def test_sequential_chain_with_different_pointer_is_not_flagged(self):
+        run = self._chain("right_start", "jump_other_pointer", "right_stop")
+        self.assertEqual(run_pointer_conflicts(run, self._actions()), [])
+
+    def test_release_before_next_press_is_not_flagged(self):
+        run = self._chain("right_start", "right_stop", "right_start", "right_stop")
+        self.assertEqual(run_pointer_conflicts(run, self._actions()), [])
+
+    def test_repeat_body_is_walked_once(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="start", kind=RunNodeKind.ACTION, action_name="right_start"))
+        run.add_node(RunNode(id="rep", kind=RunNodeKind.REPEAT, times=3))
+        run.add_node(RunNode(id="jump", kind=RunNodeKind.ACTION, action_name="jump"))
+        run.add_node(RunNode(id="stop", kind=RunNodeKind.ACTION, action_name="right_stop"))
+        run.add_edge(RunEdge(id="e1", source="start", target="rep"))
+        run.add_edge(RunEdge(id="e2", source="rep", target="jump", via="body"))
+        run.add_edge(RunEdge(id="e3", source="rep", target="stop", via="after"))
+        warnings = run_pointer_conflicts(run, self._actions())
+        self.assertEqual(len(warnings), 1)
+        self.assertIn("jump", warnings[0])
+
+    def test_unknown_action_name_is_skipped_not_raised(self):
+        run = self._chain("missing")
+        self.assertEqual(run_pointer_conflicts(run, {}), [])
+
+    def test_concurrent_fork_is_not_cross_checked(self):
+        # a genuine fork -- both branches press pointer 0 independently; this is a real
+        # potential race but run_pointer_conflicts deliberately doesn't reason about it (see
+        # its own docstring), so it should NOT be flagged as a false positive either.
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.ACTION, action_name="right_start"))
+        run.add_node(RunNode(id="b", kind=RunNodeKind.ACTION, action_name="right_start"))
+        run.add_node(RunNode(id="root", kind=RunNodeKind.DELAY, frames=1))
+        run.add_edge(RunEdge(id="e1", source="root", target="a"))
+        run.add_edge(RunEdge(id="e2", source="root", target="b"))
+        self.assertEqual(run_pointer_conflicts(run, self._actions()), [])
 
 
 class OrphanReleasesTest(unittest.TestCase):
@@ -472,6 +598,38 @@ class GameRunGraphTest(unittest.TestCase):
         run.add_edge(RunEdge(id="e1", source="f", target="a", via="found"))
         run.add_edge(RunEdge(id="e2", source="f", target="b", via="not_found"))
         self.assertEqual(run.validate(project_actions={}, project_templates={"coin": object()}), [])
+
+    def test_validate_flags_unknown_assert_template_reference(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.ASSERT, template_name="missing", label="cleared_gap"))
+        warnings = run.validate(project_actions={}, project_templates={})
+        self.assertTrue(any("unknown template" in w for w in warnings))
+
+    def test_validate_flags_assert_with_no_label(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.ASSERT, template_name="hp_full"))
+        warnings = run.validate(project_actions={}, project_templates={"hp_full": object()})
+        self.assertTrue(any("no label" in w for w in warnings))
+
+    def test_validate_flags_assert_with_via_edge(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.ASSERT, template_name="hp_full", label="hp_ok"))
+        run.add_node(RunNode(id="b", kind=RunNodeKind.DELAY))
+        run.add_edge(RunEdge(id="e1", source="a", target="b", via="match"))
+        warnings = run.validate(project_actions={}, project_templates={"hp_full": object()})
+        self.assertTrue(any("only valid from a repeat, compare, or find_template node" in w for w in warnings))
+
+    def test_clean_assert_graph_has_no_warnings(self):
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.ASSERT, template_name="hp_full", label="hp_ok"))
+        run.add_node(RunNode(id="b", kind=RunNodeKind.DELAY))
+        run.add_edge(RunEdge(id="e1", source="a", target="b"))
+        self.assertEqual(run.validate(project_actions={}, project_templates={"hp_full": object()}), [])
+
+    def test_assert_round_trips_label_and_template(self):
+        node = RunNode(id="a", kind=RunNodeKind.ASSERT, template_name="hp_full", label="hp_ok")
+        restored = RunNode.from_dict(node.to_dict())
+        self.assertEqual((restored.template_name, restored.label), ("hp_full", "hp_ok"))
 
     def test_validate_flags_repeat_with_two_body_edges(self):
         run = GameRun(name="r")

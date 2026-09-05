@@ -79,25 +79,83 @@ _NEEDS_POSITION = {EventKind.TAP, EventKind.PRESS, EventKind.RELEASE, EventKind.
 _NEEDS_KEY = {EventKind.KEY}
 
 
+class ActionKind(str, Enum):
+    """What an action looks like from an agent's point of view -- see
+    ACTION_CLASSIFICATION_DESIGN.md G12 and docs/opengym_implementation_plan.md §7.4, whose
+    `press_modes`/`macros` this mirrors. Optional (`Action.kind`, default None): a human can
+    always override, but `Action.infer_kind()` gives every action a sensible default from its
+    own event shape with no authoring burden.
+
+    MOMENTARY -- a single TAP, or a PRESS+RELEASE pair with no other pointer -- fires and
+        completes within one action call; safe as one atomic agent decision.
+    HOLD_START -- a lone PRESS (no matching RELEASE in this same action): leaves a pointer
+        held past the end of this action, expecting a HOLD_STOP later (see model.py's own
+        module docstring on the *_start/*_stop convention).
+    HOLD_STOP -- a lone RELEASE (no PRESS in this same action): ends a hold a HOLD_START left
+        open.
+    MACRO -- more than one PRESS, or more real (non-WAIT) events than a plain tap/hold needs:
+        a scripted, multi-step, multi-frame sequence with its own internal timing (e.g.
+        `right_jump`: press, wait, press pointer 1, wait, release, release). This is a
+        deliberate, first-class action shape, not a problem to eliminate -- from an agent's
+        point of view it's exactly a CISC-style *macro instruction*: one decision expands
+        into several primitive touch operations with pre-decided timing, trading fine-grained
+        control for sample efficiency, the same tradeoff `long_jump` makes in the linked plan
+        doc's §7.4. An agent's action space can freely mix MOMENTARY/HOLD primitives with
+        MACRO shortcuts over the same underlying buttons."""
+    MOMENTARY = "momentary"
+    HOLD_START = "hold_start"
+    HOLD_STOP = "hold_stop"
+    MACRO = "macro"
+
+
 @dataclass
 class Action:
     name: str
     events: list = field(default_factory=list)   # list[PrimitiveEvent]
     description: str = ""
+    kind: Optional[ActionKind] = None   # human override; None means "use infer_kind()"
+
+    def infer_kind(self) -> ActionKind:
+        """Best-effort default classification from this action's own event shape -- see
+        ActionKind's docstring for what each value means. Never guesses across actions (no
+        access to any HudRegion/project context here), so a lone PRESS is always HOLD_START
+        even if nothing in this project ever pairs a HOLD_STOP with it -- that's what
+        orphan_releases()/HudRegion wiring are for, a separate, project-wide concern."""
+        real = [e for e in self.events if e.kind != EventKind.WAIT]
+        presses = sum(1 for e in real if e.kind == EventKind.PRESS)
+        releases = sum(1 for e in real if e.kind == EventKind.RELEASE)
+        if len(real) == 1 and presses == 0 and releases == 1:
+            return ActionKind.HOLD_STOP
+        if len(real) == 1 and presses == 1 and releases == 0:
+            return ActionKind.HOLD_START
+        if presses <= 1 and releases <= 1 and len(real) <= 2:
+            return ActionKind.MOMENTARY
+        return ActionKind.MACRO
+
+    @property
+    def effective_kind(self) -> ActionKind:
+        """`self.kind` if a human set one, else `infer_kind()` -- this is what a caller
+        (the Inspector, gym_export.py, run_pointer_conflicts) should actually read."""
+        return self.kind if self.kind is not None else self.infer_kind()
 
     def to_dict(self) -> dict:
-        return {
+        d = {
             "name": self.name,
             "description": self.description,
             "events": [e.to_dict() for e in self.events],
         }
+        if self.kind is not None:
+            d["kind"] = self.kind.value
+        return d
 
     @staticmethod
     def from_dict(d: dict) -> "Action":
+        kind = d.get("kind")
         return Action(
             name=d["name"],
             description=d.get("description", ""),
             events=[PrimitiveEvent.from_dict(e) for e in d.get("events", [])],
+            kind=ActionKind(kind) if kind else None,
         )
 
     def validate(self) -> list:
@@ -721,6 +779,15 @@ class RunNodeKind(str, Enum):
                            # (having stashed the best-matching (x, y) for the executor to hand out)
                            # or its "not_found" edge if nothing over threshold turned up
                            # (see ImageTemplate.find and run_engine.py's _run_node)
+    ASSERT = "assert"       # like COMPARE (crops the live frame to a stored ImageTemplate's region
+                           # and compares it) but reports a named PASS/FAIL result instead of
+                           # branching -- single "out" edge, always taken regardless of the outcome,
+                           # so a failed assertion doesn't reroute or abort the run, just gets
+                           # recorded (GameRunExecutor.assertions) for a human -- or later, a reward
+                           # function -- to check once the run finishes. See
+                           # ACTION_CLASSIFICATION_DESIGN.md G14: this is the "verify a Game Run's
+                           # outcome" primitive that was previously entirely missing -- GameRun.
+                           # validate() only ever checked graph structure, never behavior.
 
 
 @dataclass
@@ -732,7 +799,8 @@ class RunNode:
     action_name: str = ""   # ACTION only
     frames: int = 0          # DELAY only
     times: int = 1            # REPEAT only
-    template_name: str = ""   # COMPARE and FIND_TEMPLATE only
+    template_name: str = ""   # COMPARE, FIND_TEMPLATE, and ASSERT
+    label: str = ""            # ASSERT only -- human name for this check, e.g. "cleared_the_gap"
 
     def to_dict(self) -> dict:
         d = {"id": self.id, "kind": self.kind.value, "x": self.x, "y": self.y}
@@ -742,8 +810,10 @@ class RunNode:
             d["frames"] = self.frames
         elif self.kind == RunNodeKind.REPEAT:
             d["times"] = self.times
-        elif self.kind in (RunNodeKind.COMPARE, RunNodeKind.FIND_TEMPLATE):
+        elif self.kind in (RunNodeKind.COMPARE, RunNodeKind.FIND_TEMPLATE, RunNodeKind.ASSERT):
             d["template_name"] = self.template_name
+        if self.kind == RunNodeKind.ASSERT:
+            d["label"] = self.label
         return d
 
     @staticmethod
@@ -751,7 +821,7 @@ class RunNode:
         return RunNode(
             id=d["id"], kind=RunNodeKind(d["kind"]), x=d.get("x", 0.0), y=d.get("y", 0.0),
             action_name=d.get("action_name", ""), frames=d.get("frames", 0), times=d.get("times", 1),
-            template_name=d.get("template_name", ""),
+            template_name=d.get("template_name", ""), label=d.get("label", ""),
         )
 
 
@@ -868,6 +938,14 @@ class GameRun:
                     warnings.append(f"node {node.id}: find_template has more than one found connection")
                 if len(self.outgoing(node.id, via="not_found")) > 1:
                     warnings.append(f"node {node.id}: find_template has more than one not_found connection")
+            elif node.kind == RunNodeKind.ASSERT:
+                if node.template_name not in project_templates:
+                    warnings.append(f"node {node.id}: unknown template {node.template_name!r}")
+                if not node.label:
+                    warnings.append(f"node {node.id}: assert has no label -- results are unreadable without one")
+                for e in self.outgoing(node.id):
+                    if e.via != "out":
+                        warnings.append(f"edge {e.id}: via={e.via!r} is only valid from a repeat, compare, or find_template node")
             else:
                 for e in self.outgoing(node.id):
                     if e.via != "out":
@@ -889,6 +967,83 @@ class GameRun:
         for e in d.get("edges", []):
             run.add_edge(RunEdge.from_dict(e))
         return run
+
+
+def run_pointer_conflicts(game_run: GameRun, actions: dict) -> list:
+    """Best-effort pointer-safety check for a hand-authored GameRun graph -- the proactive
+    counterpart to classified_pointer_conflicts (which only ever checks a *recorded session's*
+    segments; a hand-built graph combining two actions that happen to share a pointer got no
+    warning at all before this, see ACTION_CLASSIFICATION_DESIGN.md G13). Walks each of the
+    graph's own sequential node chains, simulating held-pointer state exactly like
+    classified_pointer_conflicts does, following plain "out" edges and a REPEAT's "body" (once,
+    not `times` times -- one pass already reveals a same-pointer re-press) then "after". A
+    COMPARE/FIND_TEMPLATE/ASSERT node's branches are each walked as their own possible
+    continuation (only one fires at runtime, but which one isn't known statically, so both are
+    checked). A genuine fork (a node with more than one plain "out" edge -- real concurrent
+    branches per run_engine.py) starts an independent simulation per branch from the same
+    pre-fork state, rather than trying to reason about their actual relative timing, which
+    GameRun's own fork/join semantics don't fix (same limitation run_engine.py's own module
+    docstring already notes for nested REPEATs) -- so a conflict *between* two forked branches
+    is NOT caught here, only within one sequential path. Returns human-readable warnings, one
+    per conflicting ACTION node. Pure function; only reasons about PRESS/RELEASE pointer_ids."""
+    warnings = []
+
+    def walk(node_id: str, held: dict, visited: frozenset) -> None:
+        if node_id in visited or node_id not in game_run.nodes:
+            return
+        visited = visited | {node_id}
+        node = game_run.nodes[node_id]
+
+        if node.kind == RunNodeKind.ACTION:
+            action = actions.get(node.action_name)
+            if action is not None:
+                held = dict(held)
+                for event in action.events:
+                    if event.kind == EventKind.PRESS:
+                        holder = held.get(event.pointer_id)
+                        if holder is not None:
+                            warnings.append(
+                                f"node {node.id} ({node.action_name!r}) presses pointer "
+                                f"{event.pointer_id}, still held since node {holder} -- give one of "
+                                f"these actions a different pointer_id, or insert a release between "
+                                f"them.")
+                        held[event.pointer_id] = f"{node.id} ({node.action_name!r})"
+                    elif event.kind == EventKind.RELEASE:
+                        held.pop(event.pointer_id, None)
+            for e in game_run.outgoing(node.id):
+                walk(e.target, held, visited)
+            return
+
+        if node.kind == RunNodeKind.REPEAT:
+            body_edges = game_run.outgoing(node.id, via="body")
+            if body_edges:
+                walk(body_edges[0].target, held, visited)
+            for e in game_run.outgoing(node.id, via="after"):
+                walk(e.target, held, visited)
+            return
+
+        if node.kind in (RunNodeKind.COMPARE, RunNodeKind.ASSERT):
+            vias = ("match", "no_match") if node.kind == RunNodeKind.COMPARE else (None,)
+        elif node.kind == RunNodeKind.FIND_TEMPLATE:
+            vias = ("found", "not_found")
+        else:
+            vias = (None,)
+
+        if vias == (None,):
+            outs = game_run.outgoing(node.id)
+            if len(outs) > 1:
+                for e in outs:  # genuine fork -- independent simulations, no cross-branch check
+                    walk(e.target, held, visited)
+            elif len(outs) == 1:
+                walk(outs[0].target, held, visited)
+        else:
+            for via in vias:
+                for e in game_run.outgoing(node.id, via=via):
+                    walk(e.target, held, visited)
+
+    for root in game_run.roots():
+        walk(root, {}, frozenset())
+    return warnings
 
 
 @dataclass

@@ -13,9 +13,10 @@ from PySide6.QtWidgets import (
     QComboBox, QPushButton, QLabel, QSpinBox, QLineEdit,
 )
 
-from ..model import Action, EventKind, PrimitiveEvent
+from ..model import Action, ActionKind, EventKind, PrimitiveEvent
 
 _COLUMNS = ["kind", "pointer_id", "x", "y", "keycode/key_name", "frames"]
+_AUTO_LABEL = "(auto-detect)"
 
 
 class ActionInspector(QWidget):
@@ -29,6 +30,23 @@ class ActionInspector(QWidget):
         layout = QVBoxLayout(self)
         self._title = QLabel("(no action selected)")
         layout.addWidget(self._title)
+
+        kind_row = QHBoxLayout()
+        kind_row.addWidget(QLabel("Kind (from an agent's point of view):"))
+        self._kind_combo = QComboBox()
+        self._kind_combo.addItems([_AUTO_LABEL] + [k.value for k in ActionKind])
+        self._kind_combo.setToolTip(
+            "MOMENTARY: one atomic step. HOLD_START/HOLD_STOP: a press/release pair split "
+            "across two actions. MACRO: a scripted multi-step sequence (a CISC-style macro "
+            "instruction, not a problem to avoid -- see ACTION_CLASSIFICATION_DESIGN.md G12). "
+            "(auto-detect) infers from the event shape; override only when that's wrong for "
+            "this specific action.")
+        self._kind_combo.currentTextChanged.connect(self._on_kind_combo_changed)
+        kind_row.addWidget(self._kind_combo)
+        self._effective_kind_label = QLabel("")
+        kind_row.addWidget(self._effective_kind_label)
+        kind_row.addStretch(1)
+        layout.addLayout(kind_row)
 
         self._table = QTableWidget(0, len(_COLUMNS))
         self._table.setHorizontalHeaderLabels(_COLUMNS)
@@ -61,7 +79,20 @@ class ActionInspector(QWidget):
     def set_action(self, action: Action | None) -> None:
         self._action = action
         self._title.setText(f"Action: {action.name}" if action else "(no action selected)")
+        self._loading = True
+        try:
+            self._kind_combo.setCurrentText(action.kind.value if action and action.kind else _AUTO_LABEL)
+            self._effective_kind_label.setText(f"(effective: {action.effective_kind.value})" if action else "")
+        finally:
+            self._loading = False
         self._reload_table()
+
+    def _on_kind_combo_changed(self, text: str) -> None:
+        if self._loading or self._action is None:
+            return
+        self._action.kind = None if text == _AUTO_LABEL else ActionKind(text)
+        self._effective_kind_label.setText(f"(effective: {self._action.effective_kind.value})")
+        self.actionChanged.emit()
 
     def add_event_at_point(self, x: int, y: int, kind: EventKind, pointer_id: int) -> PrimitiveEvent | None:
         if self._action is None:

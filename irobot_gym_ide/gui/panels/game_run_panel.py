@@ -27,6 +27,13 @@ class GameRunPanel(QWidget):
         btn_row.addWidget(self.remove_run_btn)
         left_col.addLayout(btn_row)
 
+        self.run_all_btn = QPushButton("Run All (Regression)")
+        self.run_all_btn.setToolTip(
+            "Runs every Game Run in the project against the live device in turn and reports "
+            "a PASS/FAIL summary per run based on its Assert nodes -- see "
+            "ACTION_CLASSIFICATION_DESIGN.md G16.")
+        left_col.addWidget(self.run_all_btn)
+
         left_widget = QWidget()
         left_widget.setLayout(left_col)
         left_widget.setMaximumWidth(220)

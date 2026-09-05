@@ -73,4 +73,11 @@ class DefinePanel(QWidget):
         combo_btn_row.addWidget(self.remove_combo_btn)
         layout.addLayout(combo_btn_row)
 
+        # -- Gym export --------------------------------------------------------
+        layout.addWidget(QLabel(
+            "Export this project's HUD-region buttons/macros as an ActionMap for the\n"
+            "not-yet-built Gym env (docs/opengym_implementation_plan.md §7.4):"))
+        self.export_action_map_btn = QPushButton("Export Action Map...")
+        layout.addWidget(self.export_action_map_btn)
+
         layout.addStretch(1)

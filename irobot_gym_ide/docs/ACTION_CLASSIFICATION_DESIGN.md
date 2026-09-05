@@ -1,8 +1,10 @@
 # Action definitions & classification — design and a punch list of gaps
 
-Status: **implemented, including the G1–G6/G8 punch-list fixes below** (`model.py`,
-`hud_classifier.py`, `gui/main_window.py`'s `_classify_session`, `gui/panels/library_panel.py`,
-`gui/panels/sessions_panel.py`).
+Status: **implemented, including the G1–G6/G8/G10 punch-list fixes and the G12–G18 Gym-readiness
+review in §5** (`model.py`, `hud_classifier.py`, `run_engine.py`, `session_replay.py`,
+`connection.py`, `dry_run.py`, `gym_export.py`, `gui/main_window.py`, `gui/run_editor.py`,
+`gui/inspector.py`, `gui/panels/library_panel.py`, `gui/panels/sessions_panel.py`,
+`gui/panels/game_run_panel.py`, `gui/panels/define_panel.py`).
 This doc records the design as built, the reasoning behind it, and a prioritized list of gaps to
 close next — companion to [`GAME_RUN_AI_ASSIST_DESIGN.md`](GAME_RUN_AI_ASSIST_DESIGN.md) (which
 covers authoring a `GameRun` node graph) and [`GAME_RUN_EDITOR_GUIDE.md`](GAME_RUN_EDITOR_GUIDE.md)
@@ -309,3 +311,130 @@ original reasoning for relative priority still holds and is preserved here for c
 Every function above is covered by the existing pure-Python suite
 (`irobot_gym_ide/tests/test_model.py`, `test_hud_classifier.py`) — no device required. Full suite:
 160 tests passing as of this update.
+
+## 5. Gym-readiness review (Define / Session / Game Run)
+
+A second review pass, this time of the whole **Define → Session → Game Run** pipeline against a
+specific goal: does it define a *proper action space* for a later Gym env, and does it let a
+designer *test and verify* an action sequence is valid — for a human today, for an actual RL agent
+once `tools/irobot_gym/env.py` exists (it doesn't yet, see model.py's own module docstring and
+`docs/opengym_implementation_plan.md`)? Seven concrete gaps came out of that review; all seven are
+now fixed except where explicitly marked as a recorded decision instead.
+
+**G12. No action-space metadata — an action's own event shape had no declared meaning.**
+*(status: Fixed)* `project.actions` was a flat `dict[str, Action]` with nothing distinguishing a
+momentary tap from a hold-start/stop from a scripted multi-step macro like `right_jump`. A
+**correction from an earlier draft of this review**: macros are not a problem to eliminate. From
+an agent's point of view a macro is exactly a CISC-style *macro instruction* — one decision expands
+into several primitive touch operations with pre-decided timing (docs/opengym_implementation_plan.md
+§7.4 makes precisely this tradeoff for `long_jump`, built and named before this review even
+happened) — a legitimate, first-class action shape to keep, not to flag as a defect. Fixed:
+`ActionKind` (`MOMENTARY`/`HOLD_START`/`HOLD_STOP`/`MACRO`), `Action.kind` (optional human override),
+`Action.infer_kind()` (a sensible structural default: a lone PRESS/RELEASE is a hold half; more than
+one PRESS or more real events than a plain tap/hold needs is a MACRO) and `Action.effective_kind`
+(what every other consumer should read). The single-button-hold-duration macro shape specifically
+(`docs/opengym_implementation_plan.md`'s `long_jump`) is structurally indistinguishable from a plain
+hold gesture, so it can't be reliably inferred — matching that plan's own "an integrator ... can
+declare it" framing, it requires an explicit `kind=MACRO` override, surfaced via a Kind combo box in
+the Action Inspector (`gui/inspector.py`) showing both the override and the auto-detected effective
+value. Tests: `ActionKindTest` in `test_model.py`.
+
+**G13. Pointer-safety checking was reactive (recorded sessions only), never proactive for a
+hand-authored Game Run.** *(status: Fixed)* `classified_pointer_conflicts` (G10) only ever checked a
+*recorded session's* classified segments; a Game Run built by hand in the editor, combining two
+actions that happen to share a pointer, got no warning at all. Fixed: `model.run_pointer_conflicts
+(game_run, actions)` — the same held-pointer simulation, walked instead along the graph's own
+sequential node chains (following plain "out" edges, and a REPEAT's "body" once then "after"; a
+COMPARE/FIND_TEMPLATE/ASSERT node's branches are each walked as a possible continuation since only
+one fires at runtime but not which one is known statically). A genuine concurrent fork starts an
+independent simulation per branch rather than reasoning about their real relative timing, which
+GameRun's own fork/join semantics don't fix (same limitation run_engine.py's module docstring
+already notes elsewhere) — so this catches the common sequential-authoring mistake, not a race
+between two forked branches. Wired into `gui/run_editor.py`'s `refresh_warnings`, so it now runs
+automatically alongside `GameRun.validate()` every time the graph changes. Tests:
+`RunPointerConflictsTest` in `test_model.py`.
+
+**G14. No behavioral verification — every check was structural, never "did this run actually
+achieve anything."** *(status: Fixed)* `GameRun.validate()`, `GameplaySession.validate()`, and
+`classified_pointer_conflicts` all check referential/structural correctness; none ever checked
+*outcome*. `RewardPanel`/`ObservationPanel`/`ResetPanel` are confirmed, literal stubs ("coming
+soon") — so before this fix, "verify a Game Run is valid" meant a human watches it run and eyeballs
+the result, with nothing recorded. Fixed: a new `RunNodeKind.ASSERT` — COMPARE's non-branching
+sibling, same `ImageTemplate` similarity check, but instead of choosing an edge it records a named
+PASS/FAIL result in `GameRunExecutor.assertions` (list of `(label, passed, similarity)`) and always
+continues through its single "out" edge, so a failed assertion doesn't reroute or abort the run, just
+gets recorded for a human (or later, a reward function) to check once the run finishes.
+`run_engine.summarize_assertions()` formats a one-line summary; `_on_run_finished` in
+`gui/main_window.py` logs it automatically whenever a run recorded any. `GameRun.validate()` gained
+matching checks (unknown template, missing label). GUI: an "+ Assert Node" button and a label field
+in `gui/run_editor.py`, colored distinctly (green) from every other node kind. Tests: `AssertTest`,
+`SummarizeAssertionsTest` in `test_run_engine.py`; validation cases in `test_model.py`.
+
+**G15. No way to preview a Game Run's sequence and pacing without a physical device.**
+*(status: Fixed)* Every test/replay/run path required `connection.connected`. Structural validation
+(`GameRun.validate()`) was already device-free — a real strength, not a gap — but there was no
+*simulated timeline*. Fixed: `dry_run.DryRunConnection`, a connection stand-in that logs what each
+event would have done instead of sending it and always returns `None` from `latest_frame()` (so
+COMPARE/FIND_TEMPLATE take their "no_match"/"not_found" branch and ASSERT records a FAIL, each
+already logged clearly by the existing node handlers — a human previewing isn't left confused about
+why a vision-based branch didn't fire). Needed **zero changes** to `GameRunExecutor` or
+`SessionPlayer` — both only ever needed `run_action`/`latest_frame`/`time_scale` from whatever
+`connection` object they're given, so a dry run is just a different object passed in. DELAY/WAIT
+durations still really sleep (scaled by `time_scale` exactly like a live connection), so a preview's
+pacing matches a real run — pass a small `time_scale` for a fast, structure-only preview instead. GUI:
+a "Preview (Dry Run)" button next to Run in the Game Run tab (`gui/run_editor.py`/
+`gui/main_window.py`'s `_preview_game_run`). Tests: `test_dry_run.py` (exercises the real
+`GameRunExecutor`/`SessionPlayer`, not just `DryRunConnection` in isolation).
+
+**G16. No regression/batch testing — every verification was a one-off live run.** *(status: Fixed)*
+Each Game Run could only be tested individually, with no way to ask "did anything I just changed
+break a different run." Fixed: `gui/main_window.py`'s `_run_all_game_runs` — runs every Game Run in
+the project against the live device in turn, on one shared `GameRunExecutor`, prefixing each run's own
+assertion labels with that run's name (e.g. `"level1_run:cleared_gap"`) directly in the shared
+`assertions` list before moving to the next run. This reuses `_on_run_finished`'s existing
+`summarize_assertions()` call unchanged for one aggregate PASS/FAIL summary spanning every run,
+traceable back to which run each failure came from, rather than needing separate per-run reporting
+machinery. `GameRunExecutor.stopped` (a small new public property) lets the loop check between runs
+without reaching into the private `_stop` Event. GUI: a "Run All (Regression)" button in
+`gui/panels/game_run_panel.py`. Tests: `GameRunExecutorTest.test_stopped_reflects_stop_call` in
+`test_run_engine.py` (the orchestration loop itself lives in GUI code, per this doc's established
+"model/engine logic gets tests, GUI wiring gets compiled/import-checked" split — see §1 of this
+doc's own build notes elsewhere).
+
+**G17. No bridge at all between this project's action library and the planned Gym env's expected
+input.** *(status: Fixed, as a stub — the env itself remains explicitly out of scope)*
+`tools/irobot_gym/env.py` doesn't exist, but `docs/opengym_implementation_plan.md` §7.4 already
+specifies exactly what its "Tier 1.5 -- named virtual-button actions" loader expects: an `ActionMap`
+with `schema_version`, `tier: button`, `reference_resolution`, `buttons` (each a circular `region` +
+`pointer_id` + `press_modes`), and `macros` (single-button, fixed-hold-duration shortcuts). Fixed:
+`gym_export.export_action_map(project)` builds exactly that from `project.hud_regions`/`actions` —
+each HudRegion becomes one button (its rectangle approximated as its *inscribed* circle,
+`press_modes: [tap, hold]` when `region.is_hold`, `[tap]` otherwise; a hold region's `action_name`/
+`release_action_name` pair collapses into the one button entry, matching how Tier 1.5 itself models a
+hold button as one entry with two states, not two named actions); a MACRO-kind action reducible to
+the plan's narrow single-button shape goes to `macros`; anything MACRO-shaped but not reducible to it
+(multi-pointer, like `right_jump`) goes to an additive `compound_macros` section (not part of the
+linked plan doc) with its own raw event list, rather than being silently dropped or forced into a
+shape that would lose information — a future env.py extension point, not a gap this module closes on
+its own. GUI: an "Export Action Map..." button in the Define tab writing a YAML file. This does
+**not** build a `gym.Env` subclass, `reset()`/`step()`, or any adb/OCR integration — those remain
+exactly as out-of-scope as `docs/opengym_implementation_plan.md` already describes; this closes only
+the "what would the input to that loader look like, generated from what this IDE already has" gap.
+Tests: `test_gym_export.py`.
+
+**G18. Whether to add an ML classification algorithm to the session classifier.**
+*(status: decision recorded, no code change — explicitly requested by the user, evaluated and
+declined for the core classifier)* Reasoning, unchanged from §2's "no ML, deliberately" rationale:
+touch events are exact, discrete signals (precise coordinates, kinds, timestamps) — there is no
+genuine ambiguity here for a learned model to resolve, unlike ASR where even unit boundaries are
+uncertain. Introducing ML would need labeled training data that doesn't exist (this system *is* the
+strategy for bootstrapping that data via human review, so training a classifier on its own
+not-yet-existing output is circular), would trade a deterministic, explainable decision (a distance
+number a human can sanity-check) for a probabilistic one that can misclassify with no legible reason,
+and would add non-determinism to something whose entire value proposition is "author once, replay
+deterministically." **One narrow, justified exception, not undertaken here:** G7 (drag/analog
+gestures) is a real, bounded gap where a **Dynamic Time Warping (DTW)** distance over resampled MOVE
+trajectories would let variable-length swipes compare meaningfully, while staying deterministic,
+training-data-free, and inspectable (still just a distance number, not a black box) — worth
+revisiting specifically for G7 if a project's controls actually need it, not as a general
+"add ML to the classifier" initiative.

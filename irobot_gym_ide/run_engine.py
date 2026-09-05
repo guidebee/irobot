@@ -16,7 +16,14 @@ ImageTemplate and fires only its single "found" edge or its single
 "not_found" edge, stashing the best match's (x, y) in `last_found` (keyed
 by node id) for the caller to read back once the run finishes or between
 node firings -- same if/else-branch spirit as COMPARE, but for "where is
-it" instead of "is it here".
+it" instead of "is it here". An ASSERT node is COMPARE's non-branching
+sibling: same template similarity check, but instead of choosing an edge it
+records a named PASS/FAIL result in `assertions` and always continues
+through its single "out" edge -- see model.RunNodeKind.ASSERT's docstring
+and ACTION_CLASSIFICATION_DESIGN.md G14 for why this exists: GameRun.
+validate() only ever checked graph structure, never whether a run actually
+achieved anything, which is what a human (or later, a reward function)
+verifying a Game Run's outcome actually needs.
 See model.py's GameRun docstring for the node/edge vocabulary this executes.
 
 Not itself Gym env stepping -- this is the IDE's own "run it and watch the
@@ -50,14 +57,29 @@ class GameRunExecutor:
         self.ref_w = ref_w
         self.ref_h = ref_h
         self.last_found: dict = {}   # dict[node_id, (x, y)] -- see FIND_TEMPLATE in _run_node
+        self.assertions: list = []   # list[(label, passed: bool, similarity: float)] -- see _run_assert;
+                                      # accumulates across every run() call on this executor until reset()
         self._on_log = on_log or (lambda msg: None)
         self._stop = threading.Event()
+
+    def reset_assertions(self) -> None:
+        """Clears `assertions` -- call before a fresh run() if a caller (e.g. a regression
+        runner iterating several GameRuns with the same executor) wants each run's results
+        reported separately rather than accumulated together."""
+        self.assertions = []
 
     def stop(self) -> None:
         """Requests the run wind down: in-flight nodes finish their current
         step (a DELAY sleep or a single action send) but no further node
         fires after that. Idempotent; safe to call from any thread."""
         self._stop.set()
+
+    @property
+    def stopped(self) -> bool:
+        """Whether stop() has been called -- lets a caller running several GameRuns in
+        sequence (see gui/main_window.py's _run_all_game_runs) check between runs without
+        reaching into the private `_stop` Event directly."""
+        return self._stop.is_set()
 
     def run(self, game_run: GameRun) -> None:
         """Runs `game_run` to completion (or until stop()). Blocks the
@@ -143,6 +165,8 @@ class GameRunExecutor:
             return self._run_compare(node)
         elif node.kind == RunNodeKind.FIND_TEMPLATE:
             return self._run_find_template(node)
+        elif node.kind == RunNodeKind.ASSERT:
+            self._run_assert(node)
         return None
 
     def _run_compare(self, node: RunNode) -> str:
@@ -194,9 +218,48 @@ class GameRunExecutor:
             self.last_found[node.id] = (x, y)
         return "found" if found else "not_found"
 
+    def _run_assert(self, node: RunNode) -> None:
+        """Crops the live frame to a stored ImageTemplate's region and compares it, exactly
+        like _run_compare, but records a named PASS/FAIL result in self.assertions instead
+        of choosing an outgoing edge -- see model.RunNodeKind.ASSERT's docstring. Never
+        raises: a missing template or no live frame yet records a FAIL with similarity 0.0,
+        same no-surprises spirit as _run_compare/_run_find_template."""
+        label = node.label or node.id
+        template = self.templates.get(node.template_name)
+        if template is None:
+            self._on_log(f"node {node.id}: assert {label!r} -- unknown template {node.template_name!r}, FAIL")
+            self.assertions.append((label, False, 0.0))
+            return
+        frame = self.connection.latest_frame()
+        if frame is None:
+            self._on_log(f"node {node.id}: assert {label!r} -- no live frame available yet, FAIL")
+            self.assertions.append((label, False, 0.0))
+            return
+        frame_w, frame_h, frame_arr = frame
+        similarity = template.similarity(frame_w, frame_h, frame_arr, self.ref_w, self.ref_h)
+        passed = similarity >= template.threshold
+        self._on_log(
+            f"node {node.id}: assert {label!r} similarity={similarity:.3f} (threshold "
+            f"{template.threshold:.2f}) -> {'PASS' if passed else 'FAIL'}")
+        self.assertions.append((label, passed, similarity))
+
     def _sleep_frames(self, frames: int) -> None:
         remaining = frames * FRAME_MS * self.connection.time_scale / 1000.0
         step = 0.05
         while remaining > 0 and not self._stop.is_set():
             time.sleep(min(step, remaining))
             remaining -= step
+
+
+def summarize_assertions(assertions: list) -> str:
+    """One-line PASS/FAIL summary of a GameRunExecutor.assertions list, e.g.
+    "2/3 assertions passed (FAILED: cleared_gap)" -- shared formatting for the single-run
+    log line and the multi-run regression summary (see gui/main_window.py's
+    _run_all_game_runs), so both read the same way."""
+    if not assertions:
+        return "no assertions"
+    passed = sum(1 for _label, ok, _sim in assertions if ok)
+    total = len(assertions)
+    failed = [label for label, ok, _sim in assertions if not ok]
+    suffix = f" (FAILED: {', '.join(failed)})" if failed else ""
+    return f"{passed}/{total} assertion(s) passed{suffix}"

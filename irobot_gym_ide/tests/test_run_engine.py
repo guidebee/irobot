@@ -194,6 +194,88 @@ class CompareTest(unittest.TestCase):
 
 
 @unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
+class AssertTest(unittest.TestCase):
+    def _template_and_frame(self):
+        from ..model import ImageTemplate
+        frame = np.zeros((50, 100), dtype=np.uint8)
+        frame[10:30, 10:40] = 200
+        template = ImageTemplate.capture(
+            "hp_full", x=10, y=10, width=30, height=20,
+            frame_w=100, frame_h=50, frame=frame, ref_res_w=100, ref_res_h=50)
+        return template, frame
+
+    def test_matching_frame_records_a_pass_and_still_continues(self):
+        template, frame = self._template_and_frame()
+        actions = {"after": Action(name="after")}
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.ASSERT, template_name="hp_full", label="hp_ok"))
+        run.add_node(RunNode(id="n", kind=RunNodeKind.ACTION, action_name="after"))
+        run.add_edge(RunEdge(id="e1", source="a", target="n"))
+
+        connection = FakeConnection(frame=(100, 50, frame))
+        executor = GameRunExecutor(connection, actions, ref_w=100, ref_h=50, templates={"hp_full": template})
+        executor.run(run)
+        self.assertEqual(connection.calls, ["after"])
+        self.assertEqual(executor.assertions, [("hp_ok", True, 1.0)])
+
+    def test_non_matching_frame_records_a_fail_and_still_continues(self):
+        template, _ = self._template_and_frame()
+        empty_frame = np.zeros((50, 100), dtype=np.uint8)
+        actions = {"after": Action(name="after")}
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.ASSERT, template_name="hp_full", label="hp_ok"))
+        run.add_node(RunNode(id="n", kind=RunNodeKind.ACTION, action_name="after"))
+        run.add_edge(RunEdge(id="e1", source="a", target="n"))
+
+        connection = FakeConnection(frame=(100, 50, empty_frame))
+        executor = GameRunExecutor(connection, actions, ref_w=100, ref_h=50, templates={"hp_full": template})
+        executor.run(run)
+        self.assertEqual(connection.calls, ["after"])
+        self.assertEqual(len(executor.assertions), 1)
+        label, passed, _similarity = executor.assertions[0]
+        self.assertEqual((label, passed), ("hp_ok", False))
+
+    def test_unknown_template_records_a_fail(self):
+        actions: dict = {}
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a", kind=RunNodeKind.ASSERT, template_name="ghost", label="hp_ok"))
+        connection = FakeConnection()
+        executor = GameRunExecutor(connection, actions, ref_w=100, ref_h=50, templates={})
+        executor.run(run)
+        self.assertEqual(executor.assertions, [("hp_ok", False, 0.0)])
+
+    def test_label_defaults_to_node_id_when_unset(self):
+        template, frame = self._template_and_frame()
+        run = GameRun(name="r")
+        run.add_node(RunNode(id="a1", kind=RunNodeKind.ASSERT, template_name="hp_full"))
+        connection = FakeConnection(frame=(100, 50, frame))
+        executor = GameRunExecutor(connection, {}, ref_w=100, ref_h=50, templates={"hp_full": template})
+        executor.run(run)
+        self.assertEqual(executor.assertions[0][0], "a1")
+
+    def test_reset_assertions_clears_the_list(self):
+        executor = GameRunExecutor(FakeConnection(), {}, ref_w=100, ref_h=50)
+        executor.assertions.append(("x", True, 1.0))
+        executor.reset_assertions()
+        self.assertEqual(executor.assertions, [])
+
+
+class SummarizeAssertionsTest(unittest.TestCase):
+    def test_all_passed(self):
+        from ..run_engine import summarize_assertions
+        self.assertEqual(summarize_assertions([("a", True, 1.0), ("b", True, 1.0)]), "2/2 assertion(s) passed")
+
+    def test_some_failed_lists_their_labels(self):
+        from ..run_engine import summarize_assertions
+        result = summarize_assertions([("a", True, 1.0), ("b", False, 0.2)])
+        self.assertEqual(result, "1/2 assertion(s) passed (FAILED: b)")
+
+    def test_empty_list(self):
+        from ..run_engine import summarize_assertions
+        self.assertEqual(summarize_assertions([]), "no assertions")
+
+
+@unittest.skipUnless(HAVE_NUMPY, "numpy not installed")
 class FindTemplateTest(unittest.TestCase):
     def _template_and_frame(self):
         from ..model import ImageTemplate
@@ -281,6 +363,12 @@ class StopTest(unittest.TestCase):
         connection.run_action = run_action_then_stop
         executor.run(run)
         self.assertEqual(connection.calls, ["a"])
+
+    def test_stopped_reflects_stop_call(self):
+        executor = _executor(FakeConnection(), {})
+        self.assertFalse(executor.stopped)
+        executor.stop()
+        self.assertTrue(executor.stopped)
 
 
 class UnknownActionTest(unittest.TestCase):
