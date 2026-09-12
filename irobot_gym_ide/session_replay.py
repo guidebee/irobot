@@ -3,11 +3,11 @@
 Two independent modes over the same saved file, mirroring the two audiences
 model.GameplaySession's docstring describes:
 
-  replay_raw        -- sends `session.events` in order, unmodified. Since a
-                        session's events use the exact same PrimitiveEvent
-                        vocabulary/WAIT-gap convention as an Action's, this is
-                        just LiveConnection.run_action given a throwaway
-                        Action wrapping them -- no new sending logic needed.
+  replay_raw        -- sends `session.events` in order, unmodified. Walks
+                        events one at a time (rather than handing the whole
+                        list to LiveConnection.run_action in one call) so
+                        stop() can interrupt mid-replay, including mid-WAIT --
+                        see replay_raw's own comment for why that matters.
   replay_classified -- walks `session.segments` in recorded order, running
                         each one's named Action (looked up in the project's
                         own `actions`, not replayed from the session's raw
@@ -45,7 +45,7 @@ import threading
 import time
 
 from .connection import FRAME_MS, LiveConnection
-from .model import Action, EventKind, GameplaySession, frames_between as _frames_between
+from .model import EventKind, GameplaySession, frames_between as _frames_between
 
 
 class SessionPlayer:
@@ -62,13 +62,46 @@ class SessionPlayer:
         self._stop.set()
 
     def replay_raw(self, session: GameplaySession) -> None:
+        # Deliberately not a single LiveConnection.run_action() call: that
+        # delegates each WAIT to one uninterruptible time.sleep() for the
+        # whole gap, so stop() (below) would only ever take effect *between*
+        # whole-action calls -- never mid-replay. A raw session's WAIT gaps
+        # are real recorded pauses (can be seconds long), so this walks
+        # events one at a time and chunks WAITs through the same
+        # interruptible _sleep_frames() replay_classified already uses.
         self._stop.clear()
         self._on_log(f"Replaying session {session.name!r} raw ({len(session.events)} event(s))...")
-        action = Action(name=f"__session_raw__:{session.name}", events=session.events)
-        skipped = self.connection.run_action(action, self.ref_w, self.ref_h)
+        skipped = []
+        stopped_at = None
+        for i, event in enumerate(session.events):
+            if self._stop.is_set():
+                stopped_at = i
+                break
+            if event.kind == EventKind.WAIT:
+                self._sleep_frames(event.frames)
+            else:
+                reason = self.connection.send_primitive(event, self.ref_w, self.ref_h)
+                if reason is not None:
+                    skipped.append((i, reason))
+            # Explicit GIL yield every event, not just inside _sleep_frames's own
+            # loop: a real recorded session can have long runs of near-zero-gap
+            # events (e.g. drag samples recorded a video frame apart), and
+            # _sleep_frames(0) sleeps for literally 0s. Without a yield here, a
+            # tight run of hundreds/thousands of back-to-back blocking
+            # sendall()s on this worker thread was observed to starve the
+            # connection's own video _read_loop thread of the GIL for long
+            # enough that its socket's receive buffer backed up, which in turn
+            # blocked AgentStream::RunStream's send to it server-side (see
+            # docs -- this is what "video stops streaming when I start Replay
+            # Raw" traced back to, not a server bug on its own).
+            time.sleep(0)
         for i, reason in skipped:
             self._on_log(f"  event {i} skipped: {reason}")
-        self._on_log(f"Replayed session {session.name!r} raw.")
+        if stopped_at is not None:
+            self._on_log(f"Replay of session {session.name!r} raw stopped after "
+                         f"{stopped_at}/{len(session.events)} event(s).")
+        else:
+            self._on_log(f"Replayed session {session.name!r} raw.")
 
     def replay_classified(self, session: GameplaySession, project_actions: dict) -> None:
         self._stop.clear()

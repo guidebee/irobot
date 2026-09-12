@@ -11,15 +11,21 @@ from ..session_replay import SessionPlayer
 
 
 class FakeConnection:
-    """Records every action it's asked to run, in call order. `skip_reason`,
-    if given, is returned as a single (0, reason) skipped-event pair for
-    every run_action call, to exercise the skipped-event logging path."""
+    """Records every event/action it's asked to send, in call order.
+    `skip_reason`, if given, is returned for every send_primitive call (as a
+    plain string) or run_action call (as a single (0, reason) skipped-event
+    pair), to exercise the skipped-event logging path in both replay modes."""
 
     def __init__(self, skip_reason=None):
         self.calls = []
         self._lock = threading.Lock()
         self.skip_reason = skip_reason
         self.time_scale = 1.0
+
+    def send_primitive(self, event, ref_w: int, ref_h: int):
+        with self._lock:
+            self.calls.append(event)
+        return self.skip_reason
 
     def run_action(self, action: Action, ref_w: int, ref_h: int) -> list:
         with self._lock:
@@ -41,19 +47,24 @@ def _events(kinds_and_frames) -> list:
 
 
 class ReplayRawTest(unittest.TestCase):
-    def test_sends_all_events_as_one_action(self):
+    def test_sends_each_non_wait_event_individually(self):
+        # replay_raw walks events one at a time via send_primitive (not one
+        # run_action() call for the whole session) so stop() can interrupt
+        # mid-replay, including mid-WAIT -- see replay_raw's own docstring.
+        # WAIT events are slept, never handed to the connection.
         events = _events([(EventKind.TAP, 0), (EventKind.WAIT, 5), (EventKind.TAP, 0)])
         session = GameplaySession(name="s", events=events)
         connection = FakeConnection()
-        SessionPlayer(connection, ref_w=100, ref_h=200).replay_raw(session)
-        self.assertEqual(len(connection.calls), 1)
-        self.assertEqual(connection.calls[0].events, events)
+        with patch("irobot_gym_ide.session_replay.time.sleep"):
+            SessionPlayer(connection, ref_w=100, ref_h=200).replay_raw(session)
+        self.assertEqual(connection.calls, [events[0], events[2]])
 
     def test_logs_skipped_events(self):
         session = GameplaySession(name="s", events=_events([(EventKind.TAP, 0)]))
         connection = FakeConnection(skip_reason="not connected")
         logs = []
-        SessionPlayer(connection, ref_w=100, ref_h=200, on_log=logs.append).replay_raw(session)
+        with patch("irobot_gym_ide.session_replay.time.sleep"):
+            SessionPlayer(connection, ref_w=100, ref_h=200, on_log=logs.append).replay_raw(session)
         self.assertTrue(any("skipped: not connected" in line for line in logs))
 
 

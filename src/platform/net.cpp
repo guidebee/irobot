@@ -142,6 +142,29 @@ namespace irobot::platform
         return w;
     }
 
+    bool net_set_send_timeout(socket_t socket, int millis)
+    {
+#ifdef __WINDOWS__
+        // Windows' SO_SNDTIMEO takes a plain DWORD of milliseconds, unlike
+        // POSIX's struct timeval
+        DWORD timeout = (DWORD)millis;
+        int res = setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO,
+                             (const char*)&timeout, sizeof(timeout));
+#else
+        struct timeval timeout{};
+        timeout.tv_sec = millis / 1000;
+        timeout.tv_usec = (millis % 1000) * 1000;
+        int res = setsockopt(socket, SOL_SOCKET, SO_SNDTIMEO,
+                             (const char*)&timeout, sizeof(timeout));
+#endif
+        if (res == -1)
+        {
+            perror("setsockopt(SO_SNDTIMEO)");
+            return false;
+        }
+        return true;
+    }
+
     bool net_shutdown(socket_t socket, int how)
     {
         return !shutdown(socket, how);

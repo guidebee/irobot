@@ -50,8 +50,15 @@ namespace irobot::message
         void Destroy();
     };
 
-    // only allow 1 buffer, since video image is big,may cause OOM
-    struct BlobMessageQueue CBUF(BlobMessage, 2);
+    // Kept deliberately small since each queued message owns a full video frame's
+    // worth of malloc'd pixels (OOM risk if this grows unbounded) -- but capacity 2
+    // gave a single frame event (SendOpenCVImage pushes 2 messages: the mat + the
+    // phash screenshot) zero slack: any transient stall in AgentStream::RunStream
+    // (e.g. a slow client's net_send_all blocking the one broadcast thread) filled
+    // it immediately, silently dropping (and, until the AgentManager-side fix, also
+    // leaking) every frame after that -- see agent_manager.cpp's SendOpenCVImage and
+    // agent_stream.cpp's "video queue full" log. Bumped to give ~2 frames of slack.
+    struct BlobMessageQueue CBUF(BlobMessage, 4);
 }
 #endif //ANDROID_IROBOT_BLOB_MSG_HPP
 

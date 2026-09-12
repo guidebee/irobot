@@ -153,8 +153,20 @@ namespace irobot
             msg.Destroy();
             if (!ok)
             {
-                LOGD("Could not write msg to socket");
-                break;
+                // A single send() failure used to break out of this loop
+                // entirely, permanently ending ALL future control-message
+                // delivery to the device for the rest of the process's life --
+                // every message after that point still parsed, queued, and
+                // logged fine (AgentController runs on separate threads), so
+                // nothing downstream looked broken except the device itself
+                // silently never reacting to anything again. send() can fail
+                // transiently under load (e.g. a momentarily full OS send
+                // buffer during a fast burst of replayed touch events) without
+                // the underlying device connection actually being dead, so
+                // dropping just this one message and continuing is far safer
+                // than killing delivery outright. LOGW (not LOGD) so this is
+                // visible in a normal Release build too, not only Debug.
+                LOGW("Could not write control message to device socket, dropping it");
             }
         }
         return 0;

@@ -17,6 +17,9 @@ namespace irobot::agent
 {
     unsigned char data_buffer[BLOB_MSG_SERIALIZED_MAX_SIZE];
 
+    // see the comment above net_set_send_timeout()'s call site in RunAcceptor
+    static constexpr int kVideoSendTimeoutMs = 3000;
+
     bool AgentStream::Init(socket_t socket)
     {
         cbuf_init(&this->queue);
@@ -120,7 +123,8 @@ namespace irobot::agent
         }
         else
         {
-            LOGD("Queue is full,skip video frame");
+            LOGW("Video queue is full, dropping frame (type=%d) -- a client's connection may be "
+                 "backed up (see AgentStream::RunStream's per-session net_send_all)", (int)msg->type);
             return false;
         }
     }
@@ -166,6 +170,20 @@ namespace irobot::agent
                 // snapshotted -- just drop this straggler connection
                 platform::close_socket(&client);
                 continue;
+            }
+
+            // Without this, a client whose reader stalls/dies (rather than
+            // cleanly closing) leaves its receive window permanently full;
+            // RunStream's net_send_all() to it then blocks forever, which --
+            // since RunStream is the one thread broadcasting to every session
+            // -- freezes video for every *other* connected client too, not
+            // just the stuck one. A bounded timeout turns that into a
+            // dropped session after kVideoSendTimeoutMs, same as any other
+            // send failure (see RunStream's RemoveAndCloseSession call).
+            if (!platform::net_set_send_timeout(client, kVideoSendTimeoutMs))
+            {
+                LOGW("Could not set a send timeout on video client socket -- a stuck "
+                     "reader on this client could still freeze video for every client");
             }
 
             auto* session = new VideoSession();

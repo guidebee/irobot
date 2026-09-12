@@ -190,6 +190,18 @@ namespace irobot
             cmd[count++] = "control=false";
         }
 
+        // Temporary diagnostic: irobot_server's PositionMapper.map() silently
+        // drops any positional event whose screen_size doesn't exactly match
+        // its current videoSize, logging the mismatch (with both sizes) only
+        // at VERBOSE (Controller.java's getEventPointAndDisplayId, gated by
+        // Ln.isEnabled -- default threshold is INFO, so this is normally
+        // invisible even in the console the server itself prints to). Bumping
+        // it to verbose here is the only way to see that log at all when
+        // tracking down a touch that reaches the device but has no effect.
+        // Revert (remove this line) once no longer needed -- verbose mode is
+        // chatty for normal use.
+        cmd[count++] = "log_level=verbose";
+
 #ifdef SERVER_DEBUGGER
         LOGI("Server debugger waiting for a client on device port "
              SERVER_DEBUGGER_PORT "...");

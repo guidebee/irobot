@@ -62,6 +62,15 @@ namespace irobot::platform
 
     ssize_t net_send_all(socket_t socket, const void* buf, size_t len);
 
+    // Bounds how long a blocking send() on `socket` can take before failing
+    // with a timeout instead of hanging forever. Needed for any socket a
+    // single shared thread broadcasts to sequentially (see AgentStream::
+    // RunStream) -- without it, one client whose receive side stops draining
+    // (a crashed/stuck reader, not just a slow network) blocks that thread's
+    // net_send_all() indefinitely, which starves every *other* client's
+    // frames too, not just the stuck one's.
+    bool net_set_send_timeout(socket_t socket, int millis);
+
     // how is SHUT_RD (read), SHUT_WR (write) or SHUT_RDWR (both)
     bool net_shutdown(socket_t socket, int how);
 

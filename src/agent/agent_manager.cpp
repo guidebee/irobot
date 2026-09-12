@@ -7,6 +7,7 @@
 #include "ui/events.hpp"
 #include <sys/time.h>
 #include <iostream>
+#include <SDL2/SDL_timer.h>
 #include "util/log.hpp"
 #include "util/lock.hpp"
 #include "util/buffer_util.hpp"
@@ -47,6 +48,20 @@ namespace irobot::agent
     // listen backlog needs more than the single pending connection the
     // default allows
     static constexpr int kAgentListenBacklog = 16;
+
+    // Encoding a video frame for agent clients (resize + optional colour
+    // convert + phash, x2 per frame -- see SendOpenCVImage) runs synchronously
+    // on the same thread that pumps every SDL event and renders the on-screen
+    // mirror (InputManager::EventLoop -> HandleEvent). Decoder::PushFrame fires
+    // EVENT_NEW_OPENCV_FRAME once per *rendered* device frame, uncapped -- for
+    // a fast-paced game that's 30-60/s of encode work with no client able to
+    // consume it that fast anyway: irobot_gym_ide's canvas only polls the
+    // latest frame every POLL_MS (main_window.py), which this mirrors.
+    // Encoding faster than that just steals CPU from the same thread's own
+    // event pump, which is what let VideoBuffer::OfferDecodedFrame's
+    // previous-frame-skipped logic start dropping frames under load -- i.e.
+    // exactly the "video can't catch up" symptom.
+    static constexpr Uint32 kMinVideoSendIntervalMs = 66;
 
     bool AgentManager::Init(uint16_t port)
     {
@@ -121,7 +136,11 @@ namespace irobot::agent
             agent_manager->StopRecordEvents();
             break;
         default:
-            agent_manager->controller->PushMessage(msg);
+            if (!agent_manager->controller->PushMessage(msg))
+            {
+                LOGW("Could not forward control message (type=%d) to the device controller "
+                     "-- its outgoing queue is full", (int)msg->type);
+            }
         }
     }
 
@@ -222,8 +241,6 @@ namespace irobot::agent
         {
             auto mat = ai::ConvertToMat(*this->video_buffer, max_size,
                                         color);
-            cv::Mat hashImage;
-            hashImage = computePHash(mat);
 
             unsigned char* data = mat.data;
             int width = mat.size().width;
@@ -235,7 +252,6 @@ namespace irobot::agent
             Uint64 milli_seconds = tm_now.tv_sec * 1000LL + tm_now.tv_usec / 1000;
             msg.timestamp = milli_seconds;
             msg.id = 0;
-            msg.count = 2;
             msg.total_length = 0;
             bool ok = true;
             int length = mat.total() * mat.elemSize();
@@ -255,26 +271,52 @@ namespace irobot::agent
             }
             msg.total_length += length + 24;
 
-            length = hashImage.total() * hashImage.elemSize();
-            width = hashImage.size().width;
-            height = hashImage.size().height;
-            size = length + 16;
-            data = hashImage.data;
-            msg.buffers[1].data = (unsigned char*)SDL_malloc(size);
-            if (msg.buffers[1].data != nullptr)
+            // Only BLOB_MSG_TYPE_SCREEN_SHOT's phash is ever read on the client
+            // side (irobot_gym_ide's LiveConnection.latest_thumbnail(), for the
+            // thumbnail view's change-detection) -- OPENCV_MAT's phash buffer
+            // was being computed, serialized, and sent on *every* frame for a
+            // value connection.py's latest_frame() never even reads (it only
+            // takes buffers[0]). Skipping it here removes one full
+            // (resize-to-32x32 + DCT) from every OPENCV_MAT frame.
+            if (type == message::BLOB_MSG_TYPE_SCREEN_SHOT)
             {
-                util::buffer_write64be(msg.buffers[1].data, (uint64_t)width);
-                util::buffer_write64be(msg.buffers[1].data + 8, (uint64_t)height);
-                memcpy(msg.buffers[1].data + 16, data, length);
-                msg.buffers[1].length = length;
+                cv::Mat hashImage = computePHash(mat);
+                length = hashImage.total() * hashImage.elemSize();
+                width = hashImage.size().width;
+                height = hashImage.size().height;
+                size = length + 16;
+                data = hashImage.data;
+                msg.buffers[1].data = (unsigned char*)SDL_malloc(size);
+                if (msg.buffers[1].data != nullptr)
+                {
+                    util::buffer_write64be(msg.buffers[1].data, (uint64_t)width);
+                    util::buffer_write64be(msg.buffers[1].data + 8, (uint64_t)height);
+                    memcpy(msg.buffers[1].data + 16, data, length);
+                    msg.buffers[1].length = length;
+                }
+                else
+                {
+                    LOGW("Unable to allow memory");
+                    ok = false;
+                }
+                msg.total_length += length + 24;
+                msg.count = 2;
             }
             else
             {
-                LOGW("Unable to allow memory");
+                msg.count = 1;
+            }
+            if (ok && !this->agent_stream->PushMessage(&msg))
+            {
+                // queue was full and the message was never handed off -- free what
+                // was malloc'd above ourselves, or it leaks every time the video
+                // queue backs up (see AgentStream::PushMessage / blob_msg.hpp)
                 ok = false;
             }
-            msg.total_length += length + 24;
-            if (ok) this->agent_stream->PushMessage(&msg);
+            if (!ok)
+            {
+                msg.Destroy();
+            }
         }
     }
 
@@ -339,8 +381,13 @@ namespace irobot::agent
             //LOGD("Agent Manager received Opencv Frame %d\r", this->video_buffer->frame_number);
             {
                 this->SendResolution();
-                this->SendOpenCVImage(message::BLOB_MSG_TYPE_OPENCV_MAT, 800, false);
-                this->SendOpenCVImage(message::BLOB_MSG_TYPE_SCREEN_SHOT, 240, true);
+                Uint32 now = SDL_GetTicks();
+                if (now - this->last_video_send_ticks >= kMinVideoSendIntervalMs)
+                {
+                    this->SendOpenCVImage(message::BLOB_MSG_TYPE_OPENCV_MAT, 800, false);
+                    this->SendOpenCVImage(message::BLOB_MSG_TYPE_SCREEN_SHOT, 240, true);
+                    this->last_video_send_ticks = now;
+                }
             }
             util::mutex_unlock(this->video_buffer->mutex);
             return ui::EVENT_RESULT_CONTINUE;

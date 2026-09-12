@@ -42,6 +42,13 @@ namespace irobot::agent
         int last_resolution_width = 0;
         int last_resolution_height = 0;
 
+        // SDL_GetTicks() at the last video frame actually encoded/sent to
+        // agent clients -- throttles EVENT_NEW_OPENCV_FRAME handling to
+        // kMinVideoSendIntervalMs (agent_manager.cpp) instead of running the
+        // encode pipeline at the device's native decode rate. Public for the
+        // same aggregate-initializer reason as last_resolution_width/height above.
+        Uint32 last_video_send_ticks = 0;
+
         bool Init(uint16_t port);
 
         bool Start();

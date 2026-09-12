@@ -286,11 +286,27 @@ def segment_into_gestures(touches: list) -> list:
     return finished
 
 
-def _scale_touch(touch, raw_x_max: int, raw_y_max: int, ref_w: int, ref_h: int, rotation: int):
-    if touch.x is None or touch.y is None:
+def _scale_touch(x, y, raw_x_max: int, raw_y_max: int, ref_w: int, ref_h: int, rotation: int):
+    if x is None or y is None:
         return None, None
-    x, y, x_max, y_max = apply_rotation(touch.x, touch.y, raw_x_max, raw_y_max, rotation)
+    x, y, x_max, y_max = apply_rotation(x, y, raw_x_max, raw_y_max, rotation)
     return round(x / x_max * ref_w), round(y / y_max * ref_h)
+
+
+def _first_known_position(gesture: list):
+    """The touch controller can report a slot's ABS_MT_TRACKING_ID (this
+    finger went down) in one SYN_REPORT frame and its first
+    ABS_MT_POSITION_X/Y in the next (see TouchStateMachine._flush, which
+    already has to guard "move" samples the same way) -- so a gesture's own
+    "down" sample can legitimately have x=y=None. Used as a fallback position
+    for that DOWN/TAP instead of sending it with null coordinates, which the
+    device's JSON parser rejects outright, silently dropping that whole
+    control message (that finger, and anything chained after it in the same
+    combo, simply never happens during replay -- see _gesture_to_timed_events)."""
+    for touch in gesture:
+        if touch.x is not None and touch.y is not None:
+            return touch.x, touch.y
+    return None, None
 
 
 def _gesture_to_timed_events(gesture: list, raw_x_max: int, raw_y_max: int, ref_w: int, ref_h: int,
@@ -312,7 +328,9 @@ def _gesture_to_timed_events(gesture: list, raw_x_max: int, raw_y_max: int, ref_
     if not gesture or raw_x_max <= 0 or raw_y_max <= 0:
         return []
 
-    first_x, first_y = gesture[0].x, gesture[0].y
+    fallback_x, fallback_y = _first_known_position(gesture)
+    first_x = gesture[0].x if gesture[0].x is not None else fallback_x
+    first_y = gesture[0].y if gesture[0].y is not None else fallback_y
     max_delta = 0
     if first_x is not None and first_y is not None:
         for touch in gesture:
@@ -321,15 +339,18 @@ def _gesture_to_timed_events(gesture: list, raw_x_max: int, raw_y_max: int, ref_
     duration = gesture[-1].t - gesture[0].t
 
     if max_delta < tap_threshold_px and duration < tap_duration_s:
-        x, y = _scale_touch(gesture[0], raw_x_max, raw_y_max, ref_w, ref_h, rotation)
+        x, y = _scale_touch(first_x, first_y, raw_x_max, raw_y_max, ref_w, ref_h, rotation)
         return [(gesture[0].t, PrimitiveEvent(kind=EventKind.TAP, pointer_id=pointer_id, x=x, y=y))]
 
     timed = []
     for touch in gesture:
-        x, y = _scale_touch(touch, raw_x_max, raw_y_max, ref_w, ref_h, rotation)
         if touch.kind == "down":
+            x, y = _scale_touch(fallback_x if touch.x is None else touch.x,
+                                 fallback_y if touch.y is None else touch.y,
+                                 raw_x_max, raw_y_max, ref_w, ref_h, rotation)
             timed.append((touch.t, PrimitiveEvent(kind=EventKind.PRESS, pointer_id=pointer_id, x=x, y=y)))
         elif touch.kind == "move":
+            x, y = _scale_touch(touch.x, touch.y, raw_x_max, raw_y_max, ref_w, ref_h, rotation)
             if x is not None and y is not None:
                 timed.append((touch.t, PrimitiveEvent(kind=EventKind.MOVE, pointer_id=pointer_id, x=x, y=y)))
         elif touch.kind == "up":
@@ -342,14 +363,31 @@ def _insert_wait_gaps(timed_events: list) -> list:
     returns the flat PrimitiveEvent list with a WAIT inserted between any two
     consecutive events whose real recorded gap rounds to >0 frames (same
     FRAME_MS assumption connection.py's own WAIT playback makes -- there's no
-    real frame-rate handshake on the wire, see its comment)."""
+    real frame-rate handshake on the wire, see its comment).
+
+    Tracks frames against the *cumulative* real elapsed time (round(total_ms /
+    FRAME_MS) - frames already emitted), not each gap in isolation. A raw
+    touch stream can sample every few ms (getevent), so most individual gaps
+    round to 0 frames on their own -- rounding each one independently, against
+    only its own immediately preceding sample, discarded that leftover time
+    for good instead of carrying it forward, so a real one-second drag with
+    dozens of sub-frame gaps could replay with its *entire* duration collapsed
+    to zero pacing (every event fired back-to-back). Comparing against the
+    cumulative target instead preserves the real total duration; for gaps
+    already much larger than one frame (the common case) this produces
+    exactly the same per-gap frame count as before."""
     events = []
     prev_t = None
+    total_ms = 0.0
+    emitted_frames = 0
     for t, event in timed_events:
         if prev_t is not None:
-            gap_frames = round((t - prev_t) * 1000 / FRAME_MS)
+            total_ms += (t - prev_t) * 1000
+            target_frames = round(total_ms / FRAME_MS)
+            gap_frames = target_frames - emitted_frames
             if gap_frames > 0:
                 events.append(PrimitiveEvent(kind=EventKind.WAIT, pointer_id=event.pointer_id, frames=gap_frames))
+                emitted_frames = target_frames
         events.append(event)
         prev_t = t
     return events

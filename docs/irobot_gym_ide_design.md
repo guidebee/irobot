@@ -463,6 +463,222 @@ and the full GUI flow was re-run offscreen with the same raw coordinates through
 `_toggle_device_recording()`/`_finish_device_recording()`, confirming the fix holds through the
 actual code path a user hits, not just the underlying library function.
 
+## 12. Live agent-connection bugs found chasing a real playthrough (2026-09-12)
+
+Session paused mid-investigation -- picking this back up should start by re-reading this section,
+not by re-diagnosing from scratch. Everything under "Fixed" below is rebuilt into *both*
+`build/apps/irobot.exe` (Release) and `build-debug/apps/irobot.exe` (Debug) as of this session, plus
+the `irobot_gym_ide` Python changes; everything under "Root-caused but not yet confirmed" is a
+mitigation already committed to source but not yet exercised against a live device.
+
+### Fixed
+
+- **`AgentStream` had zero slack in its video queue and leaked on every drop.** Each frame tick
+  pushes 2 `BlobMessage`s (the opencv mat + the phash screenshot), but the queue
+  (`message::BlobMessageQueue`, `src/message/blob_msg.hpp`) had capacity exactly 2 -- any transient
+  stall in `RunStream`'s broadcast loop filled it instantly, and a dropped push's malloc'd pixel
+  buffers were never freed (`AgentManager::SendOpenCVImage`/`SendResolution`, `agent_manager.cpp`).
+  Bumped capacity to 4, freed the buffers on a failed push, and turned the drop log from an
+  invisible `LOGD` into a visible `LOGW` naming the message type.
+- **One stuck video client could freeze video for every client, forever.** `RunStream`
+  (`agent_stream.cpp`) broadcasts to every session sequentially on one thread with a blocking
+  `send()` and no timeout; a client whose receive side stops draining (not just slow -- genuinely
+  stuck) blocks that one call indefinitely, wedging the queue-full state above permanently for
+  everyone. Fixed with a new `platform::net_set_send_timeout()` (`net.hpp`/`net.cpp`, handles the
+  Windows-DWORD vs POSIX-`timeval` `SO_SNDTIMEO` difference), applied to every accepted video socket
+  in `AgentStream::RunAcceptor` (3s) -- a stuck client now drops via the existing send-failure path
+  instead of blocking the broadcaster forever.
+- **No visibility into received control messages.** `AgentController::ProcessMessages`
+  (`agent_controller.cpp`) silently processed or silently dropped every incoming JSON frame. Now
+  logs every successfully parsed message (`Control client #N: received {json}`) and warns on a
+  parse failure (with the raw bytes) or on the device-controller queue rejecting a forward
+  (`agent_manager.cpp`). The per-message success log is **Debug-only** (`#ifndef NDEBUG`, which
+  CMake defines for Release automatically -- confirmed via `grep -c NDEBUG` on each build's
+  `compile_commands.json`: 71 hits in `build/`, 0 in `build-debug/`) since it fires on every single
+  touch/key event; the parse-failure and forwarding-failure warnings stay visible in both builds.
+  **Run `build-debug/apps/irobot.exe`, not the Release one, to see per-message logging.**
+- **Session deletion was missing from the IDE.** Added `io.delete_session()`, a "Delete Session"
+  button in `SessionsPanel`, and a confirming `MainWindow._delete_session()` (blocks if a recording
+  or replay is in flight, confirms via `QMessageBox` since it's an unrecoverable file delete).
+- **Stop Replay never worked for Replay Raw, only Replay Classified.**
+  `SessionPlayer.replay_raw()` (`session_replay.py`) delegated the whole event list to one
+  `LiveConnection.run_action()` call, whose own `WAIT` handling is one uninterruptible
+  `time.sleep()` for the entire gap -- `stop()` had no point at which to take effect.
+  `replay_classified()` already avoided this by walking segments itself through the interruptible
+  `_sleep_frames()` helper; `replay_raw()` now does the same, walking events one at a time and
+  checking `_stop` before each one (including mid-WAIT).
+
+### Root-caused but not yet confirmed live
+
+- **Video stops streaming specifically when Replay Raw starts**, with the "queue full" warning
+  above repeating continuously and never recovering (in a window well past the 3s send-timeout).
+  Root cause traced (not yet confirmed) to the *Python* side, not a further server bug: a real
+  recorded session can contain long runs of near-zero-gap events (drag/touch samples a video frame
+  or less apart), and `_sleep_frames(0)` sleeps for literally 0 seconds -- so `replay_raw`'s worker
+  thread was running a tight loop of hundreds/thousands of back-to-back blocking `sendall()` calls
+  with no yield point. Hypothesis: this starves `LiveConnection`'s own video `_read_loop` thread of
+  the GIL long enough that its socket stops draining, which then blocks `RunStream`'s send to it
+  server-side -- i.e. the client causes the exact stuck-client scenario the send-timeout fix
+  guards against, rather than the timeout fix being wrong. Mitigation applied: an explicit
+  `time.sleep(0)` GIL yield after every event in `replay_raw`'s loop (whether or not that event was
+  a WAIT). **Not yet re-tested against a live device.**
+
+### Next steps when resuming
+
+1. Restart `build-debug/apps/irobot.exe` (not `build/`) and the IDE, reconnect, and try Replay Raw
+   again. Watch for both: does the video survive, and does Stop Replay now take effect within
+   about a second?
+2. If video still stalls, note whether it recovers after ~3s (send-timeout doing its job, but the
+   client immediately re-triggers the same starvation) or hangs indefinitely (a different bug from
+   the one diagnosed here). That distinguishes "yield mitigation insufficient" from "wrong root
+   cause."
+3. If confirmed fixed, consider whether Release should get *some* control-message visibility (e.g.
+   a periodic rate/count rather than full per-message JSON) for production diagnosability, or
+   whether Debug-only is fine long-term.
+4. Unrelated housekeeping noticed but not touched this session: `git status` shows
+   `recordings/level1.session.yaml` modified and `recordings/level2.session.yaml` deleted under
+   `examples/mario_platformer/` -- looked like the user's own live device-recording/session-delete
+   testing, not left as a stray side effect of any fix above, but worth a glance before committing.
+
+## 13. Replay Raw reliability chase (2026-09-12, continued same day after §12's pause)
+
+Resuming should start here, not by re-deriving from scratch. This picks up exactly where §12's
+"next steps" left off (confirming the video-stall-during-replay fix), goes substantially further,
+and ends mid-investigation again — the trail is fully marked below for where to pick it back up.
+
+### Fixed today (rebuilt into both `build/apps/irobot.exe` and `build-debug/apps/irobot.exe`)
+
+1. **General video lag, not replay-specific** (reported first: "IDE streaming is laggy, cannot
+   catch up to device video"). Root cause: `AgentManager::HandleEvent`'s `EVENT_NEW_OPENCV_FRAME`
+   case ran a full `ConvertToMat` + `computePHash` (resize-to-32×32 + DCT) **twice per frame**,
+   synchronously on the same thread that pumps every other SDL event and renders the on-screen
+   mirror — uncapped, at the device's native decode rate (30–60/s for a fast game). Fixed by (a)
+   throttling that whole encode path to once per 66ms (matches `irobot_gym_ide/gui/main_window.py`'s
+   own `POLL_MS` — nothing ever consumed frames faster than that anyway) and (b) no longer
+   computing/sending a phash for `BLOB_MSG_TYPE_OPENCV_MAT` at all — `connection.py`'s
+   `latest_frame()` never reads that buffer; only `BLOB_MSG_TYPE_SCREEN_SHOT`'s phash
+   (`latest_thumbnail()`) is ever used.
+2. **Headless mode's event loop was a 100%-CPU busy-spin.** `irobot_core.cpp`'s headless branch
+   used `while (!quit) { while (SDL_PollEvent(&event)) {...} }` — `SDL_PollEvent` never blocks, so
+   an empty queue was a tight spin, not an idle wait. Replaced with
+   `while (!quit && SDL_WaitEvent(&event)) {...}` — identical per-event handling, no more spinning.
+   This is what made `--headless --max-fps 30` a viable fix for the video lag above.
+3. **Replay-time overhead**: removed `AgentController::ProcessMessages`' Debug-only per-control-message
+   `LOGI` (`agent_controller.cpp`) — synchronous console output on every single touch/key event was
+   adding real, visible latency to a dense Replay Raw run.
+4. **`Controller`'s outbound-to-device queue (`control_msg.hpp`) was only 64 deep**, easily
+   overrun by a dense replay burst (a real recorded drag can have dozens of near-frame-apart
+   samples). Bumped to 512 — cheap, since each entry is a small fixed-size struct.
+5. **Stop Replay could permanently orphan a running replay thread.** `MainWindow._run_session_replay`
+   (`gui/main_window.py`) never checked whether a previous replay was still running before starting
+   a new one — clicking Replay again while one was in flight overwrote `self._session_player`,
+   silently orphaning the first thread (Stop Replay could then only ever reach the newest one) while
+   both threads raced on the same connection. Fixed by tracking the worker thread and refusing to
+   start a new replay while the previous one `.is_alive()`.
+6. **`device_recorder.py` sent `PRESS` events with null coordinates.** A real touch controller can
+   report `ABS_MT_TRACKING_ID` (finger down) one `SYN_REPORT` frame before its first
+   `ABS_MT_POSITION_X/Y` — `TouchStateMachine._flush()` already guarded this for `"move"` samples
+   but not `"down"` samples, so a `PRESS` could carry `x=None, y=None`, which serializes to JSON
+   `null` and gets flatly rejected by the C++ side's parser (`[json.exception.type_error.302] type
+   must be number, but is null`) — silently dropping that whole control message, and with it that
+   finger (and anything chained after it in the same combo). Fixed by falling back to the gesture's
+   first *known* position (`_first_known_position`) whenever the down sample itself has none.
+7. **`device_recorder.py`'s WAIT-gap rounding silently discarded real elapsed time.**
+   `_insert_wait_gaps` rounded each individual gap to the nearest frame *independently*, comparing
+   only to the immediately preceding sample — any real gap under ~16ms (very common for raw touch
+   samples a few ms apart) rounded to 0 frames and vanished for good, no carry-forward. A real
+   one-second drag with dozens of such gaps could replay with its *entire* duration collapsed to
+   zero pacing, firing every event back-to-back. Fixed with a cumulative accumulator
+   (`round(total_elapsed_ms / FRAME_MS) - frames_already_emitted`) that preserves real total elapsed
+   time; produces byte-identical output to before for any gap already much larger than one frame
+   (the previously-tested case).
+8. **A single failed `send()` to the device permanently killed all future control delivery.**
+   `Controller::RunController` (`core/controller.cpp`) used to `break` its loop entirely on any
+   write failure — every message after that point still parsed/queued/logged fine on other threads
+   (nothing looked broken), but nothing ever reached the device again for the rest of that process's
+   life. `send()` can fail transiently under load (e.g. a momentarily full OS send buffer during a
+   fast replay burst) without the device connection actually being dead. Fixed to log a visible
+   warning and drop just that one message, not the whole pipeline.
+9. **Diagnostic added, not a fix**: `device_server.cpp` now passes `log_level=verbose` to
+   `irobot-server` on launch. `irobot_server`'s `PositionMapper.map()` (a **pre-existing, untouched
+   today** file) silently returns `null` — and `Controller.java`'s caller silently drops the event —
+   whenever a positional event's `screen_size` doesn't exactly match the current `videoSize`,
+   logging only at VERBOSE (`Ln`'s default threshold is INFO, so this was normally invisible even in
+   the console `irobot-server` itself prints to). This is a **temporary** addition — revert (drop
+   the `log_level=verbose` line) once no longer needed, since verbose is chatty for normal use.
+
+### Still open — pick up here tomorrow
+
+**Symptom**: with everything above fixed and both binaries rebuilt/confirmed current, replaying a
+recording that's been checked programmatically and is completely clean (`level1.session.yaml` —
+1050 events, 36 press/36 release perfectly balanced, no orphans, no null coordinates, all x/y in
+bounds, matches the project's `2670x1200` reference exactly) still sometimes has **no effect on the
+device at all**, while `irobot.exe`'s own console shows every single control message being
+received, parsed, queued, and written to the device socket successfully — no warnings anywhere in
+the C++ pipeline (queue-full / write-failure / parse-failure are all silent).
+
+**Ruled out this session:**
+- IDE-side resolution mismatch — user re-applied "Apply Detected Resolution" (2670×1200) multiple
+  times, matches `project.yaml` exactly.
+- `PositionMapper.map()` silently returning `null` for a `screen_size` mismatch — confirmed via the
+  new `log_level=verbose` diagnostic (§9 above): the "Ignore positional event..." VERBOSE line never
+  appears during a failing replay, so `map()` is succeeding.
+- `adb shell getevent -lt` showing nothing during replay — **this was a mistake to suggest, now
+  retracted.** `getevent` only sees raw kernel/digitizer events; `irobot_server` injects touches via
+  Android's software `InputManager.injectInputEvent()` API, which never touches the kernel input
+  layer at all (the exact same limitation §11 already found and documented for a different feature:
+  "`adb shell input tap`... injects at Android's software input layer... `getevent` never sees it").
+  So "no new message" there is uninformative either way, not a signal of anything.
+- Anything from today's C++/Python changes causing a regression — checked the full diff item by
+  item (see list above): all either video-only, additive/permissive (bigger queues, warnings
+  replacing silent drops), or the one structural change (headless's `SDL_PollEvent`→`SDL_WaitEvent`
+  rewrite) which processes the identical set of events, just without busy-spinning between them. No
+  mechanism found by which any of today's changes would suppress touch delivery.
+- **`irobot_server/` (the Android app) has zero uncommitted changes today** (`git status --short --
+  irobot_server/` is empty) — whatever's swallowing the touch after it leaves `irobot.exe` is
+  pre-existing code, not something introduced this session.
+
+**Where the trail was cut off, resume here**: traced the call chain in `irobot_server/app/src/main/
+java/com/guidebee/irobot/`:
+`control/Controller.java`'s `injectTouch()` (~line 512) builds a real `MotionEvent` and calls
+`device/Device.java:62`'s `injectEvent(event, targetDisplayId, Device.INJECT_MODE_ASYNC)`, which
+calls `ServiceManager.getInputManager().injectInputEvent(...)` — a reflection wrapper
+(`wrappers/InputManager.java:48`) around the hidden `android.hardware.input.InputManager
+.injectInputEvent()` API. That wrapper logs on a `SecurityException` (permission problem, rate-
+limited to one log per 3s) and on any other `ReflectiveOperationException` — but if the underlying
+framework call simply returns `false` with **no exception** (e.g. a stale/wrong `targetDisplayId`,
+no focused window, an InputDispatcher-level rejection), **nothing logs that, at any level.** That's
+the one remaining code path capable of silently swallowing an otherwise-perfectly-delivered touch,
+and tracing it further is where this got interrupted.
+
+### Next steps when resuming
+
+1. Add a log line in `injectInputEvent()` (`wrappers/InputManager.java:48`) for the plain-`false`
+   return path specifically (not just the exception path) — e.g. `Ln.w("injectInputEvent returned
+   false for " + inputEvent)` — rebuild `irobot-server` (see [[project_build_server]] /
+   `build_server.sh`) and push it, then reproduce and check whether this fires during a failing
+   replay.
+2. If it fires: the next question is *why* — check `targetDisplayId`
+   (`getEventPointAndDisplayId`, `Controller.java:482`, sourced from `displayData.virtualDisplayId`)
+   against whatever the real foreground/virtual display id actually is at replay time. A stale
+   display id surviving a reconnect is a plausible, silent, exception-free reason
+   `injectInputEvent` would legitimately return `false`.
+3. If it never fires (every call returns `true`): the touch is being accepted and dispatched by the
+   framework successfully — at that point this stops being an `irobot` bug at all, and becomes "why
+   doesn't the game react to a real, successfully-dispatched touch" (app focus / game state /
+   timing), which needs a different investigation entirely.
+4. Also worth cleanly ruling out, since it's the one *structural* (not just additive) C++ change
+   today: run one test with `--headless` removed (plain windowed mode), to eliminate the
+   `SDL_PollEvent`→`SDL_WaitEvent` headless-loop rewrite as a variable — even though no mechanism for
+   it affecting control delivery was found on read-through.
+5. Remove `log_level=verbose` from `device_server.cpp` once this is resolved (see §9 above) — it's
+   a deliberate temporary diagnostic, not meant to ship permanently.
+6. Housekeeping: `irobot_gym_ide/examples/mario_platformer/recordings/` churned a lot today (the
+   user's own live recording/replay testing — `level1.session.yaml` was re-recorded/overwritten
+   several times, transient `level1-1`/`level1-3` files appeared and were cleaned up); only
+   `level1.session.yaml` remains as of this writing, already verified structurally clean (see
+   "Fixed today" item 6/7's verification above).
+
 ## Phase 2 (not yet built) — reward / score extraction
 
 Deferred exactly as scoped ("let's first focus on action definitions"). When picked up, it should

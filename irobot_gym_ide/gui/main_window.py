@@ -90,6 +90,7 @@ class MainWindow(QMainWindow):
         self._session_recording_axis_ranges = None
         self._session_recording_rotation = 0
         self._session_player: SessionPlayer | None = None
+        self._replay_thread: threading.Thread | None = None
         self._session_signals = _RunSignals()
         self._session_signals.logLine.connect(lambda text: self._log_line(text))
         self._selected_run: GameRun | None = None
@@ -277,6 +278,7 @@ class MainWindow(QMainWindow):
         self._sessions_panel.replay_raw_btn.clicked.connect(self._replay_session_raw)
         self._sessions_panel.replay_classified_btn.clicked.connect(self._replay_session_classified)
         self._sessions_panel.stop_replay_btn.clicked.connect(self._stop_session_replay)
+        self._sessions_panel.delete_session_btn.clicked.connect(self._delete_session)
         self._sessions_panel.match_tolerance_spin.valueChanged.connect(self._on_match_tolerance_changed)
         self._record_session_btn = self._sessions_panel.record_session_btn
         self._session_list = self._sessions_panel.session_list
@@ -1346,7 +1348,40 @@ class MainWindow(QMainWindow):
             return None
         return Path(item.data(Qt.UserRole))
 
+    def _delete_session(self) -> None:
+        path = self._selected_session_path()
+        if path is None:
+            return
+        if self._session_recorder is not None:
+            self._log_line("Delete Session BLOCKED: stop the in-progress recording first.")
+            return
+        if self._session_player is not None:
+            self._log_line("Delete Session BLOCKED: stop the in-progress replay first.")
+            return
+        name = path.stem.removesuffix(".session")
+        reply = QMessageBox.question(
+            self, "Delete Session",
+            f"Delete session {name!r}?\n\n{path}\n\nThis removes the recording file permanently "
+            f"and cannot be undone.",
+            QMessageBox.Yes | QMessageBox.No)
+        if reply != QMessageBox.Yes:
+            return
+        project_io.delete_session(path)
+        self._refresh_session_list()
+        self._log_line(f"Deleted session {name!r} ({path}).")
+
     def _run_session_replay(self, mode: str) -> None:
+        # Without this guard, clicking Replay again while a previous replay's
+        # worker thread is still running (e.g. because Stop Replay appeared to
+        # do nothing) silently orphaned that thread: self._session_player got
+        # overwritten with a brand-new SessionPlayer, so Stop Replay could
+        # only ever reach the *new* one, while the old thread kept sending
+        # events -- with both threads now racing on the same connection --
+        # forever unstoppable from the UI. That's what made replayed events
+        # land out of sync with the actual on-screen game state.
+        if self._replay_thread is not None and self._replay_thread.is_alive():
+            self._log_line("Replay already in progress -- stop it first.")
+            return
         path = self._selected_session_path()
         if path is None:
             return
@@ -1370,7 +1405,8 @@ class MainWindow(QMainWindow):
             else:
                 self._session_player.replay_classified(session, self.project.actions)
 
-        threading.Thread(target=worker, daemon=True).start()
+        self._replay_thread = threading.Thread(target=worker, daemon=True)
+        self._replay_thread.start()
 
     def _replay_session_raw(self) -> None:
         self._run_session_replay("raw")

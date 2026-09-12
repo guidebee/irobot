@@ -135,7 +135,19 @@ namespace irobot::message
         static uint16_t ToFixedPoint16(float f);
     };
 
-    struct ControlMessageQueue CBUF(ControlMessage, 64);
+    // Sits between AgentManager forwarding an agent client's control messages
+    // and Controller::RunController's single-threaded send to the real
+    // device socket (core/controller.cpp) -- the real bottleneck under load
+    // is that device link (adb/USB), not this queue. A dense replay (e.g.
+    // irobot_gym_ide's Replay Raw, a real recorded drag with many near-frame
+    // gaps) can burst far more than 64 messages before the device drains
+    // them; anything landing on a full queue is silently dropped
+    // (Controller::PushMessage), which is exactly what turned "replay
+    // sometimes doesn't match what was recorded" into "some messages never
+    // arrived at all". Bumped for headroom -- each entry is a small,
+    // fixed-size struct (occasional heap text for clipboard/IME messages), so
+    // this costs nothing at rest.
+    struct ControlMessageQueue CBUF(ControlMessage, 512);
 
     typedef void (*MessageHandler)(void* entity, ControlMessage* msg);
 }

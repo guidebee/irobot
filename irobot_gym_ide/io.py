@@ -129,6 +129,13 @@ def list_sessions(project_path) -> list:
     return sorted(directory.glob(f"*{SESSION_SUFFIX}"))
 
 
+def delete_session(path) -> None:
+    """Deletes the session file at `path` (as returned by list_sessions).
+    No-op if it's already gone."""
+    p = Path(path)
+    p.unlink(missing_ok=True)
+
+
 def _dump(path: Path, data: dict) -> None:
     with open(path, "w", encoding="utf-8") as f:
         yaml.safe_dump(data, f, sort_keys=False, allow_unicode=True)

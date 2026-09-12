@@ -208,6 +208,11 @@ namespace irobot::agent
             {
                 ProcessMessage(&msg);
             }
+            else
+            {
+                LOGW("Control client #%d: could not parse %u-byte frame as a control message: %.*s",
+                     session->id, payload_len, (int)payload_len, &session->buf[head + kFrameHeaderSize]);
+            }
             msg.Destroy();
             head += kFrameHeaderSize + payload_len;
             assert(head <= len);

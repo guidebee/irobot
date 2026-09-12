@@ -364,23 +364,26 @@ namespace irobot
             SDL_Event event;
             bool quit = false;
             InputManager::SwitchFpsCounterState(&fps_counter);
-            while (!quit)
+            // SDL_WaitEvent, not SDL_PollEvent -- the previous SDL_PollEvent
+            // busy-loop spun a full CPU core at 100% the entire time headless
+            // mode ran (SDL_PollEvent never blocks, so an empty queue between
+            // frames was a tight spin, not an idle wait), which competes for
+            // CPU with the very decode/encode work headless mode exists to
+            // leave more room for.
+            while (!quit && SDL_WaitEvent(&event))
             {
-                while (SDL_PollEvent(&event))
+                enum EventResult result = agent_manager.HandleEvent(&event, false);
+                switch (result)
                 {
-                    enum EventResult result = agent_manager.HandleEvent(&event, false);
-                    switch (result)
-                    {
-                    case EVENT_RESULT_STOPPED_BY_USER:
-                        quit = true;
-                        break;
-                    case EVENT_RESULT_STOPPED_BY_EOS:
-                        LOGW("Device disconnected");
-                        quit = true;
-                        break;
-                    case EVENT_RESULT_CONTINUE:
-                        break;
-                    }
+                case EVENT_RESULT_STOPPED_BY_USER:
+                    quit = true;
+                    break;
+                case EVENT_RESULT_STOPPED_BY_EOS:
+                    LOGW("Device disconnected");
+                    quit = true;
+                    break;
+                case EVENT_RESULT_CONTINUE:
+                    break;
                 }
             }
             printf("Exting ...\n");
