@@ -24,6 +24,13 @@ namespace irobot::agent
     {
         socket_t socket = INVALID_SOCKET;
         int id = 0;
+        // guards every net_send_all() against `socket`: AddSession() unicasts a
+        // resolution catch-up to a just-joined session on the accept thread at
+        // the same moment RunStream's broadcast loop may already be writing a
+        // freshly queued frame to that same session -- without this, the two
+        // threads' send() calls can interleave on the wire and corrupt the
+        // receiver's length-prefixed framing (see agent_stream.cpp)
+        SDL_mutex* send_mutex = nullptr;
     };
 
     class AgentStream : public Actor

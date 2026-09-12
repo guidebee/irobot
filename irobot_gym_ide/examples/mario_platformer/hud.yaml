@@ -1,40 +1,44 @@
 hud_regions:
 - name: left_button
-  x: 117
-  y: 950
-  width: 253
-  height: 203
+  x: 0
+  y: 874
+  width: 80
+  height: 80
   action_name: left_start
   release_action_name: left_stop
 - name: right_button
-  x: 534
-  y: 947
-  width: 267
-  height: 203
+  x: 452
+  y: 874
+  width: 80
+  height: 80
   action_name: right_start
   release_action_name: right_stop
-- name: fire_button
-  x: 1856
-  y: 967
-  width: 233
-  height: 190
-  action_name: attack
+- name: up_button
+  x: 226
+  y: 648
+  width: 80
+  height: 80
+  action_name: up_start
+  release_action_name: up_stop
+- name: down_button
+  x: 226
+  y: 1100
+  width: 80
+  height: 80
+  action_name: down_start
+  release_action_name: down_stop
 - name: jump_button
-  x: 2270
-  y: 960
-  width: 270
-  height: 210
+  x: 2402
+  y: 780
+  width: 268
+  height: 268
   action_name: jump
-# No right_jump/left_jump combos here (deliberately -- see ACTION_CLASSIFICATION_DESIGN.md
-# G10): a HudRegionCombo folds a whole overlapping cluster into ONE segment naming its
-# action, which is correct for a short, discrete compound gesture but actively wrong for
-# "hold right the whole time while mashing jump" -- that pattern is ordinary sustained
-# running, not a one-shot move, and collapsing it into the right_jump/left_jump macro's own
-# short canned timing made "Replay Classified" run at a fraction of "Replay Raw"'s real
-# duration (measured on recordings/level2.session.yaml: 237 scripted frames vs. 880 actually
-# recorded). Leaving no combo here means that overlap classifies as separate right_start/
-# jump/right_stop segments instead, which correctly reproduces the real hold duration. The
-# right_jump/left_jump Actions themselves are still fine to keep and use directly (a Game
-# Run node, say, for a deliberate quick nudge-then-jump) -- just not as a HudRegionCombo
-# target for this hold-based control scheme.
+  release_action_name: ''
+- name: fire_button
+  x: 2135
+  y: 780
+  width: 268
+  height: 268
+  action_name: run_start
+  release_action_name: run_stop
 hud_region_combos: []

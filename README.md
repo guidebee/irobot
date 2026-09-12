@@ -180,7 +180,11 @@ session/HUD classification workflow, project layout, and testing instructions.
 See [`docs/opengym_implementation_plan.md`](docs/opengym_implementation_plan.md) for the detailed, phased
 implementation plan — protocol facts verified against source, package layout, build order, and a
 design-by-design comparison against the closest prior art,
-[DeepMind's AndroidEnv](https://github.com/google-deepmind/android_env).
+[DeepMind's AndroidEnv](https://github.com/google-deepmind/android_env). See
+[`docs/game_run_design_methodology.md`](docs/game_run_design_methodology.md) for the (separate, more
+hands-on) methodology this plan's Tier 1.5 action model was first validated against: how to turn a
+real game's own source/level data into a verified-safe, hand-authored Game Run today, and what that
+exercise says still needs to become reusable tooling on the way to `env.py`.
 
 iRobot's AI agent API was originally built with this goal in mind, and the pieces exist today (video + phash
 streaming, touch/keycode injection, event recording, the Gym IDE) but only as raw sockets plus a manual

@@ -1,7 +1,13 @@
 schema_version: 1
 id: ce9402b9c96d4cecb92648a8c509a23e
 name: mario_platformer_example
-description: ''
+description: 'Action/HUD library for au.com.guidebee.morsetoolkit''s Mario port (C:/workspace/morsecode)
+  real on-screen controls: a left/right/up/down touchpad (pointer 0) plus Button A
+  (fire tap / run hold, pointer 2) and Button B (jump tap, pointer 1), including a
+  long_jump macro matching the ported Jump()/GoToRight() speed-scaled long-jump mechanic.
+  Coordinates derived from GameController.layout() + MarioResourceManager.downscaledTexture()
+  at this project''s own 2670x1200 reference resolution -- verify against a live device
+  capture before relying on them for real replay/classification.'
 created_at: '2026-09-04T10:35:20.553600+00:00'
 updated_at: ''
 package: ''
@@ -12,3 +18,5 @@ port: 27183
 reference_resolution:
   width: 2670
   height: 1200
+action_match_tolerance_px: 30
+time_scale: 1.0

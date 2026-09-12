@@ -47,8 +47,13 @@ namespace irobot::agent
         {
             // unicast the current resolution to this session right away --
             // AgentManager only re-broadcasts it when it *changes*, so a
-            // session joining after the first one would otherwise never see it
+            // session joining after the first one would otherwise never see it.
+            // Must take send_mutex: this races against RunStream's broadcast
+            // loop, which may already be writing a freshly queued frame to
+            // this same just-added session (see VideoSession::send_mutex).
+            util::mutex_lock(session->send_mutex);
             platform::net_send_all(session->socket, catch_up.data(), catch_up.size());
+            util::mutex_unlock(session->send_mutex);
         }
 
         static SDL_Event new_opencv_frame_event = {
@@ -80,6 +85,7 @@ namespace irobot::agent
         {
             LOGI("Video client #%d disconnected", session->id);
             platform::close_socket(&session->socket);
+            SDL_DestroyMutex(session->send_mutex);
             delete session;
         }
     }
@@ -165,6 +171,7 @@ namespace irobot::agent
             auto* session = new VideoSession();
             session->socket = client;
             session->id = stream->next_session_id++;
+            session->send_mutex = SDL_CreateMutex();
             LOGI("Video client #%d connected", session->id);
             stream->AddSession(session);
         }
@@ -211,7 +218,9 @@ namespace irobot::agent
 
                 for (VideoSession* session : snapshot)
                 {
+                    util::mutex_lock(session->send_mutex);
                     int w = platform::net_send_all(session->socket, data_buffer, length);
+                    util::mutex_unlock(session->send_mutex);
                     if (w != (int)length)
                     {
                         stream->RemoveAndCloseSession(session);
@@ -260,6 +269,7 @@ namespace irobot::agent
         for (VideoSession* session : snapshot)
         {
             // already closed above, before RunStream was joined
+            SDL_DestroyMutex(session->send_mutex);
             delete session;
         }
     }

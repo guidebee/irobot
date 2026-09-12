@@ -1,43 +1,209 @@
 runs:
-- name: right_jump_combo_x3
+- name: level_1_1_clear
   nodes:
   - id: n_right
     kind: action
-    x: 40
-    y: 40
+    x: 0
+    y: 0
     action_name: right_start
-  - id: n_rep
-    kind: repeat
-    x: 240
-    y: 40
-    times: 3
-  - id: n_jump
+  - id: n_run
     kind: action
-    x: 440
+    x: 100
+    y: 0
+    action_name: run_start
+  - id: n_wait_0_goomba21
+    kind: delay
+    x: 200
+    y: 0
+    frames: 43
+  - id: n_jump_0_goomba21
+    kind: action
+    x: 300
     y: 0
     action_name: jump
-  - id: n_attack
+  - id: n_wait_1_pipe1_28
+    kind: delay
+    x: 400
+    y: 0
+    frames: 64
+  - id: n_jump_1_pipe1_28
     kind: action
-    x: 640
-    y: 200
-    action_name: attack
+    x: 500
+    y: 0
+    action_name: jump
+  - id: n_wait_2_goomba40_and_pipe2_38
+    kind: delay
+    x: 600
+    y: 0
+    frames: 64
+  - id: n_jump_2_goomba40_and_pipe2_38
+    kind: action
+    x: 700
+    y: 0
+    action_name: jump
+  - id: n_wait_3_goomba53_and_pipe3_46
+    kind: delay
+    x: 800
+    y: 0
+    frames: 69
+  - id: n_jump_3_goomba53_and_pipe3_46
+    kind: action
+    x: 900
+    y: 0
+    action_name: jump
+  - id: n_wait_4_pipe4_57
+    kind: delay
+    x: 1000
+    y: 0
+    frames: 67
+  - id: n_jump_4_pipe4_57
+    kind: action
+    x: 1100
+    y: 0
+    action_name: jump
+  - id: n_wait_5_gap_69_70
+    kind: delay
+    x: 1200
+    y: 0
+    frames: 87
+  - id: n_jump_5_gap_69_70
+    kind: action
+    x: 1300
+    y: 0
+    action_name: jump
+  - id: n_wait_6_goomba95_and_gap_86_88
+    kind: delay
+    x: 1400
+    y: 0
+    frames: 65
+  - id: n_jump_6_goomba95_and_gap_86_88
+    kind: action
+    x: 1500
+    y: 0
+    action_name: jump
+  - id: n_wait_7_turtle106
+    kind: delay
+    x: 1600
+    y: 0
+    frames: 64
+  - id: n_jump_7_turtle106
+    kind: action
+    x: 1700
+    y: 0
+    action_name: jump
+  - id: n_wait_8_goomba123_and_goomba127
+    kind: delay
+    x: 1800
+    y: 0
+    frames: 91
+  - id: n_jump_8_goomba123_and_goomba127
+    kind: action
+    x: 1900
+    y: 0
+    action_name: jump
+  - id: n_wait_9_goomba173_and_gap_152_154
+    kind: delay
+    x: 2000
+    y: 0
+    frames: 266
+  - id: n_jump_9_goomba173_and_gap_152_154
+    kind: action
+    x: 2100
+    y: 0
+    action_name: jump
+  - id: n_wait_flag
+    kind: delay
+    x: 2200
+    y: 0
+    frames: 348
+  - id: n_settle
+    kind: delay
+    x: 2300
+    y: 0
+    frames: 30
+  - id: n_run_stop
+    kind: action
+    x: 2400
+    y: 0
+    action_name: run_stop
   - id: n_right_stop
     kind: action
-    x: 840
-    y: 200
+    x: 2500
+    y: 0
     action_name: right_stop
   edges:
-  - id: e1
+  - id: e_n_right_n_run
     source: n_right
-    target: n_rep
-  - id: e2
-    source: n_rep
-    target: n_jump
-    via: body
-  - id: e3
-    source: n_rep
-    target: n_attack
-    via: after
-  - id: e4
-    source: n_attack
+    target: n_run
+  - id: e_n_run_n_wait_0_goomba21
+    source: n_run
+    target: n_wait_0_goomba21
+  - id: e_n_wait_0_goomba21_n_jump_0_goomba21
+    source: n_wait_0_goomba21
+    target: n_jump_0_goomba21
+  - id: e_n_jump_0_goomba21_n_wait_1_pipe1_28
+    source: n_jump_0_goomba21
+    target: n_wait_1_pipe1_28
+  - id: e_n_wait_1_pipe1_28_n_jump_1_pipe1_28
+    source: n_wait_1_pipe1_28
+    target: n_jump_1_pipe1_28
+  - id: e_n_jump_1_pipe1_28_n_wait_2_goomba40_and_pipe2_38
+    source: n_jump_1_pipe1_28
+    target: n_wait_2_goomba40_and_pipe2_38
+  - id: e_n_wait_2_goomba40_and_pipe2_38_n_jump_2_goomba40_and_pipe2_38
+    source: n_wait_2_goomba40_and_pipe2_38
+    target: n_jump_2_goomba40_and_pipe2_38
+  - id: e_n_jump_2_goomba40_and_pipe2_38_n_wait_3_goomba53_and_pipe3_46
+    source: n_jump_2_goomba40_and_pipe2_38
+    target: n_wait_3_goomba53_and_pipe3_46
+  - id: e_n_wait_3_goomba53_and_pipe3_46_n_jump_3_goomba53_and_pipe3_46
+    source: n_wait_3_goomba53_and_pipe3_46
+    target: n_jump_3_goomba53_and_pipe3_46
+  - id: e_n_jump_3_goomba53_and_pipe3_46_n_wait_4_pipe4_57
+    source: n_jump_3_goomba53_and_pipe3_46
+    target: n_wait_4_pipe4_57
+  - id: e_n_wait_4_pipe4_57_n_jump_4_pipe4_57
+    source: n_wait_4_pipe4_57
+    target: n_jump_4_pipe4_57
+  - id: e_n_jump_4_pipe4_57_n_wait_5_gap_69_70
+    source: n_jump_4_pipe4_57
+    target: n_wait_5_gap_69_70
+  - id: e_n_wait_5_gap_69_70_n_jump_5_gap_69_70
+    source: n_wait_5_gap_69_70
+    target: n_jump_5_gap_69_70
+  - id: e_n_jump_5_gap_69_70_n_wait_6_goomba95_and_gap_86_88
+    source: n_jump_5_gap_69_70
+    target: n_wait_6_goomba95_and_gap_86_88
+  - id: e_n_wait_6_goomba95_and_gap_86_88_n_jump_6_goomba95_and_gap_86_88
+    source: n_wait_6_goomba95_and_gap_86_88
+    target: n_jump_6_goomba95_and_gap_86_88
+  - id: e_n_jump_6_goomba95_and_gap_86_88_n_wait_7_turtle106
+    source: n_jump_6_goomba95_and_gap_86_88
+    target: n_wait_7_turtle106
+  - id: e_n_wait_7_turtle106_n_jump_7_turtle106
+    source: n_wait_7_turtle106
+    target: n_jump_7_turtle106
+  - id: e_n_jump_7_turtle106_n_wait_8_goomba123_and_goomba127
+    source: n_jump_7_turtle106
+    target: n_wait_8_goomba123_and_goomba127
+  - id: e_n_wait_8_goomba123_and_goomba127_n_jump_8_goomba123_and_goomba127
+    source: n_wait_8_goomba123_and_goomba127
+    target: n_jump_8_goomba123_and_goomba127
+  - id: e_n_jump_8_goomba123_and_goomba127_n_wait_9_goomba173_and_gap_152_154
+    source: n_jump_8_goomba123_and_goomba127
+    target: n_wait_9_goomba173_and_gap_152_154
+  - id: e_n_wait_9_goomba173_and_gap_152_154_n_jump_9_goomba173_and_gap_152_154
+    source: n_wait_9_goomba173_and_gap_152_154
+    target: n_jump_9_goomba173_and_gap_152_154
+  - id: e_n_jump_9_goomba173_and_gap_152_154_n_wait_flag
+    source: n_jump_9_goomba173_and_gap_152_154
+    target: n_wait_flag
+  - id: e_n_wait_flag_n_settle
+    source: n_wait_flag
+    target: n_settle
+  - id: e_n_settle_n_run_stop
+    source: n_settle
+    target: n_run_stop
+  - id: e_n_run_stop_n_right_stop
+    source: n_run_stop
     target: n_right_stop

@@ -395,6 +395,14 @@ A `calibrate_buttons.py` tool (click each button's center + drag its radius on a
 UX pattern as `calibrate_digits.py`, §8.3.3) is worth building alongside it so integrators don't
 hand-measure pixel coordinates.
 
+This tier's first real validation — a full Tier 1.5 button map plus a hand-scripted level clear
+built against an actual Mario clone's own source and level data, not just this section's
+illustrative screenshot — is written up in
+[`docs/game_run_design_methodology.md`](game_run_design_methodology.md). It surfaced two real gaps
+this section's own generic example didn't anticipate (moving hazards need their own simulated
+trajectory, not their spawn position; a jump's re-arm/air-time window bounds how close two scripted
+actions can safely sit) worth folding into `env.py`'s eventual design, not just this plan's prose.
+
 ## 8. Reward and episode boundaries — a tiered, pluggable signal architecture
 
 The README roadmap is explicit that this is not solvable generically (no standard Android

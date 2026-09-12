@@ -1,95 +1,120 @@
 actions:
-- name: attack
-  description: >-
-    tap the attack/dash button. Uses pointer_id 1, not the default 0, so it doesn't collide
-    with left_start/right_start (which hold pointer 0 for the whole run -- see
-    ACTION_CLASSIFICATION_DESIGN.md's replay-time pointer-conflict note): a PRESS on an
-    already-held pointer is silently skipped by connection.py, and a mismatched RELEASE on
-    it would end the hold early instead of doing anything to this action's own touch.
-  events:
-  - kind: press
-    pointer_id: 1
-    x: 1952
-    y: 1060
-  - kind: wait
-    pointer_id: 1
-    frames: 10
-  - kind: release
-    pointer_id: 1
-    key_name: back
-- name: jump
-  description: >-
-    recorded from 1 real device touch(es). Uses pointer_id 1, not the default 0, so it
-    doesn't collide with left_start/right_start (which hold pointer 0 for the whole run --
-    see ACTION_CLASSIFICATION_DESIGN.md's replay-time pointer-conflict note): a PRESS on an
-    already-held pointer is silently skipped by connection.py, and a mismatched RELEASE on
-    it would end the hold early instead of doing anything to this action's own touch.
-  events:
-  - kind: press
-    pointer_id: 1
-    x: 2396
-    y: 1070
-  - kind: wait
-    pointer_id: 1
-    frames: 10
-  - kind: release
-    pointer_id: 1
-    key_name: back
-- name: right_jump
-  description: recorded from 2 real device touch(es)
-  events:
-  - kind: press
-    x: 640
-    y: 1045
-  - kind: wait
-    frames: 1
-  - kind: press
-    pointer_id: 1
-    x: 2447
-    y: 1080
-  - kind: wait
-    pointer_id: 1
-    frames: 5
-  - kind: release
-  - kind: release
-    pointer_id: 1
-    key_name: back
-- name: left_jump
-  description: recorded from 2 real device touch(es)
-  events:
-  - kind: press
-    x: 289
-    y: 1054
-  - kind: wait
-    frames: 1
-  - kind: press
-    pointer_id: 1
-    x: 2445
-    y: 1099
-  - kind: wait
-    pointer_id: 1
-    frames: 4
-  - kind: release
-  - kind: release
-    pointer_id: 1
-    key_name: back
 - name: left_start
-  description: press and hold the left button (matches Android's touch DOWN -- no repeat needed while held)
+  description: Hold the touchpad knob dragged left (pointer 0) -- TouchOrKeyboardInput's
+    0.3-of-travel deadzone, matched here by dragging past it toward the left edge.
   events:
   - kind: press
-    x: 265
-    y: 1072
+    x: 40
+    y: 914
+  kind: hold_start
 - name: left_stop
-  description: release the left button (matches Android's touch UP)
+  description: Release the left hold (pointer 0).
   events:
   - kind: release
+  kind: hold_stop
 - name: right_start
-  description: press and hold the right button (matches Android's touch DOWN -- no repeat needed while held)
+  description: Hold the touchpad knob dragged right (pointer 0) -- TouchOrKeyboardInput's
+    0.3-of-travel deadzone, matched here by dragging past it toward the right edge.
   events:
   - kind: press
-    x: 742
-    y: 1063
+    x: 492
+    y: 914
+  kind: hold_start
 - name: right_stop
-  description: release the right button (matches Android's touch UP)
+  description: Release the right hold (pointer 0).
   events:
   - kind: release
+  kind: hold_stop
+- name: up_start
+  description: Hold the touchpad knob dragged up (pointer 0) -- TouchOrKeyboardInput's
+    0.3-of-travel deadzone, matched here by dragging past it toward the up edge.
+  events:
+  - kind: press
+    x: 266
+    y: 688
+  kind: hold_start
+- name: up_stop
+  description: Release the up hold (pointer 0).
+  events:
+  - kind: release
+  kind: hold_stop
+- name: down_start
+  description: Hold the touchpad knob dragged down (pointer 0) -- TouchOrKeyboardInput's
+    0.3-of-travel deadzone, matched here by dragging past it toward the down edge.
+  events:
+  - kind: press
+    x: 266
+    y: 1140
+  kind: hold_start
+- name: down_stop
+  description: Release the down hold (pointer 0).
+  events:
+  - kind: release
+  kind: hold_stop
+- name: jump
+  description: Tap Button B (isButtonBPressed -> PlatformerCommand.jumpPressed).
+  events:
+  - kind: tap
+    pointer_id: 1
+    x: 2536
+    y: 914
+  kind: momentary
+- name: long_jump
+  description: 'Corrected from an earlier version that just held Button B longer (that
+    does nothing extra here -- Player.applyJump() gates on the edge-triggered jumpPressed
+    and sets gravity once from current `speed`; there is no held/variable-height jump
+    in this engine, unlike the generic example in opengym_implementation_plan.md Sec
+    7.4 this was first copied from). The real lever is horizontal speed at takeoff,
+    so this macro holds right+run long enough to approach the turbo speed cap (50
+    frames: +2 speed/frame from 0 to 100), taps jump while at that speed, waits out
+    the landing, then releases both -- a self-contained ''run up and take a long jump'',
+    safe to call on its own without an already-held direction (if one IS already held
+    by a surrounding sequence, prefer plain right_start/run_start + a delay + jump
+    instead, as the level_1_1_clear Game Run does, so this macro''s own trailing release
+    doesn''t end that outer hold early).'
+  events:
+  - kind: press
+    x: 492
+    y: 914
+  - kind: press
+    pointer_id: 2
+    x: 2269
+    y: 914
+  - kind: wait
+    frames: 50
+  - kind: tap
+    pointer_id: 1
+    x: 2536
+    y: 914
+  - kind: wait
+    frames: 20
+  - kind: release
+  - kind: release
+    pointer_id: 2
+  kind: macro
+- name: fire
+  description: Tap Button A (isButtonAPressed -> PlatformerCommand.actionPressed ->
+    Player's fireball throw, Fire Mario only). Same physical button as run_start/run_stop
+    -- a real touch here always fires AND starts the run hold simultaneously; this
+    action exists so a Game Run can script a bare fireball throw without also committing
+    to a run hold.
+  events:
+  - kind: tap
+    pointer_id: 2
+    x: 2269
+    y: 914
+  kind: momentary
+- name: run_start
+  description: Press and hold Button A for turbo speed (isButtonAPressed -> PlatformerCommand.runHeld).
+  events:
+  - kind: press
+    pointer_id: 2
+    x: 2269
+    y: 914
+  kind: hold_start
+- name: run_stop
+  description: Release Button A, ending the turbo hold.
+  events:
+  - kind: release
+    pointer_id: 2
+  kind: hold_stop
