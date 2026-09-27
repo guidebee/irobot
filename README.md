@@ -6,9 +6,10 @@ agents as two plain TCP sockets: one streaming frames out, one taking actions in
 exactly as before — but the reason this project exists is the **AgentManager** layer built on top of it: a
 socket-level API that lets an external program, human tool, or ML model watch a device's screen and act on it in
 real time, with no code running on-device beyond the (unmodified-target) app itself. A **Gym IDE** for authoring
-and running action graphs against a live device already ships today; an **OpenAI Gym / Gymnasium-compatible
-`Env`** on the same sockets — so existing RL tooling can train against real Android games — is the near-term
-roadmap.
+and running action graphs against a live device already ships today, alongside a prototype **TypeSafe Jev agent**
+(`typesafe_agent/`) that picks actions from a Gym IDE project in a live decision loop. A **Gymnasium-compatible
+`Env`** on the same sockets — so scripted runs, RL policies, and Jev can all drive real Android games through one
+shared contract — is the near-term roadmap, gated on first fixing the frame and input path it depends on.
 
 No root access required. Works on GNU/Linux, Windows, and macOS.
 
@@ -23,7 +24,9 @@ No root access required. Works on GNU/Linux, Windows, and macOS.
 - [Architecture](#architecture)
 - [The AI Agent API](#the-ai-agent-api)
 - [Gym IDE — author and run action graphs against a live device](#gym-ide--author-and-run-action-graphs-against-a-live-device)
+- [typesafe-agent — a Jev decision loop (prototype)](#typesafe-agent--a-jev-decision-loop-prototype)
 - [Roadmap: a Gym/Gymnasium `Env`](#roadmap-a-gymgymnasium-env)
+- [Design documents](#design-documents)
 - [Screen mirroring and manual control](#screen-mirroring-and-manual-control)
 - [Build](#build)
 - [Dependencies](#dependencies)
@@ -43,15 +46,17 @@ No root access required. Works on GNU/Linux, Windows, and macOS.
 - **Frames arrive pre-processed for cheap decision loops**: a downscaled grayscale frame and a small color
   thumbnail, each paired with an OpenCV perceptual hash, so an agent (or a human tool) can detect "did anything
   change" without touching pixels.
-- **Every control event — human or agent — can be recorded and replayed** (`Ctrl+E` → `events.json`), a direct
-  path to dataset collection or imitation learning.
+- **Control events can be recorded and replayed** (`Ctrl+E` → `events.json`), a direct path to dataset
+  collection or imitation learning. Today this captures human input only; recording agent actions too is
+  tracked as [T19](docs/tasks/T19_record_agent_actions.md).
 - **A desktop authoring tool (Gym IDE) already exists** for turning raw touches into named, reusable actions and
   wiring them into branching action graphs — see [screenshot below](#gym-ide--author-and-run-action-graphs-against-a-live-device) — so integrators can
   build and test a game's action vocabulary before any training code exists.
 - **A Gym/Gymnasium `Env` is the explicit next step** ([roadmap](#roadmap-a-gymgymnasium-env)), designed against a
   point-by-point comparison with [DeepMind's AndroidEnv](https://github.com/google-deepmind/android_env) — the
   closest prior art for this exact problem shape (arbitrary apps/games, a universal touchscreen action interface,
-  pixel observations).
+  pixel observations) — and planned in detail, work package by work package, in
+  [`docs/gym_jev_implementation_plan.md`](docs/gym_jev_implementation_plan.md).
 
 ---
 
@@ -65,8 +70,9 @@ its own README for the details.
 | [`src/`](src/)                                  | `irobot` desktop client (C++23), including the `AgentManager` AI agent API — documented in this README             |
 | [`tools/`](tools/README.md)                     | `agent_client.py` — reference/test client and wire-protocol docs for the AI agent API                              |
 | [`irobot_gym_ide/`](irobot_gym_ide/README.md)   | Gym IDE (PySide6) — action-map editor and Game Run node-graph editor built on the AI agent API                     |
+| [`typesafe_agent/`](typesafe_agent/README.md)   | Prototype decision loop that lets TypeSafe's Jev model pick a Gym IDE project's actions against a live device     |
 | [`irobot_server/`](irobot_server/README.md)     | Android server (Java, forked from scrcpy) — built to an APK/DEX and pushed to the device via ADB at connection time |
-| [`docs/`](docs/)                                | Architecture diagrams and the Gym/Gymnasium implementation plan                                                     |
+| [`docs/`](docs/)                                | Architecture diagrams, design docs, implementation plans, and task work orders — see [Design documents](#design-documents) |
 
 `irobot_server` used to be maintained as a separate project; it now lives under
 [`irobot_server/`](irobot_server/README.md) with its own build script (`build_server.sh` / `build_server.cmd`),
@@ -93,8 +99,8 @@ Android Device                       Desktop (iRobot)
                                            └──────┬──────┘
                                                    │  TCP (JSON in / binary frames out)
                                           external AI agent
-                                (tools/agent_client.py, Gym IDE today;
-                                 a Gym/Gymnasium Env is next — see Roadmap)
+                                (tools/agent_client.py, Gym IDE, typesafe_agent
+                                 today; a Gym/Gymnasium Env is next — see Roadmap)
 ```
 
 The companion `irobot-server` APK is pushed to the device via ADB, captures the screen (and, by default, audio) as
@@ -113,7 +119,11 @@ Separately from the human mirror window, iRobot always opens two more TCP ports 
 | Socket                             | Direction      | Purpose                                                                                            |
 |-------------------------------------|----------------|------------------------------------------------------------------------------------------------------|
 | **AgentStream** (video port)       | iRobot → Agent | Streams a downscaled grayscale frame + a small color thumbnail, each paired with a perceptual hash |
-| **AgentController** (control port) | Agent → iRobot | Receives JSON control messages (touch, keycode, ...) and forwards them to the real device          |
+| **AgentController** (control port) | Agent → iRobot | Receives length-prefixed JSON control messages (touch, keycode, ...) and forwards them to the real device |
+
+Control messages are framed with a 4-byte big-endian length prefix. The agent video stream is throttled to one
+frame per 66 ms (`kMinVideoSendIntervalMs` in `src/agent/agent_manager.cpp`), so observations arrive at about
+15 fps at most.
 
 A ready-to-use reference client for this API — live view, click-to-touch control, record/replay — lives in
 [`tools/agent_client.py`](tools/README.md); that doc also has the full wire-format reference for writing your own
@@ -123,16 +133,18 @@ client in any language.
 
 - `BLOB_MSG_TYPE_SCREEN_SHOT` — small color thumbnail
 - `BLOB_MSG_TYPE_OPENCV_MAT` — larger grayscale frame
-- `BLOB_MSG_TYPE_RESOLUTION` — the real, undownscaled device resolution, sent on connect and on every change (no
-  more manually reading `--screen-size` off stdout)
+- `BLOB_MSG_TYPE_RESOLUTION` — the undownscaled video stream resolution, sent on connect (no more manually
+  reading `--screen-size` off stdout). This is the stream's size, which differs from the physical screen when
+  `--max-size` is set, and it isn't re-sent on rotation yet (see [Known data path issues](#known-data-path-issues))
 - Standard control messages — `INJECT_TOUCH_EVENT`, `INJECT_KEYCODE`, `INJECT_TEXT`, `INJECT_SCROLL_EVENT`, etc.
   (JSON over the control port; see `src/message/control_msg.cpp`)
 
 ### Event recording
 
-Press **Ctrl+E** inside `irobot.exe` to start recording every control event (from both human input and any
-connected agent) to `events.json` in irobot's working directory, for replay, dataset collection, or imitation
-learning; Ctrl+E again stops it. `tools/agent_client.py play` can replay that file directly.
+Press **Ctrl+E** inside `irobot.exe` to start recording control events to `events.json` in irobot's working
+directory, for replay, dataset collection, or imitation learning; Ctrl+E again stops it.
+`tools/agent_client.py play` can replay that file directly. Only human input is recorded today: actions sent by
+a connected agent are not ([T19](docs/tasks/T19_record_agent_actions.md) adds them).
 
 ### Image processing
 
@@ -144,6 +156,27 @@ The `brain` module (`src/ai/brain.cpp`) provides:
 Every frame sent to an agent is paired with an OpenCV PHash (perceptual hash) for cheap frame-change detection —
 see [`tools/README.md`](tools/README.md#perceptual-hash-what-its-for).
 
+### Known data path issues
+
+A code-level [review of the frame and input path](docs/gym_data_path_review.md) (2026-09-27) found 20 issues
+(DP01–DP20) that an agent or Gym env would hit. None are fixed yet. The high-severity ones:
+
+| ID   | Issue                                                                                              |
+|------|------------------------------------------------------------------------------------------------------|
+| DP01 | Agents can receive torn frames (the decoder writes the shared frame without the lock the encoder reads it under) |
+| DP02 | Rotation / resolution changes break the agent frame path and are never announced                   |
+| DP03 | An agent that connects before the first decoded frame crashes irobot                               |
+| DP04 | Frames carry no identity (`id` is always 0) and no usable timestamp                                |
+| DP05 | Under backpressure the video queue drops the newest frame and keeps older ones                     |
+| DP06 | Nothing tells an agent whether its touch was actually injected on the device                       |
+| DP07 | Taps have zero hold time, so games that poll touch state per frame can miss them                   |
+| DP08 | Releases are sent at (0, 0) instead of where the finger was                                        |
+
+Related: the Gym IDE design records an open bug where a replay sometimes has no effect on the device, with no
+error anywhere ([`irobot_gym_ide_design.md` §13](docs/irobot_gym_ide_design.md)). The fixes are broken into 25
+step-by-step work orders (T01–T25) in [`docs/tasks/`](docs/tasks/README.md), with dependencies, build/test
+commands, and a definition of done.
+
 ---
 
 ## Gym IDE — author and run action graphs against a live device
@@ -153,13 +186,22 @@ turning raw device input into a reusable, testable action vocabulary — no trai
 
 1. **Define actions** — click to place touch events on the live mirror, combine them into named actions (a tap, a
    held d-pad direction, a jump-then-move combo), and test each one against a real device.
-2. **Script a Game Run** — a node-graph editor (drag Action / Delay / Repeat / Compare / Find-Template nodes onto
-   a canvas and connect them) that lets a human design a branching sequence of actions — including conditions on
-   what's currently on screen, e.g. "if the game-over banner is showing, tap Retry" — then click **Run** to replay
-   that graph against a live device and auto-play the game.
+2. **Script a Game Run** — a node-graph editor (drag Action / Delay / Repeat / Compare / Find Template / Assert
+   nodes onto a canvas and connect them, with fork/join) that lets a human design a branching sequence of
+   actions — including conditions on what's currently on screen, e.g. "if the game-over banner is showing, tap
+   Retry" — then preview it with a dry run, or click **Run** to replay it against a live device and auto-play
+   the game, or as a regression run.
 3. **Record and classify real gameplay** — capture raw touches straight off the device (`adb shell getevent`),
    or a whole playthrough as a gameplay session, and classify it against HUD regions into named actions
    automatically.
+4. **Export an `ActionMap`** — the Tier 1.5 action schema the planned Gym env will load
+   (`irobot_gym_ide/gym_export.py`).
+
+The Reward, Observation, and Reset panels are still stubs; the plan to fill them is WP2.3 of the
+[Gym + Jev implementation plan](docs/gym_jev_implementation_plan.md). The worked example is
+[`irobot_gym_ide/examples/mario_platformer/`](irobot_gym_ide/examples/mario_platformer), calibrated against
+Ampere's Run, the Mario-style platformer in `guidebee/super-morse`. Design rationale and a 2026-09-27 peer
+review are in [`docs/irobot_gym_ide_design.md`](docs/irobot_gym_ide_design.md).
 
 
 ```bash
@@ -175,44 +217,111 @@ session/HUD classification workflow, project layout, and testing instructions.
 
 ---
 
+## typesafe-agent — a Jev decision loop (prototype)
+
+[`typesafe_agent/`](typesafe_agent/README.md) connects to a running `irobot`'s agent sockets, loads a Gym IDE
+project's actions, and runs a tick-based loop that asks TypeSafe's Jev model which named action to run next. It
+reuses the Gym IDE's `LiveConnection` and project loader instead of re-implementing the wire protocol. It grew
+out of a comparison with [`typesafe-mario`](https://github.com/guidebee/typesafe-mario), and targets the
+`mario_platformer` example.
+
+```bash
+pip install -r typesafe_agent/requirements.txt   # PyYAML; typesafe-sdk for the default `typesafe` policy
+./typesafe_agent.sh state-demo    irobot_gym_ide/examples/mario_platformer/project.yaml   # list actions, no device
+./typesafe_agent.sh latency-check irobot_gym_ide/examples/mario_platformer/project.yaml --action jump
+./typesafe_agent.sh play          irobot_gym_ide/examples/mario_platformer/project.yaml --policy heuristic
+```
+
+`play` with the default `typesafe` policy needs `TYPESAFE_API_KEY`; `--policy heuristic` needs no key and is the
+way to smoke-test the loop. Each decision is logged to `artifacts/run-<timestamp>.jsonl`.
+
+It is a prototype, not a playing strategy: the loop blocks on each decision, and the only observation is a
+perceptual-hash "did the screen change" flag, so Jev chooses nearly blind. Phase 4 of the
+[Gym + Jev implementation plan](docs/gym_jev_implementation_plan.md) replaces it with an asynchronous Jev policy
+over the Gym env, fed structured state from first-party game telemetry.
+
+---
+
 ## Roadmap: a Gym/Gymnasium `Env`
 
-See [`docs/opengym_implementation_plan.md`](docs/opengym_implementation_plan.md) for the detailed, phased
-implementation plan — protocol facts verified against source, package layout, build order, and a
-design-by-design comparison against the closest prior art,
-[DeepMind's AndroidEnv](https://github.com/google-deepmind/android_env). See
-[`docs/game_run_design_methodology.md`](docs/game_run_design_methodology.md) for the (separate, more
-hands-on) methodology this plan's Tier 1.5 action model was first validated against: how to turn a
-real game's own source/level data into a verified-safe, hand-authored Game Run today, and what that
-exercise says still needs to become reusable tooling on the way to `env.py`.
+The build plan is [`docs/gym_jev_implementation_plan.md`](docs/gym_jev_implementation_plan.md). Its goal is to
+let three kinds of "player" drive a real Android game through `irobot` against **one shared contract** for
+actions, observations, rewards, and episode boundaries:
+
+| Driver         | What it is                                                         | Exists today?                     |
+|-----------------|----------------------------------------------------------------------|-------------------------------------|
+| **Scripted**   | A Gym IDE Game Run graph, replayed deterministically               | Yes (`irobot_gym_ide/run_engine.py`) |
+| **RL policy**  | A Stable-Baselines3 (or similar) policy trained against a Gymnasium env | No: no env yet                 |
+| **Jev policy** | TypeSafe's Jev model choosing actions from structured game state   | Prototype (`typesafe_agent/`)       |
+
+The first target game is Ampere's Run, since the `mario_platformer` example is already calibrated against it and
+its source is ours. The plan commits to ten design decisions, among them a **real-time** env (fixed control
+rate, actions held between steps, observation age reported), **`Discrete`/`MultiDiscrete`** action encoding so
+SB3 can train on it, a fixed canonical observation shape plus optional structured features, one declarative
+**`task.yaml`** per game, Jev as an **asynchronous** policy with a decision log, and a **simulator backend** for
+games we own. Work is split into phases with milestones:
+
+| Milestone                | Contents                                           | Demonstrates                                           |
+|---------------------------|------------------------------------------------------|----------------------------------------------------------|
+| **M0** Trustworthy pipe  | Phase 0: silent touch-drop root cause, latency     | Device does what it's told; latency is a known number  |
+| **M1** Env on device     | Phases 1–3: `irobot_client/`, `task.yaml`, `IrobotEnv` | `check_env` passes; a random policy runs 1,000 steps  |
+| **M2** Jev plays         | Game telemetry, Jev state builders, IDE Agent tab  | Jev with telemetry state plays level 1-1 on device     |
+| **M3** Jev authors       | Trace-to-Game-Run compiler, `DECIDE` node          | A Jev playthrough compiled into a replayable Game Run  |
+| **M4** Scale             | Simulator, PPO, evaluation harness                 | PPO trained in sim, evaluated on device                |
+
+Phase 0 is a gate: no agent can be evaluated until the device path is trustworthy. Its device-side work is the
+[data path task list](docs/tasks/README.md) (T01–T25), which takes precedence over the plan's own step lists
+where they overlap.
+
+The earlier [`docs/opengym_implementation_plan.md`](docs/opengym_implementation_plan.md) remains the reference
+for design rationale — protocol analysis, package layout, reward tiers, and a design-by-design comparison against
+the closest prior art, [DeepMind's AndroidEnv](https://github.com/google-deepmind/android_env) — though its build
+order (§12) is superseded and a 2026-09-27 peer review (§15) corrects several of its "current state" statements.
+See [`docs/game_run_design_methodology.md`](docs/game_run_design_methodology.md) for the (separate, more
+hands-on) methodology its Tier 1.5 action model was first validated against: how to turn a real game's own
+source/level data into a verified-safe, hand-authored Game Run today, and what that exercise says still needs to
+become reusable tooling on the way to the env.
 
 iRobot's AI agent API was originally built with this goal in mind, and the pieces exist today (video + phash
-streaming, touch/keycode injection, event recording, the Gym IDE) but only as raw sockets plus a manual
-[reference client](tools/README.md) — not yet a drop-in RL environment. The next step is an **OpenAI Gym /
-Gymnasium-compatible `Env`** on top of the same two ports, so existing RL tooling (Stable-Baselines3, RLlib,
-CleanRL, ...) can train against Android games with minimal glue:
+streaming, touch/keycode injection, event recording, the Gym IDE, the Jev prototype) but only as raw sockets plus
+a manual [reference client](tools/README.md) — not yet a drop-in RL environment. The open design problems for
+the env, and where the plans stand on them:
 
 - **Action space**: touch first — it's what almost every Android game actually responds to (mouse and gamepad
   were deliberately deprioritized, since touch already covers a pointer and most games don't need a hardware
   controller). Keycode injection covers the rest.
-- **Observation space**: the existing downscaled grayscale/color frames map naturally onto Gym's typical image
-  `Box` space; may want an option for the raw (non-downscaled) frame for agents that need it. Audio is not
+- **Observation space**: a fixed canonical image shape built from the existing downscaled frames (so the shape
+  doesn't depend on the device), plus an optional dict of structured features — from first-party game
+  telemetry where we own the game, then vision features, then pixels. Audio is not
   currently part of the observation — worth adding only for genres where sound carries state that isn't visible
   on screen, not as a default.
 - **Reward**: not solved generically — Android exposes no standard "game score" signal, so this needs per-game
-  logic (score-HUD OCR, template/pixel matching, or similar), supplied by whoever wraps a specific game.
+  logic (score-HUD OCR, template/pixel matching, telemetry, or similar), declared per game in its `task.yaml`.
 - **Episode boundaries** (`reset()`/`terminated`/`truncated`): needs a way to detect game-over/restart screens,
   likely via the same perceptual-hash machinery already in place, plus driving the actual app restart over `adb`.
-- **Protocol hardening**: control messages are now length-prefixed. A 2026-09-27 review of the frame and input
-  path ([`docs/gym_data_path_review.md`](docs/gym_data_path_review.md)) found further issues an environment
-  would hit (torn frames, unannounced rotations, no frame identity, silent input rejection); they're broken into
-  step-by-step work orders in [`docs/tasks/`](docs/tasks/README.md).
+- **Protocol hardening**: control messages are now length-prefixed. The rest is the
+  [data path review](docs/gym_data_path_review.md)'s findings (see
+  [Known data path issues](#known-data-path-issues)) and their [work orders](docs/tasks/README.md).
 - **Parallel rollouts**: multiple simultaneous environments means multiple `irobot` instances against distinct
   devices/emulators, each on distinct `--port` values (the agent ports derive from it) — not yet automated.
 
-This is exploratory direction, not a committed timeline. Feasibility notes for latency-sensitive genres
+The plan carries per-work-package estimates, but it is a plan, not a committed timeline. Feasibility notes for latency-sensitive genres
 (real-time shooting/fighting games specifically) are in
 [the implementation plan §1.1](docs/opengym_implementation_plan.md#11-feasibility-assessment-real-time-shootingfighting-games-specifically).
+
+---
+
+## Design documents
+
+| Document | What it covers |
+|---|---|
+| [`docs/gym_jev_implementation_plan.md`](docs/gym_jev_implementation_plan.md) | **The current build plan**: Gym env + TypeSafe Jev integration, ten design decisions, phases, work packages, milestones, risks |
+| [`docs/gym_data_path_review.md`](docs/gym_data_path_review.md) | Code-level review of the frame and input path (DP01–DP20); read before the plan |
+| [`docs/tasks/`](docs/tasks/README.md) | T01–T25: step-by-step work orders that fix the data path findings, with dependencies and a definition of done |
+| [`docs/opengym_implementation_plan.md`](docs/opengym_implementation_plan.md) | Original Gym env design: protocol analysis, action/observation tiers, AndroidEnv comparison, 2026-09-27 peer review |
+| [`docs/irobot_gym_ide_design.md`](docs/irobot_gym_ide_design.md) | Gym IDE design: data model, reuse of the wire client, known bugs, 2026-09-27 peer review |
+| [`docs/game_run_design_methodology.md`](docs/game_run_design_methodology.md) | How to turn a game's own source/level data into a verified, hand-authored Game Run |
+| [`irobot_gym_ide/docs/`](irobot_gym_ide/docs/) | Game Run editor guide, action classification design, Game Run AI-assist design |
 
 ---
 
@@ -445,6 +554,26 @@ build/apps/irobot.exe            # desktop client
 build/apps/server/irobot-server  # server APK (deployed to device at runtime)
 ```
 
+### 3. Running the tests
+
+```bash
+# C++ (Catch2)
+cmake -B build -DCMAKE_BUILD_TYPE=Debug
+cmake --build build
+./build/tests/all_tests
+
+# Python, from the repository root (no device or Qt needed)
+python -m unittest discover -s irobot_gym_ide/tests -t .
+python -m unittest discover -s typesafe_agent/tests -t .
+
+# Java (on-device server)
+cd irobot_server && ./gradlew test
+```
+
+CI doesn't run any of these suites yet (`ctest` finds no registered tests, and the Python and Java suites
+aren't invoked); tasks [T01](docs/tasks/T01_ctest_registration.md)–[T03](docs/tasks/T03_java_tests_in_ci.md)
+fix that. See [`docs/tasks/README.md`](docs/tasks/README.md#build-and-test-commands) for more options.
+
 ---
 
 ## Dependencies
@@ -482,9 +611,18 @@ irobot_server/          # Android server source + build script (see irobot_serve
 irobot_gym_ide/         # action-map editor GUI (see irobot_gym_ide/README.md)
 irobot_gym_ide.sh       # launcher (Git Bash / WSL / Linux / macOS)
 irobot_gym_ide.cmd      # launcher (Windows)
+typesafe_agent/         # Jev decision-loop prototype (see typesafe_agent/README.md)
+typesafe_agent.sh       # launcher (Git Bash / WSL / Linux / macOS)
+typesafe_agent.cmd      # launcher (Windows)
 tools/
 ├── agent_client.py     # reference/test client for the AI agent API
 └── README.md           # its docs + wire-protocol reference
+tests/                  # C++ Catch2 tests (all_tests)
+docs/
+├── gym_jev_implementation_plan.md  # current Gym env + Jev build plan
+├── gym_data_path_review.md         # frame/input path review (DP01–DP20)
+├── tasks/                          # work orders T01–T25
+└── ...                             # earlier design docs, diagrams
 ```
 
 ---
@@ -521,6 +659,8 @@ corruption caused by the old header format.
 ## Related projects
 
 - [scrcpy](https://github.com/Genymobile/scrcpy) — the original C project this is based on
+- [typesafe-mario](https://github.com/guidebee/typesafe-mario) — a TypeSafe/Jev agent that plays NES Super Mario
+  Bros from emulator RAM; the model for `typesafe_agent/`
 - [AutoAdb](https://github.com/rom1v/autoadb) — auto-start irobot when a device connects (`autoadb irobot -s '{}'`)
 - [AndroidEnv](https://github.com/google-deepmind/android_env) — DeepMind's RL platform for Android; closest prior
   art to the planned Gym/Gymnasium `Env` above (same problem shape: arbitrary apps/games, a universal touchscreen
