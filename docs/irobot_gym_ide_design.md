@@ -10,6 +10,15 @@ implement.
 Code: `irobot_gym_ide/`. Tests: `irobot_gym_ide/tests/` (13 tests, pure Python, no
 device/Qt required — see [Testing](#testing)).
 
+> **Review note (2026-09-27).** The status line above and the test count are out of date. The tool
+> now also has the Game Run editor (six node kinds, including Compare, Find Template, and Assert),
+> gameplay sessions with HUD-region classification, image templates, dry-run preview, regression
+> runs, and ActionMap export, and `irobot_gym_ide/tests` has 237 tests. The worked example is now the
+> directory `examples/mario_platformer/`, not a single `.yaml` file. A peer review is in
+> [§14](#14-peer-review-2026-09-27), and the plan for the Gym env and the TypeSafe Jev integration is
+> [`gym_jev_implementation_plan.md`](gym_jev_implementation_plan.md). **Before relying on any live
+> run, note that §13's silent touch-drop bug is still open.**
+
 ## 1. What this is
 
 A desktop tool for defining, per Android game, the vocabulary of actions an AI agent can take —
@@ -718,3 +727,84 @@ a new design:
   if a specific recording is excessive. Not built speculatively without a concrete case needing it.
 - **`calibrate_buttons.py`** (referenced in plan §7.4 as a possible standalone script) is
   effectively superseded by this GUI's click-to-add flow — not built separately.
+
+## 14. Peer review (2026-09-27)
+
+Reviewed from a solution-architecture angle against the code as of 2026-09-27, with the Gym env and
+a TypeSafe Jev integration as the intended downstream consumers. Where a finding is addressed, it
+points at [`gym_jev_implementation_plan.md`](gym_jev_implementation_plan.md) (**GJ**).
+
+### 14.1 Factual corrections
+
+| Where | This document says | Actual state |
+|---|---|---|
+| Status line | "Phase 1 implemented (action definitions only)" | Also built: Game Run editor (ACTION, DELAY, REPEAT, COMPARE, FIND_TEMPLATE, ASSERT), gameplay sessions, HUD regions and combos, session classification, image templates, dry run, regression runs, `gym_export` |
+| Header, §5, §10 | 13 / 25 tests | 237 tests (17 skipped) in `irobot_gym_ide/tests` |
+| §3 | Three types: `EventKind`, `PrimitiveEvent`, `Action`, `Project` | `model.py` also defines `ActionKind`, `HudRegion`, `HudRegionCombo`, `ImageTemplate`, `GameRun`/`RunNode`/`RunEdge`, `GameplaySession`/`SessionSegment` |
+| §8, §9 | `examples/mario_platformer.yaml`; actions `move_left_start`, `attack` | Directory `examples/mario_platformer/` (split files); actions `left_start`/`left_stop`, `right_start`/`right_stop`, `up_*`, `down_*`, `jump`, `long_jump`, `fire`, `run_start`/`run_stop`, calibrated for Ampere's Run at 2670×1200 |
+
+### 14.2 What this document does well
+
+- **The headless core** (§5) is the most important architectural decision in the tool. It's why the
+  env, the Jev driver, and tests can all reuse `model`/`io`/`connection` with no Qt.
+- **Reuse, not reimplementation** (§4), and the refuse-rather-than-guess policy for resolution and
+  rotation (§6.1, §11.1), prevented whole classes of silent failures.
+- **Bugs are recorded with their root cause and their proof**, including what wasn't proven (§11's
+  three verification layers). That's the right standard for a tool whose failures are silent by
+  nature.
+
+### 14.3 Findings
+
+**G1 (high) — §13's open bug gates all automation.** A structurally clean replay sometimes has no
+device effect, with no error anywhere. Every downstream consumer (Game Run regression, the Gym env,
+Jev) inherits it, and it makes every failed run ambiguous: bad plan or dropped input?
+*Recommendation*: finish §13's next steps first, and add a rejected-injection counter visible to
+clients, so the next silent drop is a number instead of an investigation. → GJ WP0.1.
+
+**G2 (medium) — Delays drift.** `GameRunExecutor._sleep_frames` and `LiveConnection`'s `WAIT` both
+sleep relative to "now", so each send's duration adds to the next delay. Over a run like
+`level_1_1_clear` (ten or more cumulative jump timings), the error accumulates. *Recommendation*:
+schedule against the run's start time. No file format change. → GJ WP0.6.
+
+**G3 (medium) — The unit of "frame" is ambiguous across the system.** `FRAME_MS = 33` for WAIT, at
+least 66 ms per agent video frame, and 16.7 ms physics units in Ampere's Run, whose per-render
+delta is clamped to 1/30 s, so game time lags wall-clock time below 30 fps. `time_scale` exists to
+paper over the last one, but the example project doesn't record which unit its delays were computed
+in. → GJ D9, WP0.4.
+
+**G4 (medium) — This document has become partly a session journal.** §12 and §13 are dated
+debugging logs with "resume here" instructions. They're valuable, but they make it hard to tell what
+the design *is*. *Recommendation*: move them to `docs/journal/`, leave a one-paragraph summary here,
+and keep this document normative. → GJ WP0.2.
+
+**G5 (medium) — The scope statement should change.** §1 says "Which AI agent later plays the game
+is entirely out of scope." With a live agent driver (Jev) arriving, the IDE is the natural place to
+*watch and supervise* an agent, because it already owns the live canvas, templates, and regions.
+*Recommendation*: bring agent supervision into scope (an Agent tab with a decision stream, human
+takeover, and "save trace as Game Run") and keep training out of scope. → GJ §8.4.
+
+**G6 (medium) — Phase 2 should target a declarative `task.yaml`.** The Reward, Observation, and
+Reset panels are stubs. They should author one task file in the project directory (the project is
+already split-file), and template-based signals should reuse `ImageTemplate.similarity` rather than
+the separate implementation the Gym plan originally sketched. → GJ D5, WP2.1–2.3.
+
+**G7 (medium) — Consumers should read hold pairs from the model, not from action names.** The model
+already records which action releases which (`HudRegion.release_action_name`), and
+`gym_export` already collapses pairs into one button. Code that infers pairs from a
+`*_start`/`*_stop` naming convention (including the `typesafe_agent` prototype's hold bookkeeping)
+should use the model instead. → GJ D2, §8.1.
+
+**G8 (low) — `connection.py` belongs in a shared transport package.** It has no GUI dependency and
+is needed by the env and the Jev driver. Moving it (with a re-export here) also retires the
+`_agent_client.py` importlib shim. → GJ D10, WP1.1.
+
+**G9 (low) — Control-message visibility is Debug-only.** §13 removed per-message logging for
+latency, which was right, but Release builds are now blind to control traffic. *Recommendation*:
+counters (received, parsed, forwarded, rejected by the device) in both builds, logged periodically
+and exposed to clients. That answers §12's "next steps" item 3.
+
+**G10 (low) — Live AI in Game Runs needs a reconciled position.** `GAME_RUN_AI_ASSIST_DESIGN.md`
+§3.3 rejects a live LLM node because it breaks reproducibility, but leaves the door open to "a very
+clearly-labeled node kind with its own timeout/fallback semantics". *Recommendation*: a `DECIDE`
+node with a timeout, a fallback edge, and record/replay keyed by `(node, visit)`, so a recorded run
+replays with no model call at all. → GJ D7, WP4.6.
