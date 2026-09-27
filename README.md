@@ -203,9 +203,10 @@ CleanRL, ...) can train against Android games with minimal glue:
   logic (score-HUD OCR, template/pixel matching, or similar), supplied by whoever wraps a specific game.
 - **Episode boundaries** (`reset()`/`terminated`/`truncated`): needs a way to detect game-over/restart screens,
   likely via the same perceptual-hash machinery already in place, plus driving the actual app restart over `adb`.
-- **Protocol hardening**: length-prefixed control-message framing (today's whole-buffer JSON parsing is fine for
-  a human-paced test client but not a multi-step/second training loop) — tracked as Phase 0 of the implementation
-  plan.
+- **Protocol hardening**: control messages are now length-prefixed. A 2026-09-27 review of the frame and input
+  path ([`docs/gym_data_path_review.md`](docs/gym_data_path_review.md)) found further issues an environment
+  would hit (torn frames, unannounced rotations, no frame identity, silent input rejection); they're broken into
+  step-by-step work orders in [`docs/tasks/`](docs/tasks/README.md).
 - **Parallel rollouts**: multiple simultaneous environments means multiple `irobot` instances against distinct
   devices/emulators, each on distinct `--port` values (the agent ports derive from it) — not yet automated.
 

@@ -13,6 +13,14 @@ It came out of a peer review of both documents (see
 `typesafe_agent/` prototype (`typesafe_agent/README.md`). Where this plan disagrees with an earlier
 document, the disagreement and its reason are stated inline, not silently overridden.
 
+> **Update (2026-09-27): read the [data path review](gym_data_path_review.md) first.** A code-level
+> review of the frame and input path this plan builds on found 20 issues (DP01–DP20). Two of them
+> contradict §2's baseline: resolution changes are **not** handled on the agent path (DP02), and
+> frames can be torn (DP01). The fixes, plus the device-side parts of Phase 0, are broken into
+> junior-sized work orders in [`docs/tasks/`](tasks/README.md) (T01–T25), which take precedence over
+> this plan's step lists where they overlap: WP0.1 → T16, T17, T18 and T22; WP0.2 → T24; WP0.3 → T23;
+> WP0.5 → T10. WP0.4 and WP0.6 aren't data-path work and stay as written here.
+
 ---
 
 ## 0. Summary
