@@ -1,0 +1,2 @@
+PyYAML          # project.yaml load/save (via irobot_gym_ide.io)
+typesafe-sdk    # Jev's Choice judgment; only needed for `play --policy typesafe`
