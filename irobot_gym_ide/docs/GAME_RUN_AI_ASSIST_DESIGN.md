@@ -373,6 +373,14 @@ from silently derailing an otherwise long, unattended playthrough.
   the latency/reproducibility argument above. If a future need for this shows up, it belongs behind
   a very clearly-labeled node kind with its own timeout/fallback semantics, not folded into today's
   deterministic executor.
+
+  > **Update (2026-09-27):** that future need is now planned, as a `DECIDE` node in
+  > [`docs/gym_jev_implementation_plan.md`](../../docs/gym_jev_implementation_plan.md) (D7, WP4.6). It
+  > follows the conditions set here (a distinct node kind, a timeout, a fallback edge) and adds
+  > **record/replay**: a live decision is recorded under `(node_id, visit_index)`, and replay mode
+  > takes the recorded edge with no model call, so the reproducibility objection is answered rather
+  > than traded away. The latency objection still holds for frame-perfect moments, so the plan
+  > limits `DECIDE` to strategic branch points; jump timing stays in deterministic nodes.
 - **No automatic template/obstacle discovery** (AI scanning a level for "things that look like
   hazards" unprompted) — templates stay human-captured (`GAME_RUN_EDITOR_GUIDE.md` §5); AI only
   helps turn an already-captured situation into a subgraph.

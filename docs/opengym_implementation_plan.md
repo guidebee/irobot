@@ -4,6 +4,13 @@ Status: design document, not yet implemented. Companion to the [README roadmap](
 [tools/README.md roadmap](../tools/README.md#roadmap). Written to let any future contributor (human or agent)
 pick this up without re-deriving the protocol analysis below.
 
+> **Review note (2026-09-27).** A peer review of this document is in [§15](#15-peer-review-2026-09-27).
+> Several "current state" statements in §2–§4, §9, and §12 are now out of date (most importantly,
+> control framing is **already length-prefixed**; see §15.1). The build order in §12 is superseded by
+> [`gym_jev_implementation_plan.md`](gym_jev_implementation_plan.md), which keeps this document's
+> design rationale and adds four decisions this document didn't cover: real-time stepping,
+> SB3-compatible action encoding, a fixed observation shape, and a declarative `task.yaml`.
+
 ## 1. Goal
 
 Wrap the existing AgentManager sockets (`--port`+1 control, `--port`+2 video) in a standard
@@ -81,6 +88,13 @@ it. The five points below are why, most-important first.
 | Event recording | Ctrl+E in `irobot.exe` → `events.json` | `ControlMessage::JsonSerialize`, replayable by `agent_client.py play` |
 
 ## 3. Protocol facts that constrain the design (read before writing code)
+
+> **Review note (2026-09-27):** fact 1 below is historical. `AgentController::ProcessMessages` now
+> reads a 4-byte big-endian length prefix per message (`kFrameHeaderSize`, `agent_controller.cpp`),
+> and `tools/agent_client.py`'s `send_json` writes it. Fact 3 is also resolved
+> (`BLOB_MSG_TYPE_RESOLUTION`, §4.2). A fact this section doesn't list but should: the agent video
+> stream is **throttled to one frame per 66 ms** (`kMinVideoSendIntervalMs`, `agent_manager.cpp:64`),
+> which caps the observation rate at about 15 fps. See §15.1.
 
 These are not roadmap opinions — they were confirmed by reading `control_msg.cpp` /
 `agent_controller.cpp` directly, and they directly shape Phase 0 below:
@@ -751,6 +765,10 @@ emulator instances are the realistic scaling bottleneck (CPU/RAM), not the socke
 
 ## 12. Suggested build order (each step independently mergeable/testable)
 
+> **Superseded (2026-09-27)** by [`gym_jev_implementation_plan.md` §12](gym_jev_implementation_plan.md#12-schedule-and-dependencies).
+> Status of the steps below: 0 has a prototype (`typesafe_agent latency-check`, with caveats in that
+> plan's WP0.3); 1 and 2 are **done**; 3–9 are not started.
+
 0. **Latency benchmark spike, before anything else** (§1.1.1) — a throwaway script that sends a touch
    through the existing agent control socket and counts frames on the existing agent video socket
    until a known on-screen element visibly responds. No new package, no C++ change — this uses
@@ -943,3 +961,133 @@ actual code, cited by file where it matters.
   reuse gap between this plan and the Game Run editor's existing code, not something AndroidEnv's
   single-codebase design ever had to face. Still worth fixing before either side ships (see prior
   design-review discussion), just not a "what AndroidEnv does differently" item.
+
+## 15. Peer review (2026-09-27)
+
+Reviewed from a solution-architecture and Gymnasium/RL-practice angle, against the code as of
+2026-09-27 (not against this document's own description of it). Findings are ranked by severity.
+Each one names where it's addressed in
+[`gym_jev_implementation_plan.md`](gym_jev_implementation_plan.md) (abbreviated **GJ**), so this
+section records *what* and *why* while GJ records *how* and *when*.
+
+### 15.1 Factual corrections (the document vs. the code)
+
+| Where | This document says | The code says |
+|---|---|---|
+| §2, §3.1, §4.1 | Control framing is whole-buffer and a stall risk; a length prefix is proposed | **Done.** 4-byte big-endian prefix, oversize frame drops the connection (`agent_controller.cpp` `ProcessMessages`, `kFrameHeaderSize = 4`); `agent_client.py`'s `send_json` writes it. §4.1's suggested protocol-version bump was **not** done (GJ WP1.3) |
+| §3 (missing) | — | Agent video is throttled to one frame per 66 ms (`agent_manager.cpp:64`), about 15 fps. This caps observation rate and quantizes §1.1's latency benchmark to 66 ms steps (GJ WP0.3, WP0.5) |
+| §9 | Unclear whether `--no-display` alone supports agent-only runs | `--headless` exists and idle-waits instead of busy-spinning (`irobot_core.cpp`; `irobot_gym_ide_design.md` §13 item 2) |
+| §12 | Steps 1–2 are future work | Both done; step 0 has a prototype (`typesafe_agent latency-check`) |
+| §5 | `tools/irobot_gym/connection.py` is to be written | Its described behavior already exists as `irobot_gym_ide/connection.py` (`LiveConnection`), and `irobot_gym_ide/gym_export.py` already emits §7.4's Tier 1.5 `ActionMap` |
+| `tools/README.md` line 130 (companion doc) | "no length prefix or delimiter" | Stale for the same reason as §3.1 (GJ WP0.2) |
+
+### 15.2 What this document gets right, and should keep
+
+- **Latency first.** §1.1's insistence on measuring the round trip before building reward machinery
+  is the single most valuable instruction here, and GJ keeps it as a Phase 0 gate.
+- **Grounding in AndroidEnv's source**, not its paper. §7.2, §9.1, §13, and §14 cite actual files,
+  and the adopted patterns (health tracking, bounded relaunch, off-critical-path watchdogs) are the
+  right ones.
+- **Reward design.** Delta-not-absolute, clipping per DQN, signal tiers ordered by cost, the
+  score-reset artifact rule (§8.6), and the explicit `terminated`-vs-`truncated` warning (§8.4) are
+  all correct and often gotten wrong.
+- **Honesty about scope.** Multiple sections say what wasn't verified. Keep that habit.
+
+### 15.3 Findings
+
+**F1 (high) — The env has no notion of real time.** Gymnasium's API implicitly assumes the world
+pauses between `step()` calls; a device doesn't. §9's `step()` waits "for the next fresh frame
+(bounded by `step_timeout`)", which makes step duration depend on frame arrival and policy speed.
+The resulting MDP changes with the policy's inference time, so a policy evaluated on a faster or
+slower machine than it trained on is solving a different problem. This is the setting studied by
+Ramstedt & Pal, *Real-Time Reinforcement Learning* (NeurIPS 2019), and by delayed-MDP work (state
+augmentation with in-flight actions, Katsikopoulos & Engelbrecht, 2003). *Recommendation*: a fixed
+control period, actions held between steps, overruns counted in `info`, an `ActionHistory` wrapper,
+and asynchronous slow policies. → GJ D1.
+
+**F2 (high) — The proposed action spaces can't be trained with the proposed library.**
+Stable-Baselines3 supports `Box`, `Discrete`, `MultiDiscrete`, and `MultiBinary` action spaces, not
+`Dict`. Tier 0.1 (`Dict` of a discrete type and a continuous position) is a hybrid
+parameterized-action space that also needs specialized algorithms. Tiers 1 and 1.5 are specified as
+`Dict`s. *Recommendation*: encode Tier 1.5 as `MultiDiscrete`, one dimension per pointer group
+(mutually exclusive buttons share a pointer, so share a dimension, which makes invalid combinations
+unrepresentable), with macros as an extra `Discrete` dimension. Keep the named `Dict` as a
+human-readable view through an `ActionCodec`. → GJ D2.
+
+**F3 (high) — The observation `Box` has no fixed shape.** `OPENCV_MAT` is "≤800 px on the long
+side", so its shape follows the device's aspect ratio and changes on rotation. A `Box` must be
+fixed, and SB3's `NatureCNN` is sized for 84×84 inputs; 800 px wastes compute in the first
+convolution. *Recommendation*: canonical resize with letterboxing (default 84×84 grayscale, declared
+per task), and end the episode as `truncated` on a rotation. → GJ D3.
+
+**F4 (high) — An unresolved correctness bug gates everything, and this document doesn't mention
+it.** `irobot_gym_ide_design.md` §13: a clean replay sometimes has no device effect, with every
+C++ stage logging success. The last unlogged path is a plain `false` from
+`InputManager.injectInputEvent`. Until that's understood, no training result or agent evaluation can
+be trusted, because a bad episode could be the pipe rather than the policy. *Recommendation*: make
+it Phase 0 work, and add a rejected-injection counter reported in `info`. → GJ WP0.1.
+
+**F5 (medium) — No dense progress signal for the platformer genre that motivated §7.4.** §8's
+tiers are score- and terminal-oriented, and score in a platformer is sparse. `gym-super-mario-bros`
+uses x-position delta as its main reward term for this reason. *Recommendation*: add a
+`scroll_progress` signal (`cv2.phaseCorrelate` over a background ROI, summed horizontal camera
+motion), which needs no calibration. For games we own, add a first-party telemetry tier above
+logcat-regex: the game emits structured state on a debug build. That also gives exact state for
+LLM-based drivers, which can't use pixels. → GJ D4, WP2.2, WP5.1.
+
+**F6 (medium) — §14.3's task-definition gap should be closed now, not later.** No adapter code
+exists yet, so choosing the declarative form costs nothing today and a migration later.
+*Recommendation*: a `task.yaml` in the IDE project directory (the project format is already
+split-file), signals referenced by registry name, reset as a list of steps that can call Game Runs.
+→ GJ D5, §6.1.
+
+**F7 (medium) — Throughput has no answer beyond "more devices".** §1.1.3 is right that real-device
+step rates make RL sample-inefficient. For games whose source and level data we have,
+`game_run_design_methodology.md` already contains the core of a frame-accurate simulator.
+*Recommendation*: a simulator backend sharing the task, action codec, and features, with latency
+randomization and a fidelity test against device telemetry. → GJ D8, WP5.3.
+
+**F8 (medium) — "Frame" means three different durations.** `WAIT` frames are 33 ms
+(`connection.py`), agent video frames are ≥66 ms, and the first target game's physics runs in
+16.7 ms units with a per-render delta clamp (`MarioConfiguration.MAX_DELTA_SECONDS = 1/30`), so its
+game time lags wall-clock time whenever it renders below 30 fps. *Recommendation*: new schema fields
+in milliseconds; existing `frames` fields explicitly documented as WAIT frames. → GJ D9, WP0.4.
+
+**F9 (medium) — No evaluation protocol.** The plan defines how to train but not how to decide
+whether something works: no success definition separate from `terminated`, no episode counts, no
+baselines, no statement of what `reset(seed=)` means on a device that can't be seeded.
+*Recommendation*: a `success` condition in the task, an evaluation harness comparing scripted,
+heuristic, LLM, and RL drivers on the same metrics, and infrastructure-health metrics in the same
+report so a policy isn't blamed for a flaky pipe. → GJ WP6.3.
+
+**F10 (medium) — Package layout doesn't match how the repo grew.** Python tools in this repo are
+top-level packages run with `python -m` from the root (`irobot_gym_ide/`, `typesafe_agent/`), and
+`LiveConnection` already exists. *Recommendation*: extract a shared `irobot_client/` (protocol,
+connection, telemetry) first, and put the env at top-level `irobot_gym/`. → GJ D10, WP1.1.
+
+**F11 (low) — Gymnasium specifics worth writing down.** `check_env` includes a reset-seed
+determinism check that a real device fails by construction, so run it against fake and simulated
+backends and give the device backend its own integration checklist. Vector-env autoreset behavior
+differs between Gymnasium versions and SB3's `SubprocVecEnv`, and matters here because device resets
+take seconds, so pin versions and test the autoreset path. Register the env
+(`gymnasium.register`) so `gym.make` works. → GJ §7, §11.
+
+**F12 (low) — The latency benchmark in §1.1 can mis-attribute cause.** "Count frames until the
+screen changes" is confounded in any scrolling game, where the screen changes regardless of input.
+*Recommendation*: benchmark on a static screen, or use telemetry's report of the input the game
+actually read. → GJ WP0.3.
+
+**F13 (low) — Reset assumptions don't hold for the first target.** §9 assumes
+`am start <activity>`. Ampere's Run's `MarioGameActivity` isn't exported, so reset must launch
+`GamePickerActivity` and navigate, which a Game Run can do. A debug-only launch extra would make it
+one command. → GJ §6.1 `reset`, WP5.1.
+
+**F14 (low) — LLM-driven policies need guardrails this document doesn't cover** (it predates that
+use case): per-episode and per-hour decision budgets, deterministic fallback on timeout, API keys
+kept out of project files, and a decision log. → GJ §8.2.
+
+### 15.4 What changed in this document as a result
+
+Only the status banner at the top and the notes at the start of §3 and §12. The design rationale
+in §1–§14 is left as written, since it's still correct where it isn't superseded, and rewriting it
+would lose the history of why each choice was made.

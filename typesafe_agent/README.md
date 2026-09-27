@@ -91,8 +91,17 @@ typesafe_agent/
 
 ## Known limitations / next steps
 
+The plan that replaces this prototype's loop with a production driver is
+[`docs/gym_jev_implementation_plan.md`](../docs/gym_jev_implementation_plan.md) §8. In short: Jev
+runs asynchronously beside a fixed-rate env instead of blocking it, gets structured state from
+first-party telemetry instead of a phash flag, and chooses among a curated macro set instead of all
+13 raw project actions. Current limitations:
+
+- **The loop blocks on each decision**, so Jev's inference time is added to every control period,
+  and the game keeps running with no fresh input in the meantime (plan D1, D6).
 - **Hold bookkeeping assumes a `*_start`/`*_stop` naming convention** (see `runner._update_holds`).
-  True for `mario_platformer`'s actions, not guaranteed by the `ActionMap` schema itself.
+  True for `mario_platformer`'s actions, but the model already records the real pairing in
+  `HudRegion.release_action_name`, which is what the replacement reads (plan §8.1).
 - **No reward signal.** A won/lost/progress-made signal (score OCR, a health-bar fill ratio, an
   `ImageTemplate`/`Compare`-node check per `irobot_gym_ide`'s own Compare Templates feature)
   would let Jev do far better than reacting to "did the screen change" alone.
